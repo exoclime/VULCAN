@@ -137,4 +137,3 @@ for research on exoplanets. The three parts of the ESP are
 [2]: https://github.com/exoclime/HELIOS
 [3]: https://github.com/exoclime/THOR
 [4]: https://github.com/exoclime/VULCAN
-# VULCAN
