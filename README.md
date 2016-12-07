@@ -3,7 +3,7 @@ Chemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python co
 
 The theory paper of VULCAN can be found at https://arxiv.org/abs/1607.00409
 
-This is currectly a working, beta version. Any questions or feedbacks is welcome and can be sent to [Shami Tsai](mailto:shang-min.tsai@space.unibe.ch)
+This is currectly a working, beta version. Any questions or feedbacks are welcome and can be sent to [Shami Tsai](mailto:shang-min.tsai@space.unibe.ch)
 
 ## Requirements
 VULCAN is developed with Python 2.7 and does _not_ work with Python 3. A python 3.X compatible branch will be released later.
