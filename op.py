@@ -706,9 +706,9 @@ class Output(object):
         
         if os.path.isfile(output_dir+out_name):
             # Fix Python 3.x and 2.x.
-            try: raw_input = input
+            try: input = raw_input
             except NameError: pass
-            raw_input("  The output file: " + str(out_name) + " already exists.\n"
+            input("  The output file: " + str(out_name) + " already exists.\n"
                       "  Press enter to overwrite the existing file,\n"
                       "  or Ctrl-Z and Return to leave and choose a different out_name in vulcan_cfg.")
         
