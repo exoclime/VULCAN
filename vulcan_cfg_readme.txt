@@ -25,8 +25,8 @@ atom_list = ['H', 'O', 'C', 'He'] : included elements (list)
 O_H = 6.0618E-4 : O/H ratio (float)
 C_H = 2.7761E-4 : C/H ratio (float)
 He_H = 0.09691  : He/H ratio (float)
-ini_mix = 'EQ'  : defines the way to set the initial composition, can be 'EQ', 'CH4', or 'CO'
-				  for chemical equilibrium (major species), all carbon in CH4, or all carbon in CO respectively
+ini_mix = 'EQ'  : defines the way to set the initial composition, can be 'EQ' or 'CH4'
+				  for chemical equilibrium (major species) or all carbon starting in CH4, respectively
 
 # ====== Reactions to be switched off  ======
 remove_list = [] : the reactions (by the index in the chemical network) to be set to zero
@@ -83,10 +83,10 @@ dt_var_max = 2. : the maximum increment of the stepsize (float)
 dt_var_min = 0.2 : the maximum decrease of the stepsize (float)
 atol = 1.E-3 : the lower limit of the absolute number density to compute determine accept/reject the solution after each step (float)
 			  i.e. ignore the trace species with number density below this value when calculating the variation of the solution
-mtol = 1.E-30 : the lower limit of the mixing ratio to compute determine accept/reject the solution after each step (float) 
-mtol_conv = 1.E-20 : the lower limit of the mixing ratio to check for convergence (float)
+mtol = 1.E-20 : the lower limit of the mixing ratio to compute determine accept/reject the solution after each step (float) 
+mtol_conv = 1.E-26 : the lower limit of the mixing ratio to check for convergence (float)
 pos_cut = 0 : the positive value for clipping (float)
-nega_cut = -0.1 : the negative value for clipping (float)
+nega_cut = -1. : the negative value for clipping (float)
 loss_eps = 1e-4 : the tolerance for partical conservation (float)
 yconv_cri = 0.05 : the relative variation for checking the steady-state (float)
 slope_cri = 1.e-4 : the relative slope (devided by time) for checking the steady-state (float)
@@ -94,7 +94,7 @@ count_max = int(2E4) : the maximum steps (int)
 update_frq = 100 : the frequency (for every X steps) to update the layer width, dz and dzi, due to the change of mean molecular weight (int)
 
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
-rtol = 0.05 : the relative tolerance for the truncation error
+rtol = 0.05 : the relative tolerance for the truncation error (try smaller value if numerical unstable)
 
 # ====== Setting up numerical parameters for SemiEu/SparSemiEU ODE solver ====== 
 PItol = 0.1 : the relative tolerance for the PID control

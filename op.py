@@ -36,7 +36,7 @@ class ReadRate(object):
         
         self.i = 1
         # flag of trimolecular reaction
-        self.re_tri = False
+        self.re_tri, self.re_tri_k0 = False, False
         self.list_tri = []
 
         
@@ -46,7 +46,8 @@ class ReadRate(object):
         var.Rf, var.Rindx, var.a, var.n, var.E, var.a_inf, var.n_inf, var.E_inf, var.k, var.k_fun, var.k_inf,  var.kinf_fun,  var.k_fun_new
         
         i = self.i
-        re_tri = self.re_tri
+        # flags for starting 3-body, 3-body without high-P rates
+        re_tri, re_tri_k0 = self.re_tri, self.re_tri_k0
         list_tri = self.list_tri
         
         Tco = atm.Tco.copy()
@@ -60,6 +61,10 @@ class ReadRate(object):
                 # switch to 3-body and dissociation reations 
                 if line.startswith("# 3-body"): 
                     re_tri = True
+                
+                # switch to 3-body without high-pressure rates
+                if line.startswith("# 3-body reactions without high-pressure rates"):
+                    re_tri_k0 = True
                     
                 if line.startswith("# special"): 
                     special_re = True # switch to reactions with special forms (hard coded)                   
@@ -81,8 +86,8 @@ class ReadRate(object):
                         ofstr += re_label + str(i) + '\n'
                         ofstr +=  Rf[i] + '\n'
                 
-                    # switching to trimolecular reactions (len(columns) > 3 for those with high-P limit rates)   
-                    if re_tri == True and len(columns) > 3:
+                    # switching to trimolecular reactions (re_tri_k0 == False for those with high-P limit rates)   
+                    if re_tri == True and re_tri_k0 == False:
                         a_inf[i] = float(columns[3])
                         n_inf[i] = float(columns[4])
                         E_inf[i] = float(columns[5])
@@ -506,14 +511,16 @@ class ODESolver(object):
             para.delta_count += 1
             
         elif np.any(var.y < 0):             
-            para.nega_count += 1 
-            self.print_nega(var,para) # print the info for the negative solutions (where y < 0)
+            para.nega_count += 1
+            if vulcan_cfg.use_print_prog == True:
+                self.print_nega(var,para) # print the info for the negative solutions (where y < 0)
             # print input: y, t, count, dt
             
 
         else: # meaning np.amax( np.abs( np.abs(y_loss) - np.abs(loss_prev) ) )<loss_eps
             para.loss_count +=1
-            self.print_lossBig(para)
+            if vulcan_cfg.use_print_prog == True:
+                self.print_lossBig(para)
         
         
         var = self.reset_y(var) # reset y and dt to the values at previous step
@@ -521,7 +528,8 @@ class ODESolver(object):
         if var.dt < vulcan_cfg.dt_min:
             var.dt = vulcan_cfg.dt_min
             var.y[var.y<0] = 0. # clipping of negative values
-            print ('Keep producing negative values! Clipping negative solutions and moving on!')
+            if vulcan_cfg.use_print_prog == True:
+                print ('Keep producing negative values! Clipping negative solutions and moving on!')
             return True
         
         return False

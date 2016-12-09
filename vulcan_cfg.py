@@ -22,7 +22,7 @@ atom_list = ['H', 'O', 'C', 'He']
 O_H = 6.0618E-4
 C_H = 2.7761E-4 
 He_H = 0.09691
-ini_mix = 'EQ' # 'EQ', 'CH4', or 'CO'
+ini_mix = 'EQ' # 'EQ' or 'CH4'
 
 # ====== Reactions to be switched off  ======
 remove_list = []
@@ -71,7 +71,7 @@ atol = 1.E-3
 mtol = 1.E-20
 mtol_conv = 1.E-26
 pos_cut = 0
-nega_cut = -0.1
+nega_cut = -1.
 loss_eps = 1e-4
 yconv_cri = 0.05 # for checking steady-state
 slope_cri = 1.e-4

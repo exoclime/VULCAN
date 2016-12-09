@@ -22,12 +22,12 @@ class InitialAbun(object):
     """
     
     def __init__(self):
-        self.ini_m = [0.9,0.1,0.,0.] # initial guess
+        self.ini_m = [0.7,0.1,0.1,0.1] # initial guess
         self.EQ_ini_file = vulcan_cfg.EQ_ini_file
         
         self.atom_list = vulcan_cfg.atom_list
 
-    def abun_lowT(self, x):
+    def abun_ch4(self, x):
         """
         calculating the initial mixing ratios of the following 4 molecules (with CH4) 
         satisfying the assigned elemental abundance
@@ -39,19 +39,6 @@ class InitialAbun(object):
         f2 = x2 - (2*x1+2*x2+4*x3)*O_H
         f3 = x3 - (2*x1+2*x2+4*x3)*C_H
         f4 = x4 - (2*x1+2*x2+4*x3)*He_H
-        return f1,f2,f3,f4
-        
-    def abund_highT(self, x):
-        """
-        calculating the initial mixing ratios of the following 4 molecules (with CO) 
-        satisfying the assigned elemental abundance
-        x1:H2 x2:H2O x3:CO x4:He
-        """
-        x1,x2,x3,x4 = x
-        f1 = x1+x2+x3+x4-1.
-        f2 = x2+x3 - (2*x1+2*x2)*O_H
-        f3 = x3 - (2*x1+2*x2)*C_H
-        f4 = x4 - (2*x1+2*x2)*He_H
         return f1,f2,f3,f4
     
     def abund_eq9(self, sp_ini, tp, pp):
@@ -153,12 +140,13 @@ class InitialAbun(object):
         return mix_eq
     
     def ini_mol(self):
-        return np.array(sop.fsolve(self.abun_lowT, self.ini_m))
+        if vulcan_cfg.ini_mix == 'CH4':
+            return np.array(sop.fsolve(self.abun_ch4, self.ini_m))
+        else: 
+            raise ValueError("Unknown assigned ini_mix in vulcan_cfg.py. (see vulcan_cfg_readme.txt for ini_mix)")
        
     def ini_y(self, data_var, data_atm): 
-        # initial mixing ratios of the molecules
-        
-        ini_mol = self.ini_mol() 
+        # initializing the starting mixing ratios from the assigned elemental abundance
            
         ini = np.zeros(ni)
         y_ini = data_var.y
@@ -176,17 +164,15 @@ class InitialAbun(object):
                 for sp in sp_ini + ['H2', 'He']:
                     y_ini[i,species.index(sp)] = ini_eq[sp]*gas_tot[i]
             
-            elif vulcan_cfg.ini_mix == 'CH4': 
+            elif vulcan_cfg.ini_mix == 'CH4':
+                ini_mol = self.ini_mol()  
                 y_ini[i,:] = ini
                 y_ini[i,species.index('H2')] = ini_mol[0]*gas_tot[i]; y_ini[i,species.index('H2O')] = ini_mol[1]*gas_tot[i]; y_ini[i,species.index('CH4')] = ini_mol[2]*gas_tot[i]
                 # assign rest of the particles to He
                 y_ini[i,species.index('He')] = gas_tot[i] - np.sum(y_ini[i,:])
             
-            elif vulcan_cfg.ini_mix == 'CO':
-                y_ini[i,:] = ini
-                y_ini[i,species.index('H2')] = ini_mol[0]*gas_tot[i]; y_ini[i,species.index('H2O')] = ini_mol[1]*gas_tot[i]; y_ini[i,species.index('CO')] = ini_mol[2]*gas_tot[i]
-                # assign rest of the particles to He
-                y_ini[i,species.index('He')] = gas_tot[i] - np.sum(y_ini[i,:])
+            else:
+                raise ValueError("Unknown assigned ini_mix in vulcan_cfg.py. (see vulcan_cfg_readme.txt for ini_mix)")
         
         ysum = np.sum(y_ini, axis=1).reshape((-1,1))
         # storing ymix
@@ -194,8 +180,6 @@ class InitialAbun(object):
         
         return data_var
         
-
-
     def ele_sum(self, data_var):
         
         for atom in self.atom_list:
