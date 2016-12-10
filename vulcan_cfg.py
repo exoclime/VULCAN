@@ -7,7 +7,7 @@ network = 'CHO_network.txt'
 gibbs_text = 'thermo/gibbs_text.txt'
 # all the nasa9 files must be placed in the folder: thermo/NASA9/
 com_file = 'thermo/HOC_compose.txt'
-atm_file = 'atm/atm_HD189_Kzz.txt'
+atm_file = 'atm/atm_HD189.txt'
 output_dir = 'output/'
 plot_dir = 'plot/'
 out_name = 'test.vul'
