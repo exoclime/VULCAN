@@ -7,7 +7,7 @@ This is currectly a working, beta version. Any questions or feedbacks are welcom
 
 ## Requirements
 VULCAN is developed with Python 2.7 and does _not_ work with Python 3. A python 3.X compatible branch will be released later.
-For the moment, if you are only using  Python 3, it is easiest to create a separated Python 2 evniorment with an environment manager, e.g. [Anaconda](https://docs.continuum.io/).
+For the moment, if you are only using Python 3, it is easiest to create a separate Python 2 environment with an environment manager, e.g. [Anaconda](https://docs.continuum.io/).
 
 VULCAN requires the following python packages:
 - numpy
