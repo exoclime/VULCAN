@@ -162,7 +162,7 @@ class ReadRate(object):
         
         # reversing rates and storing into data_var
         for i in rev_list: 
-            var.k_fun[i] = lambda temp, mm, i=i: var.k[i-1]/HOC_gibbs.Gibbs(i-1,Tco)
+            var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
             var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
        
         return var
