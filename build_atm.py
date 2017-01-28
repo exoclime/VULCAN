@@ -131,11 +131,11 @@ class InitialAbun(object):
         n_eq['HCO'] = n_eq['CO']*k12
         n_eq['H2CO'] = n_eq['CO']*k13
               
-        norm = sum([n_eq[sp] for sp in sp_ini]) + 1. + vulcan_cfg.He_H # 1. is from H2
+        norm = sum([n_eq[sp] for sp in sp_ini]) + 1. + vulcan_cfg.He_H*2. # 1. is from H2
         for sp in sp_ini: # normalizing so that the total mixing ratio equals 1
             mix_eq[sp] = n_eq[sp]/norm 
         mix_eq['H2'] = 1./norm
-        mix_eq['He'] = vulcan_cfg.He_H/norm
+        mix_eq['He'] = 2.*vulcan_cfg.He_H/norm
     
         return mix_eq
     
