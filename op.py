@@ -773,11 +773,11 @@ class Output(object):
         
         output_file = dname + '/' + output_dir + out_name
         with open(output_file, 'wb') as outfile:
-            if vulcan_cfg.output_humanread == True: # human-readable form, less efficient 
-                outfile.write(str({'variable': var_save, 'atm': vars(atm), 'parameter': vars(para)}))
-            else:
-                pickle.dump( {'variable': var_save, 'atm': vars(atm), 'parameter': vars(para) }, outfile, protocol=pickle.HIGHEST_PROTOCOL)
-                # how to add  'config': vars(vulcan_cfg) ?
+            # if vulcan_cfg.output_humanread == True: # human-readable form, less efficient
+            #     outfile.write(str({'variable': var_save, 'atm': vars(atm), 'parameter': vars(para)}))
+            # else:
+            pickle.dump( {'variable': var_save, 'atm': vars(atm), 'parameter': vars(para) }, outfile, protocol=pickle.HIGHEST_PROTOCOL)
+            # how to add  'config': vars(vulcan_cfg) ?
         
             
     def plot_update(self, var, atm, para):

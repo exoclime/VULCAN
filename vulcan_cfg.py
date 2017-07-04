@@ -49,7 +49,6 @@ live_plot_frq = 10
 use_plot_end = True
 use_plot_evo = True
 plot_TP = True
-output_humanread = False
 plot_spec = ['H', 'H2', 'CH3', 'CH4', 'C2H2', 'CO', 'CH3OH', 'CH2OH', 'He']
 live_plot_spec = ['H', 'H2', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2', 'C2H4', 'C2H6', 'CH3OH']
 
