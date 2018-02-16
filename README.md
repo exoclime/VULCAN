@@ -126,6 +126,8 @@ Finally, run ```prepipe.py``` as described before.
 VULCAN is distributed under the terms of the GNU General Public License (GPL) license. For more information, see ```GPL_license.txt``` in the main directory.
 
 ## Remarks
+The TEA compendium to reproduce Figure 2. in [Tsai et al. (2017)](https://arxiv.org/abs/1607.00409) can be found [here](https://github.com/exoclime/RRC-Tsai-2017-ApJS-VULCAN).
+
 The project is financially support from the Center for Space and Habitability (CSH), the PlanetS NCCR framework and the Swiss- based MERAC Foundation.
 The Exoclime Simulation Platform ([ESP][1]) develops a set of open-source codes
 for research on exoplanets. The three parts of the ESP are
