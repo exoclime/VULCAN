@@ -1,0 +1,20 @@
+#element abundance file   
+input/element_abundances_vulcan.dat
+
+#elements data file         
+fastchem_src/chem_input/chemical_elements.dat
+
+#species data file    
+input/nasa9_logK_NCHOTi.dat
+
+#accuracy of chemistry iteration
+1.0e-4
+
+#max error of Newton's method
+1.0e-4
+
+#max number of chemistry iterations 
+1000  
+
+#max number of Nelder-Mead iterations
+20000

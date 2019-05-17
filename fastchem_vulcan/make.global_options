@@ -1,0 +1,11 @@
+
+D                    = 
+CXX                  = g++
+CC                   = g++
+SHLIBLD              = g++
+LDFLAGS              = -lm -Wall
+OBJDIR               = obj/
+OBJEXT               = o
+OBJ                  = -o
+CXXFLAGS             = -c -Wall -std=gnu++11 -pedantic -O3 -march=native -MMD
+EXECUTABLE_NAME      = fastchem

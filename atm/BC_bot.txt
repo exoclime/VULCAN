@@ -1,0 +1,12 @@
+#species flux [cm-2 s-1]   v_dep [cm s-1]
+CO            3.7e+11                0.03        
+NH3           7.7e+9                   1.
+N2O           1.0e+9                   0
+NO            7.0e+9                0.016
+NO2              0                    0.1
+NO3              0                    0.1
+HNO3             0                      4.
+CH4           1.4e+11                   0
+
+# N2O5             0                      4. 
+# Earth bottom boundary from Hauglustain 1994  

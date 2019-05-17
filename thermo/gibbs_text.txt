@@ -1,0 +1,39 @@
+corr = kb/1.e6  #P0=1.e6
+
+# the data of 'H2CO' is from Brucat's 2015 
+#C2H NASA 9 new from Brucat
+nasa9 = {} 
+for i in [ _ for _ in spec_list]:
+    nasa9[i] = np.loadtxt('thermo/NASA9/' + str(i) + '.txt')
+    nasa9[i] = nasa9[i].flatten()
+    nasa9[i,'low'] = nasa9[i][0:10]
+    nasa9[i,'high'] = nasa9[i][10:20]
+	
+#H/RT
+def h_RT(T,a):
+    return -a[0]/T**2 + a[1]*np.log(T)/T + a[2] + a[3]*T/2. + a[4]*T**2/3. + a[5]*T**3/4. + a[6]*T**4/5. + a[8]/T
+    
+#s/R    
+def s_R(T,a):
+    return -a[0]/T**2/2. -a[1]/T + a[2]*np.log(T) + a[3]*T + a[4]*T**2/2. + a[5]*T**3/3. + a[6]*T**4/4. + a[9]
+
+#g/RT (non-dimensional)
+def g_RT(T,a_low,a_high): # T has to be 200 < T < 6000 K
+    gi = (T < 1000)*(h_RT(T, a_low)-s_R(T, a_low)) + (T >= 1000)*(h_RT(T, a_high)-s_R(T, a_high))
+
+    return gi
+    
+def gibbs_sp(i,T):
+    gi = g_RT(T,nasa9[i,'low'],nasa9[i,'high'])
+    return gi
+
+#cp/R
+def cp_R(T,a):
+    return a[0]/T**2 + a[1]/T + a[2] + a[3]*T + a[4]*T**2 + a[5]*T**3 + a[6]*T**4
+
+#cp/R of species sp
+def cp_R_sp(i,T):
+    if np.any(np.logical_or(T < 200, T > 6000)):
+        print ('T exceeds the valid range.')
+    cp =  (T < 1000)*cp_R(T,nasa9[i,'low']) + (T >= 1000)*cp_R(T,nasa9[i,'high'])
+    return cp

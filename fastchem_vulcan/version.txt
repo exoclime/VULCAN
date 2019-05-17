@@ -1,0 +1,10 @@
+This is a modified FastChem code (https://github.com/exoclime/fastchem) adopting the NASA 9-coefficients to couple with VULCAN.
+The the main change of this FastChem 2.0 version is allowing arbitrary elemental compositions.
+Copyright (C) 2019 Daniel Kitzmann, Joachim Stock
+Modified by Shami Tsai  14/05/2019
+
+
+The steps I have done to change the original fastchem:
+1. Providing nasa9_logK_NCHOTi.dat
+2. Modify mass_action_constant.cpp for calculating log_K (of all elements too)
+3. In model_main.cpp, change the ouput names: e.g. P (bar) => P 
