@@ -112,7 +112,8 @@ class InitialAbun(object):
             ost = ost[:-1]
             f.write(ost)
         
-        subprocess.call(["./fastchem input/config.input"], shell=True, cwd='fastchem_vulcan/')
+        try: subprocess.check_call(["./fastchem input/config.input"], shell=True, cwd='fastchem_vulcan/') # check_call instead of call can catch the error 
+        except: print ('\n FastChem cannot run properly. Try compile it by running make under /fastchem_vulcan\n'); raise
            
     def ini_y(self, data_var, data_atm): 
         # initial mixing ratios of the molecules
