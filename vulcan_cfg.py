@@ -16,16 +16,14 @@ gibbs_text = 'thermo/gibbs_text.txt'
 cross_folder = 'thermo/leiden_cross/'
 com_file = 'thermo/all_compose.txt'
 atm_file = 'atm/atm_HD189_Kzz.txt'
-sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' # HD189_Moses11.txt #VPL_solar.txt # This is the flux at the stellar surface
+sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' #This is the flux at the stellar surface
 top_BC_mix_file = 'atm/BC_top.txt'
 bot_BC_mix_file = 'atm/BC_bot.txt'
 vul_ini = 'output/moses_HD189.vul'
 output_dir = 'output/'
 plot_dir = 'plot/'
 movie_dir = 'plot/movie/new-HD189/'
-out_name =  'fastchem-test-HD189.vul' #'from2nm-noC2H2-photo_Moses_HD189_nominalKzz.vul' #'photo_NCHO_Moses_HD189_nominalKzz.vul'
-
-#CH4-O2-ini-EQ-HD189.vul
+out_name =  'HD189.vul' 
 
 # ====== Setting up the photochemistry ======
 use_photo = True
@@ -34,7 +32,7 @@ scat_sp = ['H2', 'He'] # # the molecules that contribute to Rayleigh scattering
 r_star = 0.752 #0.752 HD209: 1.118
 orbit_radius = 0.03142 #0.03142 # planet-star distance in A.U.
 sl_angle = 48 /180.*3.14159 # the zenith angle of the star  
-edd = 0.669 #(cos(48 deg) )  # the Eddington coefficient 
+edd = 0.669 #(cos(48 deg) )  # the Eddington coefficient 
 dbin = 0.2
 
 # frequency to update the flux and tau
@@ -68,7 +66,7 @@ remove_list = []
 
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' # the bulk gas of the atmosphere: changes molecular diffsion and some 3-body reactions
-nz = 160
+nz = 120
 use_Kzz = True
 use_vz = 0
 use_moldiff = True
@@ -145,7 +143,7 @@ yconv_min = 0.1
 flux_cri = 5.e-2  #0.1
 flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
 
-count_max = 100#int(2E5)
+count_max = int(2E5)
 
 # ====== Setting up for output and plotting ====== 
 live_plot_frq = 10
@@ -156,8 +154,7 @@ use_plot_evo = True
 plot_TP = 1
 output_humanread = False
 plot_spec = ['H', 'H2', 'CH3', 'CH4', 'CO', 'CH3OH', 'CH2OH', 'He']
-# live_plot_spec = ['H', 'H2', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2', 'C2H4', 'C2H6', 'CH3OH']
-live_plot_spec = ['H', 'H2O', 'CH4', 'CO', 'CO2','C2H2']
+live_plot_spec = ['H', 'H2O', 'CH4', 'CO', 'CO2','HCN']
 
 save_evolution = False
 save_evo_frq = 10
