@@ -17,7 +17,7 @@
 # ====== Setting up the elements included in the network ======
 atom_list = ['H', 'O', 'C', 'N']
 # ====== Set up paths and filenames for the input and output files  ======
-network = 'thermo/test-NCHO_earth_photo_network_v503.txt' #NCHO_earth_photo_network_v118.txt
+network = 'thermo/NCHO_earth_photo_network_.txt'
 gibbs_text = 'thermo/gibbs_text.txt'
 # all the nasa9 files must be placed in the folder: thermo/NASA9/
 cross_folder = 'thermo/leiden_cross/'
@@ -29,7 +29,7 @@ bot_BC_mix_file = 'atm/BC_bot.txt'
 vul_ini = 'output/wsettling-Earth.vul'
 output_dir = 'output/'
 plot_dir = 'plot/'
-out_name =  'rtol02-cap1e-4_e-6_st95_test.vul' #'from2nm-noC2H2-photo_Moses_HD189_nominalKzz.vul' #'photo_NCHO_Moses_HD189_nominalKzz.vul'
+out_name =  'Earth.vul'
 # storing data for every 'out_y_time_freq' step  
 # y_time_freq = 1 
 
@@ -60,8 +60,8 @@ ini_mix = 'const_mix' # 'const_lowT', 'fc_precal' 'vulcan_ini'
 const_mix = {'N2':0.8-(3.5E-4+0.01+5.e-6)/2., 'O2':0.2-(3.5E-4+0.01+5.e-6)/2., 'CO2':3.5E-4,  'H2O':0.01, 'He':5.2e-4}
 
 # from Paul Rimmer
-const_mix = {'N2':0.8012, 'CO':1.13E-7, 'H2':1e-6, 'NO':2.4e-11, 'O2':1.9793e-1, 'CO2':3.5E-4, 'H2O':0.01,\
-'N2O':3.02e-7, 'NH3':2.4e-10, 'CH4':1.939e-6, 'He':5.2e-4} 
+# const_mix = {'N2':0.8012, 'CO':1.13E-7, 'H2':1e-6, 'NO':2.4e-11, 'O2':1.9793e-1, 'CO2':3.5E-4, 'H2O':0.01,\
+# 'N2O':3.02e-7, 'NH3':2.4e-10, 'CH4':1.939e-6, 'He':5.2e-4}
 
 #const_mix = {'N2':0.8-(3.5E-4+0.01+5.e-6)/2., 'O2':0.2-(3.5E-4+0.01+5.e-6)/2., 'CH4': 3.5E-4,  'H2O':0.01, 'He':5.2e-4}
 #const_mix = {'NH3':0.8-(3.5E-4+0.01+5.e-6), 'CO': 0.2456, 'CH4': 3.5E-4, 'H2O':0.01, 'He':5.2e-4}
