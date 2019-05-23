@@ -65,6 +65,7 @@ class ReadRate(object):
         conden_re = False
         photo_re = False
         end_re = False
+        br_read  = False
         
         photo_sp = [] 
                
@@ -96,11 +97,11 @@ class ReadRate(object):
                 elif line.startswith("# re_end"):
                     end_re = True
                     
-                elif line.startswith("# wavelength switch"):
-                    var.wavelen = ast.literal_eval(all_lines[line_indx+1])
-                
-                elif line.startswith("# branching ratio"):
-                    var.br_ratio = ast.literal_eval(all_lines[line_indx+1])
+                elif line.startswith("# braching info start"):
+                    br_read = True
+       
+                elif line.startswith("# braching info end"):
+                    br_read = False
                     
                 # skip common lines and blank lines
                 # ========================================================================================
@@ -205,6 +206,16 @@ class ReadRate(object):
                     
                     i += 2
                 
+                # end_re == True
+                elif br_read == True and not line.startswith("#"):
+                    # read in the quantum yields of photolysis reactions
+                    sp_list = line.partition(':')
+                    sp = sp_list[0]
+                    lists = sp_list[-1]
+                    wavelen_yield = lists.partition(';')
+                    # wavelen_yield is tuple of string in wavelength seitch, ;, Q yield e.g. ('[165.]', ';', '[(1.,0),(0,1.)]')
+                    var.wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
+                    var.br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
                 
         k_fun.update(k_fun_new)
     
@@ -275,6 +286,12 @@ class ReadRate(object):
         list_tri = self.list_tri
         
         special_re = False
+        conden_re = False
+        photo_re = False
+        end_re = False
+        br_read  = False
+        
+        photo_sp = []
                
         with open(vulcan_cfg.network) as f:
             for line in f.readlines():
@@ -297,11 +314,11 @@ class ReadRate(object):
                 elif line.startswith("# re_end"):
                     end_re = True
                     
-                elif line.startswith("# wavelength switch"):
-                    var.wavelen = ast.literal_eval(all_lines[line_indx+1])
-                
-                elif line.startswith("# branching ratio"):
-                    var.br_ratio = ast.literal_eval(all_lines[line_indx+1])
+                elif line.startswith("# braching info start"):
+                    br_read = True
+       
+                elif line.startswith("# braching info end"):
+                    br_read = False
                        
                 # skip common lines and blank lines
                 # ========================================================================================
@@ -372,6 +389,17 @@ class ReadRate(object):
                     var.n_branch[columns[0]] = int(columns[1])
                     
                     i += 2
+                
+                # end_re == True
+                elif br_read == True and not line.startswith("#"):
+                    # read in the quantum yields of photolysis reactions
+                    sp_list = line.partition(':')
+                    sp = sp_list[0]
+                    lists = sp_list[-1]
+                    wavelen_yield = lists.partition(';')
+                    # wavelen_yield is tuple of string in wavelength seitch, ;, Q yield e.g. ('[165.]', ';', '[(1.,0),(0,1.)]')
+                    var.wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
+                    var.br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
                     
         k_fun.update(k_fun_new)
     

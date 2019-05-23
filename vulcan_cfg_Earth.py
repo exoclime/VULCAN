@@ -17,7 +17,7 @@
 # ====== Setting up the elements included in the network ======
 atom_list = ['H', 'O', 'C', 'N']
 # ====== Set up paths and filenames for the input and output files  ======
-network = 'thermo/NCHO_earth_photo_network_.txt'
+network = 'thermo/NCHO_earth_photo_network.txt'
 gibbs_text = 'thermo/gibbs_text.txt'
 # all the nasa9 files must be placed in the folder: thermo/NASA9/
 cross_folder = 'thermo/leiden_cross/'
