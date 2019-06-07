@@ -178,13 +178,16 @@ class InitialAbun(object):
             for sp in vulcan_cfg.condesne_sp:
                 data_atm.sat_mix[sp] = data_atm.sat_p[sp]/data_atm.pco
                 
-                if not vulcan_cfg.ini_mix == 'vulcan_ini':
+                #if not vulcan_cfg.ini_mix == 'vulcan_ini':
                     # TEST Cold trap
                     # np.argmax stops at the first TRUE value and returns its index
-                    conden_lev = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
-                    print ( sp + "Cold trap condensed from nz = " + str(conden_lev))
+                conden_lev = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                if not conden_lev == 0: 
+                    print ( sp + " condensed from nz = " + str(conden_lev) + " (cold trap)")
                     data_var.y[conden_lev:,species.index(sp)] = 0
                     data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
+                else:
+                    print ( sp + " should be condensed from the surface!")
         
         # re-normalisation 
         # TEST
@@ -245,7 +248,7 @@ class Atm(object):
         return data_atm
     
     
-    def load_TPK(self, data_atm, output):
+    def load_TPK(self, data_atm):
         
         PTK_fun = {}
         
@@ -317,29 +320,52 @@ class Atm(object):
         if self.use_vz == False: 
             data_atm.vz = np.zeros(nz-1)   
         
-        if self.use_settling == True:
+        # if self.use_settling == True:
         # TESTing settling velocity
-        #def vs(self, var, atm):
-            dmu = 1.729e-4 # the dynamics viscosity of air
-            for sp in self.non_gas_sp: 
-                if sp == 'H2O_l_s':
-                    cs = 1. # the slip correction factor
-                    rho_p = 1.
-                    r_p = 2.e-4
-                    vs = -2./9*r_p**2* rho_p*self.g *cs/dmu # negative for downward
+        # def vs(self, var, atm):
+            # dmu = 1.729e-4 # the dynamics viscosity of air
+            # for sp in self.non_gas_sp:
+            #     if sp == 'H2O_l_s':
+            #         cs = 1. # the slip correction factor
+            #         rho_p = 1.
+            #         r_p = 2.e-4
+            #         vs = -2./9*r_p**2* rho_p*self.g *cs/dmu # negative for downward
+            #         data_atm.vs[:,species.index(sp)] = vs
             
-                    data_atm.vs[:,species.index(sp)] = vs
+#             # Using Gao 2018 (50)
+#             g = self.g
+#             r_p = 1.e-4
+#             R_uni = kb*Navo # the universal gas const
+#
+#             Ti = 0.5*(data_atm.Tco + np.roll(data_atm.Tco,-1))
+#             Ti = Ti[:-1]
+#             mui = 0.5*(data_atm.mu + np.roll(data_atm.mu,-1))
+#             mui = mui[:-1]
+#             pi = data_atm.pico[1:-1]
+#
+#             data_atm.mui = mui
+#             data_atm.Ti = Ti
+#             data_atm.pi = pi
+#
+#             # mass density of the air
+#             rho_a = pi/Ti/(R_uni/mui)
+#             for sp in self.non_gas_sp:
+#                 if sp == 'H2O_l_s':
+#                     rho_p = 1.
+#                     vs = 0.5*rho_p*g*r_p / rho_a *(np.pi*mui /(2*R_uni*Ti))**0.5
+#                     data_atm.vs[:,species.index(sp)] = vs
         
         
         # calculating and storing M(the third body)
         data_atm.M = data_atm.pco/(kb*data_atm.Tco)
         data_atm.n_0 = data_atm.M.copy()
         
-        # plot T-P profile
-        if vulcan_cfg.plot_TP == True: output.plot_TP(data_atm)
-        
-        # print warning when T exceeds the valid range of Gibbs free energy (NASA polynomials)
-        if np.any(np.logical_or(data_atm.Tco < 200, data_atm.Tco > 6000)): print ('Temperatures exceed the valid range of Gibbs free energy.\n')
+        # moved to f_mu_dz()
+        # # plot T-P profile
+        # if vulcan_cfg.plot_TP == True: output.plot_TP(data_atm)
+        #
+        # # print warning when T exceeds the valid range of Gibbs free energy (NASA polynomials)
+        # if np.any(np.logical_or(data_atm.Tco < 200, data_atm.Tco > 6000)): print ('Temperatures exceed the valid range of Gibbs free energy.\n')
         
         return data_atm
         
@@ -378,7 +404,7 @@ class Atm(object):
         atm.mu = mu
         return atm        
         
-    def f_mu_dz(self, data_var, data_atm):  
+    def f_mu_dz(self, data_var, data_atm, output): # Initilising mean molecular weight and dz 
             
         dz, zco = np.empty(nz), np.zeros(nz+1) # pressure defined at interfaces
         Tco, pico = data_atm.Tco.copy(), data_atm.pico.copy()
@@ -404,6 +430,22 @@ class Atm(object):
         data_atm.dzi = dzi
         data_atm.zmco = zmco
         
+        if self.use_settling == True:
+            # Using Gao 2018 (50)
+            r_p = 1.e-4
+            R_uni = kb*Navo # the universal gas const
+        
+            Ti = 0.5*(Tco + np.roll(Tco,-1))
+            Ti = Ti[:-1]
+            mui = 0.5*(data_atm.mu + np.roll(data_atm.mu,-1))
+            mui = mui[:-1]
+            pi = pico[1:-1]
+        
+        # plot T-P profile
+        if vulcan_cfg.plot_TP == True: output.plot_TP(data_atm)
+        # print warning when T exceeds the valid range of Gibbs free energy (NASA polynomials)
+        if np.any(np.logical_or(data_atm.Tco < 200, data_atm.Tco > 6000)): print ('Temperatures exceed the valid range of Gibbs free energy.\n')
+            
         return data_atm
         
     def read_sflux(self, var, atm):
@@ -480,7 +522,7 @@ class Atm(object):
         # read in the const top BC
         if vulcan_cfg.use_topflux == True: 
             print ("Using the prescribed constant top flux.")
-            with open (vulcan_cfg.top_BC_mix_file) as f:
+            with open (vulcan_cfg.top_BC_flux_file) as f:
                 for line in f.readlines():
                     if not line.startswith("#") and line.strip():
                         li = line.split()                   
@@ -489,7 +531,7 @@ class Atm(object):
         # read in the const bottom BC
         if vulcan_cfg.use_botflux == True: 
             print ("Using the prescribed constant bottom flux.")
-            with open (vulcan_cfg.bot_BC_mix_file) as f:
+            with open (vulcan_cfg.bot_BC_flux_file) as f:
                 for line in f.readlines():
                     if not line.startswith("#") and line.strip():
                         li = line.split()                   
@@ -499,7 +541,7 @@ class Atm(object):
         # using fixed-mixing-ratio BC          
         if vulcan_cfg.use_fix_sp_bot == True: 
             print ("Using the prescribed fixed bottom mixing ratios.")
-            with open (vulcan_cfg.bot_BC_mix_file) as f:
+            with open (vulcan_cfg.bot_BC_flux_file) as f:
                 for line in f.readlines():
                     if not line.startswith("#") and line.strip():
                         li = line.split()                   

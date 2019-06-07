@@ -1,0 +1,15 @@
+#species flux [cm-2 s-1]   v_dep [cm s-1]
+H            0.                  0.02        
+O            0.                  0.02
+O_1          0.                  0.02
+O3           0.                  0.02
+OH           0.                  0.02
+HO2          0.                  0.02
+H2O2         0.                  0.02
+NH3          0.                  0.02
+NO3          0.                  0.02
+N2O5         0.                  0.02
+HNO3         0.                  0.02
+HNO2         0.                  0.02
+
+# Check Zhnle for CHO2??

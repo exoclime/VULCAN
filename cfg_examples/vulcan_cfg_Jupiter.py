@@ -1,48 +1,43 @@
 # ============================================================================= 
-# Summary for the configuration file (vulcan_cfg.py) of VULCAN 
-# More detailed instructions can be found in GitHub project README. 
-# The variable types are indicated in the brackets:
-# int: integer  str: string  float: float  bool: Boolean   
+# Configuration file of VULCAN:  
 # ============================================================================= 
 
 # ====== Setting up the elements included in the network ======
-atom_list = ['H', 'O', 'C', 'He', 'N'] (list): list of elements for checking atom conservation 
-  
+atom_list = ['H', 'O', 'C', 'He']
 # ====== Setting up paths and filenames for the input and output files  ======
 # input:
-network = 'thermo/NCHO_photo_network.txt' (str): the filename of the desinated chemical network (NCHO_earth_photo_network.txt for oxidising/Ear-like atmospheres)
-gibbs_text = 'thermo/gibbs_text.txt' (str): the input text file for make_chem_funs.py 
-(all the nasa9 files must be placed in the folder: thermo/NASA9/)
-cross_folder = 'thermo/photo_cross/' (str): the path of the folder for the UV cross sections 
-com_file = 'thermo/all_compose.txt' (str): the file name of the basic property of chemical species 
-atm_file = 'atm/atm_HD189_Kzz.txt' (str): the file name of the input T-P(-Kzz) profile 
-sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' (str): The stellar flux density at the surface of the star 
-top_BC_flux_file = 'atm/BC_top.txt' (str): the file name of the top boundary for constant flux boundary conditions 
-bot_BC_flux_file = 'atm/BC_bot.txt' (str): the file name of the bottom boundary for constant flux boundary conditions 
-vul_ini = 'output/moses_HD189.vul' (str): the file name of the vulcan output as the intial mixing-ratio profiles, for ini_mix = 'vulcan_ini' and the T-P grids have to be exactly the same
+network = 'thermo/CHO_photo_network_lowT.txt'
+gibbs_text = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
+cross_folder = 'thermo/photo_cross/'
+com_file = 'thermo/all_compose.txt'
+atm_file = 'atm/Jupiter_deep_top.txt'
+sflux_file = 'atm/stellar_flux/VPL_solar.txt' # This is the flux density at the stellar surface
+top_BC_flux_file = 'atm/BC_top_Jupiter.txt'
+bot_BC_flux_file = 'atm/BC_bot.txt'
+vul_ini = 'output/'
 # output:
-output_dir = 'output/' (str): the name of the output directory
-plot_dir = 'plot/' (str): the name of the plot directory
-movie_dir = 'plot/movie/new-HD189/' (str): the name of the movie directory when use_save_movie = True
-out_name =  'HD189.vul' (str): the name of the output file
+output_dir = 'output/'
+plot_dir = 'plot/'
+movie_dir = 'plot/movie/Jupiter/'
+out_name =  'st09-rtol01-Jupiter.vul'
 
 # ====== Setting up the elemental abundance ======
 use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
 # customized elemental abundance (only reads when use_solar = False)
-O_H = 6.0618E-4 (float): O/H ratio
-C_H = 2.7761E-4 (float): C/H ratio 
-N_H = 8.1853E-5 (float): N/H ratio
-He_H = 0.09691  (float): He/H ratio
-ini_mix = 'EQ' (str): Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same),
-which defines how to set the initial compositions based on the elemental abundance 
-const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} (dict): Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix) 
+O_H = 6.0618E-4 *(0.5)  
+C_H = 1.1788E-3  
+#N_H = 8.1853E-5
+He_H = 0.07829
+ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
+# Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
+const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
 
 # ====== Setting up photochemistry ======
 use_photo = True
 # astronomy input
-r_star = 0.752 # stellar radius in solar radius
-orbit_radius = 0.03142 # planet-star distance in A.U.
-sl_angle = 48 /180.*3.14159 # the zenith angle of the star in degree
+r_star = 1 # stellar radius in solar radius
+orbit_radius = 5.2 # planet-star distance in A.U.
+sl_angle = 80 /180.*3.14159 # the zenith angle of the star in degree
 # radiation parameters 
 excit_sp = ['O_1', 'CH2_1'] # N_D not included due to lack of NASA9 Gibbs energy
 scat_sp = ['H2', 'He'] # the bulk compositions that contribute to Rayleigh scattering
@@ -54,8 +49,8 @@ final_update_photo_frq = 10
 
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' # the bulk gas of the atmosphere: affects molecular diffsion
-nz = 120   # number of vertical layers
-P_b = 1.E9 # pressure at the bottom (dyne/cm^2)
+nz = 180   # number of vertical layers
+P_b = 5.E9 # pressure at the bottom (dyne/cm^2)
 P_t = 1.e-2 # pressure at the top (dyne/cm^2)
 use_Kzz = True
 use_moldiff = True
@@ -63,7 +58,7 @@ use_vz = False
 atm_type = 'file' # Options: 'isothermal', 'analytical', or 'file'
 Kzz_prof = 'file' # Options: 'const' or 'file'
 vz_prof = 'const' # Options: 'const' or 'file'
-g = 2140.         # gravity (cm/s^2)  (HD189:2140  HD209:936)
+g = 2479.         # gravity (cm/s^2)  (HD189:2140  HD209:936)
 Tiso = 3000. # only reads when atm_type = 'isothermal'
 # setting the parameters for the analytical T-P from (126)in Heng et al. 2014. Only reads when atm_type = 'analytical' 
 # T_int, T_irr, ka_L, ka_S, beta_S, beta_L
@@ -77,7 +72,7 @@ update_frq = 100
 
 # ====== Setting up the boundary conditions ======
 # Boundary Conditions:
-use_topflux = False
+use_topflux = True
 use_botflux = False
 #use_fix_all_bot = True
 use_fix_sp_bot = False 
@@ -85,15 +80,15 @@ use_fix_sp_bot = False
 # ====== Reactions to be switched off  ======
 remove_list = [] # in pairs e.g. [1,2]
 
-# == Condensation still testing...
-use_condense = False
+# == Condensation (Ongoing testing!)  ======
+use_condense = True
 use_settling = False
-#start_conden_time = 1e10
-condesne_sp = ["H2O"]    # , 'NH3'
-non_gas_sp = ["H2O_l_s"]
+start_conden_time = 1e6
+condesne_sp = ["H2O"]    #'NH3'
+non_gas_sp = ["H2O_l_s"] # 'NH3_l'
 
 # ====== steady state check ======
-st_factor = 0.5
+st_factor = 0.9
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
@@ -107,10 +102,10 @@ dt_max = runtime*1e-5
 dt_var_max = 2.
 dt_var_min = 0.5
 count_min = 120
-count_max = int(2E5)
+count_max = int(1E5)
 atol = 1.E-2 # Try decreasing this if the solutions are not stable
 mtol = 1.E-24
-mtol_conv = 1.E-20
+mtol_conv = 1.E-16
 pos_cut = 0
 nega_cut = -1.
 loss_eps = 1e-1
@@ -138,7 +133,7 @@ use_PIL = True
 live_plot_frq = 10
 save_movie_rate = live_plot_frq
 y_time_freq = 1  #  storing data for every 'y_time_freq' step
-plot_spec = ['H', 'CH4', 'CO', 'CO2','C2H2','HCN'  ,'N2H4','CH3NH2']  
+plot_spec = ['H2O','H2O_l_s', 'CH4','CO', 'CO2', 'C2H2','C2H4','C2H6','C4H2','H']  
 # output:
 output_humanread = False
 save_evolution = False

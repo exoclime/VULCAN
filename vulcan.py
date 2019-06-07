@@ -13,13 +13,13 @@
 #   Sympy
 #   matplotlib 
 #   PIL/Pillow (optional)
-#
+#   C++ compiler (e.g. g++, Clang) for the embede FastChem
 # - Following files in the same directory:
 #   build_atm.py
 #   chem_funs.py
-#   CHO_network.txt (or other text file for the chemical network)
+#   NCHO_photo_network.txt (or other text file for the chemical network)
 #   op.py
-#   prepipe.py
+#   make_chem_funs.py
 #   store.py
 #   vulcan.py
 #   vulcan_cfg.py
@@ -106,7 +106,7 @@ output.save_cfg(dname)
 # construct pico
 data_atm = make_atm.f_pico(data_atm)
 # construct Tco and Kzz 
-data_atm =  make_atm.load_TPK(data_atm, output)
+data_atm =  make_atm.load_TPK(data_atm)
 # construct Dzz (molecular diffusion)
 
 # Only setting up ms (the species molecular weight) if vulcan_cfg.use_moldiff == False
@@ -133,8 +133,8 @@ data_var = ini_abun.ini_y(data_var, data_atm)
 # storing the initial total number of atmos
 data_var = ini_abun.ele_sum(data_var)
 
-# calculating mean molecular weight, dz, and dzi
-data_atm = make_atm.f_mu_dz(data_var, data_atm)
+# calculating mean molecular weight, dz, and dzi and plotting TP
+data_atm = make_atm.f_mu_dz(data_var, data_atm, output)
 
 # specify the BC
 make_atm.BC_flux(data_atm)
@@ -143,7 +143,6 @@ make_atm.BC_flux(data_atm)
 # time-steping in the while loop until conv() returns True or count > count_max 
 
 # setting the numerical solver to the desinated one in vulcan_cfg
-#solver = eval("op." + vulcan_cfg.ode_solver + "()")
 solver_str = vulcan_cfg.ode_solver
 solver = getattr(op, solver_str)()
 

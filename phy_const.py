@@ -1,6 +1,7 @@
 ### Physical const (in cgs)
 kb = 1.38*10**-16    #Boltzmann constant (erg K^-1)
 Navo = 6.022*10**23
+#The universal gas constant R = kn*Navo and the specific gas constant = R_uni/molar mass)
 
 # Planck constant times the light speed
 hc = 1.98644568E-9 # erg.nm

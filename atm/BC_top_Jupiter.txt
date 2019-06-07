@@ -1,0 +1,5 @@
+#species flux [cm-2 s-1]  
+H             1.5E9         
+H2O           4E4             
+CO            4E6     
+CO2           1E4     

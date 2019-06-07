@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.legend as lg
 import time, os, pickle
 import csv, ast
+
 #from builtins import input
 #from collections import defaultdict
 # TODO :test the TODO buldle
@@ -255,6 +256,7 @@ class ReadRate(object):
         Tco = atm.Tco.copy()
         
         # reversing rates and storing into data_var
+        print ('Rates larger than 1e-8:')
         for i in rev_list: 
             var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
             var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
@@ -436,7 +438,6 @@ class ReadRate(object):
         for n, sp in enumerate(photo_sp):
             try: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
             except: print ('\nMissing the cross section from ' + sp)
-            
             if cross_raw[sp]['cross'][0] == 0 or cross_raw[sp]['cross'][-1] ==0:
                 raise IOError ('\n Please remove the zeros in the cross file of ' + sp)
             
@@ -558,7 +559,8 @@ class Integration(object):
         self.output = output
          
         self.odesolver = odesolver
-        self.non_gas_sp = vulcan_cfg.non_gas_sp 
+        self.non_gas_sp = vulcan_cfg.non_gas_sp
+        self.use_settling = vulcan_cfg.use_settling 
         self.g = vulcan_cfg.g
         
         # TEST
@@ -656,6 +658,27 @@ class Integration(object):
         
         data_atm.dz, data_atm.dzi, data_atm.pico = dz, dzi, pico
         
+        # Calculating the settling velocity
+        if self.use_settling == True:
+            # Using Gao 2018 (50)
+            r_p = 1.e-4
+            R_uni = kb*Navo # the universal gas const
+        
+            Ti = data_atm.Ti
+            mui = 0.5*(data_atm.mu + np.roll(data_atm.mu,-1))
+            mui = mui[:-1]
+            pi = data_atm.pico[1:-1]
+            
+            # TEST
+            # mass density of the air
+            rho_a = pi/Ti/(R_uni/mui)
+            data_atm.rho_a = rho_a
+            for sp in self.non_gas_sp:
+                if sp == 'H2O_l_s':
+                    rho_p = 0.9
+                    # negative for downward
+                    data_atm.vs[:,species.index(sp)] = -0.5*rho_p*g*r_p / rho_a *(np.pi*mui /(2*R_uni*Ti))**0.5
+                    
         return data_atm
     
 
@@ -766,12 +789,12 @@ class Integration(object):
         for re in var.conden_re_list:
             if var.Rf[re] == 'H2O -> H2O_l_s':
                 m = 18./Navo
-                rho_p = 1.
+                rho_p = 0.9
                 r_p = 1.e-4 # assuming 1 micron from the stratospheric aerosols in Table 2. [Toon & Farlow]
             
                 rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2O')]-atm.sat_p['H2O']/kb/atm.Tco)/r_p
                 
-                var.rate_c = rate_c
+                #var.rate_c = rate_c
                 
                 var.k[re] = rate_c
                 var.k[re+1] = rate_c
@@ -783,8 +806,11 @@ class Integration(object):
                 var.k[re+1] = np.abs(var.k[re+1])
                 
                 # TEST capping
-                var.k[re] = np.minimum(var.k[re], 1.e-4)
-                var.k[re+1] = np.minimum(var.k[re+1], 1.e-6)
+                #var.k[re] = np.minimum(var.k[re], 1.e-8)
+                #var.k[re+1] = np.minimum(var.k[re+1], 1.e-30)
+                
+                var.k[re] *= 1e-6
+                var.k[re+1] *= 1e-20
                 
                 # /kb/data_atm.Tco is to convert p_sat into n_sat
                 #print ('water conden')
@@ -794,7 +820,7 @@ class Integration(object):
             elif var.Rf[re] == 'NH3 -> NH3_l':
                 m = 17./Navo
                 rho_p = 0.7
-                r_p = 1.e-4
+                r_p = 1.e-4 # assuming 1 micron
             
                 rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('NH3')]-atm.sat_p['NH3']/kb/atm.Tco)/r_p
         
@@ -806,6 +832,13 @@ class Integration(object):
                 # negative: evaporation
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
+                
+                # TEST capping
+                #var.k[re] = np.minimum(var.k[re], 1.e-8)
+                #var.k[re+1] = np.minimum(var.k[re+1], 1.e-30)
+                
+                var.k[re] *= 1e-6
+                var.k[re+1] *= 1e-20
 
         # for sp in vulcan_cfg.condesne_sp:
 #             atm.sat_mix[sp] = atm.sat_p[sp]/atm.pco
@@ -818,18 +851,7 @@ class Integration(object):
         #var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
     
         return var
-    
-    # # TESTing settling velocity
-    # def vs(self, var, atm):
-    #     dmu = 1.729e-4 # the dynamics viscosity of air
-    #     for sp in self.non_gas_sp:
-    #         if sp == 'H2O_l_s':
-    #             cs = 1. # the slip correction factor
-    #             rho_p = 1.
-    #             r_p = 1.e-5
-    #             vs = -2./9*r_p**2* rho_p*self.g *cs/dmu # negative for downward
-    #
-    #             atm.vs[:,species.index(sp)] = vs
+
     
 class ODESolver(object):
     
@@ -869,6 +891,7 @@ class ODESolver(object):
         B[0] += -( (vz[0]<0)*vz[0] )/dzi[0]
         A[-1] += ( (vz[-1]<0)*vz[-1] )/dzi[-1]
         C[-1] += ( (vz[-1]>0)*vz[-1] )/dzi[-1]
+        # vertical adection
         
         for j in range(1,nz-1):  
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
@@ -877,14 +900,10 @@ class ODESolver(object):
             C[j] = 2./(dzi[j-1] + dzi[j])*Kzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]
             
             # vertical adection
-            #A[j] += -0.5*(vz[j]-vz[j-1])/dz_ave
-            #B[j] += -0.5*(vz[j])/dz_ave
-            #C[j] += -0.5*(-vz[j-1])/dz_ave
-            
-            A[j] += -( (vz[j]>0)*vz[j] + (vz[j-1]<0)*vz[j-1] )/dz_ave
+            A[j] += -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
             B[j] += -( (vz[j]<0)*vz[j] )/dz_ave
             C[j] += ( (vz[j-1]>0)*vz[j-1] )/dz_ave
-            #
+            # vertical adection
             
         tmp0 = A[0]*y[0] + B[0]*y[1]
         tmp1 = np.ndarray.flatten( (np.vstack(A[1:nz-1])*y[1:(nz-1)] + np.vstack(B[1:nz-1])*y[1+1:(nz-1)+1] + np.vstack(C[1:nz-1])*y[1-1:(nz-1)-1]) )
@@ -937,11 +956,11 @@ class ODESolver(object):
         B[nz-1] = 0 
         C[nz-1] = 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] 
         
-        # vertical adection
-        A[0] += -0.5*(vz[0])/dzi[0]
-        B[0] += -0.5*(vz[0])/dzi[0]
-        A[-1] +=  0.5*(vz[-1])/dzi[-1]
-        C[-1] += 0.5*(vz[-1])/dzi[-1]
+        # vertical adection (with closed B.C.) 
+        A[0] += -( (vz[0]>0)*vz[0] )/dzi[0]
+        B[0] += -( (vz[0]<0)*vz[0] )/dzi[0]
+        A[-1] += ( (vz[-1]<0)*vz[-1] )/dzi[-1]
+        C[-1] += ( (vz[-1]>0)*vz[-1] )/dzi[-1]
         # vertical adection
         
         # shape of ni-long 1D array
@@ -963,9 +982,10 @@ class ODESolver(object):
             C[j] = 1./dz_ave * Kzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]
             
             # vertical adection
-            A[j] += -0.5*(vz[j]-vz[j-1])/dz_ave
-            B[j] += -0.5*(vz[j])/dz_ave
-            C[j] += -0.5*(-vz[j-1])/dz_ave
+            A[j] += -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            B[j] += -( (vz[j]<0)*vz[j] )/dz_ave
+            C[j] += ( (vz[j-1]>0)*vz[j-1] )/dz_ave
+            # vertical adection
             
             # Ai in the shape of nz*ni and Ai[j] in the shape of ni 
             Ai[j] = -1./dz_ave * ( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j]  
@@ -1039,25 +1059,25 @@ class ODESolver(object):
         B[nz-1] = 0 
         C[nz-1] = 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] 
         
-        # vertical adection
-        A[0] += -0.5*(vz[0])/dzi[0]
-        B[0] += -0.5*(vz[0])/dzi[0]
-        A[-1] +=  0.5*(vz[-1])/dzi[-1]
-        C[-1] += 0.5*(vz[-1])/dzi[-1]
+        # vertical adection (with closed B.C.) 
+        A[0] += -( (vz[0]>0)*vz[0] )/dzi[0]
+        B[0] += -( (vz[0]<0)*vz[0] )/dzi[0]
+        A[-1] += ( (vz[-1]<0)*vz[-1] )/dzi[-1]
+        C[-1] += ( (vz[-1]>0)*vz[-1] )/dzi[-1]
         # vertical adection
         
         # shape of ni-long 1D array
         # Including the settling velocity of the particles
         Ai[0] = -1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[0] +\
-        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -0.5*(vs[0])/dzi[0]  
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]  
         Bi[0] = 1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] +\
-        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -0.5*(vs[0])/dzi[0]
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]<0)*vs[0] )/dzi[0]
         Ci[0] = 0 
         Ai[nz-1] = -1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] \
-        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +0.5*(vs[-1])/dzi[-1]
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]<0)*vs[-1] )/dzi[-1]
         Bi[nz-1] = 0
         Ci[nz-1] = 1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] \
-        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +0.5*(vs[-1])/dzi[-1]
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]>0)*vs[-1] )/dzi[-1]
         
         for j in range(1,nz-1):
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
@@ -1066,15 +1086,16 @@ class ODESolver(object):
             C[j] = 1./dz_ave * Kzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]
             
             # vertical adection
-            A[j] += -0.5*(vz[j]-vz[j-1])/dz_ave
-            B[j] += -0.5*(vz[j])/dz_ave
-            C[j] += -0.5*(-vz[j-1])/dz_ave
+            A[j] += -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            B[j] += -( (vz[j]<0)*vz[j] )/dz_ave
+            C[j] += ( (vz[j-1]>0)*vz[j-1] )/dz_ave
+            # vertical adection
             
             # Ai in the shape of nz*ni and Ai[j] in the shape of ni 
             # Including the settling velocity of the particles
-            Ai[j] = -1./dz_ave * ( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j] -0.5*(vs[j]-vs[j-1])/dz_ave 
-            Bi[j] = 1./dz_ave * Dzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]  -0.5*(vs[j])/dz_ave
-            Ci[j] = 1./dz_ave * Dzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]  -0.5*(-vs[j-1])/dz_ave
+            Ai[j] = -1./dz_ave * ( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j] -( (vs[j]>0)*vs[j] + (vs[j-1]<0)*vs[j-1] )/dz_ave
+            Bi[j] = 1./dz_ave * Dzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]  -( (vs[j]<0)*vs[j] )/dz_ave
+            Ci[j] = 1./dz_ave * Dzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
             
             Ai[j] += 1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
             - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+ alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) ) #/ysum[j]
@@ -1138,9 +1159,9 @@ class ODESolver(object):
             # excluding the buttom and the top cell
             # at j level consists of ni species
             dz_ave = 0.5*(dzi[j-1] + dzi[j]) 
-            dfdy[j_indx[j], j_indx[j]] +=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -0.5*(vz[j]-vz[j-1])/dz_ave 
-            dfdy[j_indx[j], j_indx[j+1]] += 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -0.5*(vz[j])/dz_ave
-            dfdy[j_indx[j], j_indx[j-1]] += 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) -0.5*(-vz[j-1])/dz_ave
+            dfdy[j_indx[j], j_indx[j]] +=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave  
+            dfdy[j_indx[j], j_indx[j+1]] += 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] += 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
             
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] +=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
@@ -1158,7 +1179,7 @@ class ODESolver(object):
         # deposition velocity
         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep / atm.dz[0]
         
-        dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
+        dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
 
@@ -1209,9 +1230,9 @@ class ODESolver(object):
             # excluding the buttom and the top cell
             # at j level consists of ni species
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
-            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -0.5*(vz[j]-vz[j-1])/dz_ave
-            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -0.5*(vz[j])/dz_ave
-            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) -0.5*(-vz[j-1])/dz_ave
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
 
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
@@ -1232,7 +1253,7 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
 
-        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1] 
+        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]  
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
         - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]  
@@ -1274,9 +1295,9 @@ class ODESolver(object):
             # excluding the buttom and the top cell
             # at j level consists of ni species
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
-            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -0.5*(vz[j]-vz[j-1])/dz_ave
-            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -0.5*(vz[j])/dz_ave
-            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) -0.5*(-vz[j-1])/dz_ave
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
     
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         # deposition velocity
@@ -1326,9 +1347,9 @@ class ODESolver(object):
             # excluding the buttom and the top cell
             # at j level consists of ni species
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
-            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -0.5*(vz[j]-vz[j-1])/dz_ave
-            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -0.5*(vz[j])/dz_ave
-            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) -0.5*(-vz[j-1])/dz_ave
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
 
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
@@ -1343,7 +1364,7 @@ class ODESolver(object):
         # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep / atm.dz[0]
         
         # Fix bottom BC
-        print (dfdy[:, j_indx[0]])
+        #print (dfdy[:, j_indx[0]])
         dfdy[:, j_indx[0]] = 0.
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
@@ -1391,9 +1412,9 @@ class ODESolver(object):
             # excluding the buttom and the top cell
             # at j level consists of ni species
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
-            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -0.5*(vz[j]-vz[j-1])/dz_ave
-            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -0.5*(vz[j])/dz_ave
-            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) -0.5*(-vz[j-1])/dz_ave
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
     
         #dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         # deposition velocity (off with fixed all BC)
@@ -1425,7 +1446,7 @@ class ODESolver(object):
         Kzz = atm.Kzz.copy()
         Dzz = atm.Dzz.copy()
         vz = atm.vz.copy()
-        vs = atm.vz.copy()
+        vs = atm.vs.copy()
         alpha = atm.alpha.copy()
         Tco = atm.Tco.copy()
         mu, ms = atm.mu.copy(),  atm.ms.copy()
@@ -1448,35 +1469,35 @@ class ODESolver(object):
             # excluding the buttom and the top cell
             # at j level consists of ni species
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
-            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -0.5*(vz[j]-vz[j-1])/dz_ave
-            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -0.5*(vz[j])/dz_ave
-            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) -0.5*(-vz[j-1])/dz_ave
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
 
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
             +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
-            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )  -0.5*(vs[j]-vs[j-1])/dz_ave
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )  -( (vs[j]>0)*vs[j] - (vs[j-1]<0)*vs[j-1] )/dz_ave
             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
-            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )  -0.5*(vs[j])/dz_ave
+            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )  -( (vs[j]<0)*vs[j] )/dz_ave
             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
-            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )  -0.5*(-vs[j-1])/dz_ave
+            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
     
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]
         # deposition velocity
         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep / atm.dz[0]
         
-        dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] -( (vs[0]<0)*vs[0] )/dzi[0] 
+        dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) -( (vs[0]<0)*vs[0] )/dzi[0]
 
-        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1] +( (vs[-1]<0)*vs[-1] )/dzi[-1] 
+        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]  
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
-        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
-        dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1] +( (vs[-1]>0)*vs[-1] )/dzi[-1]  
+        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]<0)*vs[-1] )/dzi[-1]
+        dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]   
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
-                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]>0)*vs[-1] )/dzi[-1]
 
         return dfdy
             
@@ -1796,8 +1817,10 @@ class ODESolver(object):
     def compute_J(self, var, atm): # the vectorised version
         # change it to trapezoid integral!!!
         flux = var.aflux
-        #cross = var.cross
-        cross = var.cross_J
+        
+        cross = var.cross
+        #cross = var.cross_J
+        
         bins = var.bins
         n_branch = var.n_branch
         wavelen = var.wavelen
@@ -1941,10 +1964,13 @@ class Ros2(ODESolver):
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             for sp in vulcan_cfg.use_fix_sp_bot.keys():
                 sol[0,species.index(sp)] = vulcan_cfg.use_fix_sp_bot[sp]*atm.n_0[0]
-            # surface sink for the particles
-            for sp in self.non_gas_sp:    
+        # surface sink (and top BC for the particles?)
+        if vulcan_cfg.use_condense == True:
+            #pass
+            for sp in self.non_gas_sp:
                 sol[0,species.index(sp)] = 0
-
+                #sol[-1,species.index(sp)] = 0
+                
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
@@ -2187,7 +2213,7 @@ class Output(object):
         plt.figure('live mixing ratios')
         plt.ion()
         color_index = 0
-        for sp in vulcan_cfg.live_plot_spec:
+        for sp in vulcan_cfg.plot_spec:
             if sp in tex_labels: sp_lab = tex_labels[sp]
             else: sp_lab = sp
             if vulcan_cfg.plot_height == False:
@@ -2250,7 +2276,7 @@ class Output(object):
         
         plt.figure('live mixing ratios')
         color_index = 0
-        for sp in vulcan_cfg.live_plot_spec:
+        for sp in vulcan_cfg.plot_spec:
             if vulcan_cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = colors[color_index], label=sp)
                 plt.gca().set_yscale('log')
@@ -2327,15 +2353,19 @@ class Output(object):
             plt.close()
     
     def plot_TP(self, atm):
-        
         plot_dir = vulcan_cfg.plot_dir
-        
         plt.figure('TP')
-        plt.semilogy( atm.Tco, atm.pco/1.e6, c='black')
-        plt.gca().invert_yaxis()
-        plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
+        if vulcan_cfg.plot_height == False:
+            plt.semilogy( atm.Tco, atm.pco/1.e6, c='black')
+            plt.gca().invert_yaxis()
+            plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
+            plt.ylabel("Pressure (bar)")
+        else: # plotting with height
+            
+            line, = plt.plot(atm.Tco, atm.zmco/1.e5, c='black')            
+            plt.ylabel("Height (km)")
+        
         plt.xlabel("Temperature (K)")
-        plt.ylabel("Pressure (bar)")
         plot_name = plot_dir + 'TP.png'
         plt.savefig(plot_name)
         if vulcan_cfg.use_PIL == True:        
