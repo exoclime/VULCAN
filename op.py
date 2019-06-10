@@ -1,3 +1,13 @@
+# ==============================================================================
+# Module includes all the numerical functions VULCAN. 
+# Copyright (C) 2016 Shang-Min Tsai (Shami)                    
+# ==============================================================================
+# ReadRate() reads in the chemical network and construct the rate constants based
+# on the T-P sturcture.
+# Integration() is the backbone of integrating for one time step
+# ODESolver() contains the functions for solving system of ODEs (e.g. dy/dt, Jacobian, etc.)
+# ==============================================================================
+
 import numpy as np
 import scipy
 from scipy import sparse
@@ -806,11 +816,11 @@ class Integration(object):
                 var.k[re+1] = np.abs(var.k[re+1])
                 
                 # TEST capping
-                #var.k[re] = np.minimum(var.k[re], 1.e-8)
-                #var.k[re+1] = np.minimum(var.k[re+1], 1.e-30)
+                var.k[re] = np.minimum(var.k[re], 1.e-6)
+                var.k[re+1] = np.minimum(var.k[re+1], 0)
                 
-                var.k[re] *= 1e-6
-                var.k[re+1] *= 1e-20
+                # var.k[re] *= 1e-6
+#                 var.k[re+1] *= 1e-20
                 
                 # /kb/data_atm.Tco is to convert p_sat into n_sat
                 #print ('water conden')
@@ -2152,9 +2162,11 @@ class Output(object):
         print (para.loss_count)
         print ('delta rejected counter:')
         print (para.delta_count)
-        
+        if vulcan_cfg.use_shark == True: print ("It's a long journey to this shark planet. Don't stop bleeding.")
         print ('------ Live long and prosper \V/ ------') 
-    
+        
+        
+        
     def save_cfg(self, dname):
         output_dir, out_name = vulcan_cfg.output_dir, vulcan_cfg.out_name
         # copy the vulcan_cfg.py file

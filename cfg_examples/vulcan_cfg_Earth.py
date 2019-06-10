@@ -19,7 +19,7 @@ vul_ini = 'output/No-condense-Earth.vul'
 output_dir = 'output/'
 plot_dir = 'plot/'
 movie_dir = 'plot/movie/earth/'
-out_name =  'rtol005-2nd-Earth.vul'
+out_name =  'noNH3ini-nz20-cap1e6e0-2nd-Earth.vul'
 
 # ====== Setting up the elemental abundance ======
 use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
@@ -28,9 +28,12 @@ O_H = 6.0618E-4 *(0.793)
 C_H = 2.7761E-4  
 N_H = 8.1853E-5
 He_H = 0.09691
-ini_mix = 'vulcan_ini' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
+ini_mix = 'const_mix' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
-const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
+const_mix = {'N2':0.8012, 'O2':0.2-(3.5E-4+0.01+5.e-6)/2., 'CO2':3.5E-4,  'H2O':0.01, 'He':5.2e-4}
+
+#const_mix = {'N2':0.8012, 'CO':1.13E-7, 'H2':1e-6, 'NO':2.4e-11, 'O2':1.9793e-1, 'CO2':3.5E-4, 'H2O':0.01,\
+#'N2O':3.02e-7, 'NH3':2.4e-10, 'CH4':1.939e-6, 'He':5.2e-4} 
 
 # ====== Setting up photochemistry ======
 use_photo = True
@@ -49,9 +52,9 @@ final_update_photo_frq = 10
 
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'N2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: affects molecular diffsion
-nz = 100   # number of vertical layers
+nz = 20   # number of vertical layers
 P_b = 1.E6 # pressure at the bottom (dyne/cm^2)
-P_t = 1.e0 # pressure at the top (dyne/cm^2)
+P_t = 1.e1 # pressure at the top (dyne/cm^2)
 use_Kzz = True
 use_moldiff = True
 use_vz = False
@@ -88,7 +91,7 @@ condesne_sp = ["H2O"]    # , 'NH3'
 non_gas_sp = ["H2O_l_s"]
 
 # ====== steady state check ======
-st_factor = 0.95
+st_factor = 0.99
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
@@ -104,18 +107,18 @@ dt_var_min = 0.5
 count_min = 120
 count_max = int(2E5)
 atol = 1.E-2 # Try decreasing this if the solutions are not stable
-mtol = 1.E-22
+mtol = 1.E-20
 mtol_conv = 1.E-16
 pos_cut = 0
 nega_cut = -1.
-loss_eps = 1e-1
+loss_eps = 1e6
 yconv_cri = 0.01 # for checking steady-state
 slope_cri = 1.e-4
-yconv_min = 0.1
+yconv_min = 0.2
 flux_cri = 5.e-2 
 flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
-rtol = 0.05
+rtol = 0.1
 # ====== Setting up numerical parameters for SemiEu/SparSemiEU ODE solver (Not used) ====== 
 PItol = 0.1
 
@@ -136,5 +139,6 @@ y_time_freq = 1  #  storing data for every 'y_time_freq' step
 plot_spec = ['H2O', 'H2O_l_s', 'CO2', 'CH4', 'NO', 'NO2', 'O2', 'O3','N2O', 'NH3']  
 # output:
 output_humanread = False
+use_shark = False
 save_evolution = False
 save_evo_frq = 10

@@ -136,5 +136,6 @@ y_time_freq = 1  #  storing data for every 'y_time_freq' step
 plot_spec = ['H', 'CH4', 'CO', 'CO2','C2H2']  
 # output:
 output_humanread = False
+use_shark = False
 save_evolution = False
 save_evo_frq = 10

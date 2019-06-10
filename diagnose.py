@@ -15,12 +15,14 @@ import chem_funs, op
 from chem_funs import nr, re_wM_dict
 
 # Setting the 2nd input argument as the filename of vulcan output   
-vul_data = 'output/rtol005-continue-1e7conden-evap-cap-Earth.vul'
+vul_data = 'output/st99-nz60-cap1e6e0-2nd-Earth.vul'
 
 # setting the numerical solver to the desinated one in vulcan_cfg
 solver_str = vulcan_cfg.ode_solver
 solver = getattr(op, solver_str)()
 
+# the number of fastest reactions to print out
+top_num = 10
 
 with open(vul_data, 'rb') as handle:
   data = pickle.load(handle)
@@ -38,10 +40,11 @@ for re in range(1,nr+1):
 
 # 1+ is to shift the index to match starting with R1  
 re_sort_indx = 1 + np.argsort(max_re_list)[::-1]
-top_20 = re_sort_indx[0:20]
-for re in top_20:
+#rate_sort = np.sort(max_re_list)[::-1]
+top_re = re_sort_indx[0:top_num]
+for re in top_re:
     print (re)
-    if re % 2 == 1: print (data['variable']['Rf'][re])
+    if re % 2 == 1: print (data['variable']['Rf'][re] + ' max rate: ' + "{:.2e}".format(max_re_list[re-1]))
     else: print('The reverse of ' + str(data['variable']['Rf'][re-1]))
      
 #plt.figure()

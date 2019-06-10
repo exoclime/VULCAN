@@ -3,7 +3,7 @@
 # ============================================================================= 
 
 # ====== Setting up the elements included in the network ======
-atom_list = ['H', 'O', 'C', 'He', 'N']
+atom_list = ['H', 'O', 'C', 'N']
 # ====== Setting up paths and filenames for the input and output files  ======
 # input:
 network = 'thermo/NCHO_photo_network.txt'
@@ -28,9 +28,9 @@ O_H = 6.0618E-4 *100.
 C_H = 2.7761E-4 *100. 
 N_H = 8.1853E-5 *100. 
 He_H = 0.09691
-ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
+ini_mix = 'const_mix' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
-const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
+const_mix = {'CO2':0.96, 'N2': 0.03, 'O2': 1.3E-3, 'H2O': 3E-4} 
 
 # ====== Setting up photochemistry ======
 use_photo = True
@@ -40,7 +40,7 @@ orbit_radius = 0.02887 # planet-star distance in A.U.
 sl_angle = 48 /180.*3.14159 # the zenith angle of the star in degree
 # radiation parameters 
 excit_sp = ['O_1', 'CH2_1'] # N_D not included due to lack of NASA9 Gibbs energy
-scat_sp = ['H2', 'He'] # the bulk compositions that contribute to Rayleigh scattering
+scat_sp = ['CO2'] # the bulk compositions that contribute to Rayleigh scattering
 edd = 0.669 #(cos(48 deg) ) # the Eddington coefficient 
 dbin = 0.2  # the uniform bin width
 # frequency to update the flux and optical depth
@@ -64,7 +64,7 @@ Tiso = 3000. # only reads when atm_type = 'isothermal'
 # T_int, T_irr, ka_L, ka_S, beta_S, beta_L
 para_gj436 = [130.,  900., 0.05, 0.002, 1., 1.]
 para_anaTP = para_gj436
-const_Kzz = 1.E8 # (cm^2/s) Only reads when use_Kzz = True and Kzz_prof = 'const'
+const_Kzz = 1.E12 # (cm^2/s) Only reads when use_Kzz = True and Kzz_prof = 'const'
 const_vz = 0 # (cm/s) Only reads when use_vz = True and vz_prof = 'const'
 
 # frequency for updating dz and dzi due to change of mu
@@ -136,5 +136,6 @@ y_time_freq = 1  #  storing data for every 'y_time_freq' step
 plot_spec = ['H', 'CH4', 'CO', 'CO2','C2H2','HCN','NH3','N2']  
 # output:
 output_humanread = False
+use_shark = False
 save_evolution = False
 save_evo_frq = 10

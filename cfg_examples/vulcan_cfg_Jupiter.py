@@ -102,7 +102,7 @@ dt_max = runtime*1e-5
 dt_var_max = 2.
 dt_var_min = 0.5
 count_min = 120
-count_max = int(1E5)
+count_max = int(5E5)
 atol = 1.E-2 # Try decreasing this if the solutions are not stable
 mtol = 1.E-24
 mtol_conv = 1.E-16
@@ -136,5 +136,6 @@ y_time_freq = 1  #  storing data for every 'y_time_freq' step
 plot_spec = ['H2O','H2O_l_s', 'CH4','CO', 'CO2', 'C2H2','C2H4','C2H6','C4H2','H']  
 # output:
 output_humanread = False
+use_shark = False
 save_evolution = False
 save_evo_frq = 10
