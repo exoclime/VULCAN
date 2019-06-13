@@ -22,7 +22,7 @@ re_wM_dict = chem_funs.re_wM_dict
 
 # the pathway (conversion of the 2 species) to analise
 conv_sp = ('CH4', 'CO')
-# the pressure level to analise (in cgs)
+# the pressure level to analise (in cgs unit)
 p_ana_list = [1e6, 1e3]
 
 vul_data = 'output/HD189.vul'
@@ -57,7 +57,6 @@ for p_ana in p_ana_list:
 
     #remove_fw_re = [523,197,383,207,193,127,153, 309] # 295,293,319
     remove_fw_re = [547,566,368]
-    remove_fw_re = []
     remove_re = list(remove_fw_re)
     [remove_re.append(re+1) for re in remove_fw_re]
 
@@ -183,15 +182,15 @@ for p_ana in p_ana_list:
                 
                 # or chekcing the pathway in the end and remove the CH3 + CO one???
                 
-                if neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
-                    print (distance[(now, neighbor)][1])
-                
-                
-                
-                if neighbor in unvisited_distance.keys() and connection == False or \
-                neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
+                # if neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
+                #     print (distance[(now, neighbor)][1])
+                #
+                #
+                #
+                # if neighbor in unvisited_distance.keys() and connection == False or \
+                # neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
                     
-                #if neighbor in unvisited_distance.keys() and end not in re_reat[ distance[(now, neighbor)][1] ]: # never check the visited nodes again!
+                if neighbor in unvisited_distance.keys(): # never check the visited nodes again!
                 #and neighbor != ini and neighbor != end
                     
                     #if connection==True:
