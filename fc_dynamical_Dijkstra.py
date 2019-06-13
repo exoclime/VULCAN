@@ -7,6 +7,7 @@ import pydot
 import os, sys
 from PIL import Image 
 import pickle
+import math
 
 # import VULCAN modules
 import store, op
@@ -14,28 +15,29 @@ import vulcan_cfg
 from phy_const import kb, Navo
 import chem_funs
 
+
 species = chem_funs.spec_list
 re_dict = chem_funs.re_dict
 re_wM_dict = chem_funs.re_wM_dict
 
-# options for adding more paths
-use_add_more = False
+# the pathway (conversion of the 2 species) to analise
+conv_sp = ('CH4', 'CO')
+# the pressure level to analise (in cgs)
+p_ana_list = [1e6, 1e3]
 
-# the pathway (conversion of the 2 species) to analize
-conv_sp = ('CH4', 'C4H2')
-
-vul_data = 'output/helios_HD189.vul'
+vul_data = 'output/HD189.vul'
 with open(vul_data, 'rb') as handle:
   data = pickle.load(handle)
 
 vulcan_spec = data['variable']['species']
-pco_indx_range = [-5,-20]
 
 
-for p_indx in pco_indx_range:
-    # the pressure to analize
-    p_ana = data['atm']['pco'][p_indx]/1.e6
-    T_ana = data['atm']['Tco'][p_indx]/1.e6
+for p_ana in p_ana_list:
+    # Find the index of pco closest to p_ana
+    p_indx = min( range(len(data['atm']['pco'])), key=lambda i: abs(data['atm']['pco'][i]-p_ana))
+    # pressure and T from the vulcan data
+    pp = data['atm']['pco'][p_indx]
+    T_ana = data['atm']['Tco'][p_indx]
     # the third body
     mm = p_ana*1.e6/kb/T_ana
 
@@ -54,7 +56,8 @@ for p_indx in pco_indx_range:
     #ana_sp = [ 'CH4', 'CH3',  'N', 'NH', 'CN', 'HCN', 'NO', 'NH2', 'N2', 'NH3', 'N2H2', 'N2H', 'N2H3', 'N2H4', 'CH3NH', 'CH2NH', 'CH2NH2', 'CH3NH2', 'HNO', 'H2CN', 'HNCO', 'CH3NO', 'NO2', 'HNO2']
 
     #remove_fw_re = [523,197,383,207,193,127,153, 309] # 295,293,319
-    remove_fw_re = [115,317,531,203,559,241,189]
+    remove_fw_re = [547,566,368]
+    remove_fw_re = []
     remove_re = list(remove_fw_re)
     [remove_re.append(re+1) for re in remove_fw_re]
 
@@ -100,20 +103,20 @@ for p_indx in pco_indx_range:
 
 
     # Reading rates
+    re_prod, re_reat = {}, {}
     for re in range(1,nr+1): 
         if not re in remove_re:
-            re_prod = [prod for prod in re_dict[re][0] if prod in ana_sp]
-            re_reat = [reat for reat in re_dict[re][1] if reat in ana_sp]
+            re_prod[re] = [prod for prod in re_dict[re][0] if prod in ana_sp]
+            re_reat[re] = [reat for reat in re_dict[re][1] if reat in ana_sp]
 
             comb = []
-            for prod in re_prod:
-                for reat in re_reat:
+            for prod in re_prod[re]:
+                for reat in re_reat[re]:
                     comb.append((prod, reat)) #tuple
             re_comb[re] = comb
 
             # collecting rates (not rate constants) for each combination in ana_comb
             for pair in re_comb[re]:
-
                 if pair in ana_comb or pair[::-1] in ana_comb:
                     rate_const = data['variable']['k'][re][p_indx]
                     this_rate = rate_const
@@ -154,7 +157,7 @@ for p_indx in pco_indx_range:
         self.nodes = ana_sp
         self.edges = edges
         self.distance = maxRate
-
+        
     g = Graph()
 
     def shortest_path(graph, ini, end):
@@ -173,7 +176,28 @@ for p_indx in pco_indx_range:
 
         while unvisited_distance: # while unvisited_distance is not empty
             for neighbor in edges[now]:
-                if neighbor in unvisited_distance.keys(): # never check the visited nodes again!
+                #if neighbor == 'CO': print ((now,neighbor))
+                
+                if math.isnan(distance[(now, neighbor)][1]) == True: connection = False
+                else: connection = True
+                
+                # or chekcing the pathway in the end and remove the CH3 + CO one???
+                
+                if neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
+                    print (distance[(now, neighbor)][1])
+                
+                
+                
+                if neighbor in unvisited_distance.keys() and connection == False or \
+                neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
+                    
+                #if neighbor in unvisited_distance.keys() and end not in re_reat[ distance[(now, neighbor)][1] ]: # never check the visited nodes again!
+                #and neighbor != ini and neighbor != end
+                    
+                    #if connection==True:
+                        #print (re_reat[ distance[(now, neighbor)][1] ])
+                
+    
                     rate = distance[(now, neighbor)][0]
                     if not rate == 0:
                         temp_distance = distance_indx[now] + 1./rate 
@@ -202,7 +226,7 @@ for p_indx in pco_indx_range:
                     goback = prev[goback]
                 return (path[::-1], distance_indx)
             elif unvisited_distance[next_now] == np.inf:
-                print 'Not connected!'
+                print ('Not connected!')
                 break
         
 
@@ -284,9 +308,9 @@ for p_indx in pco_indx_range:
             gdot.add_edge(edge)
 
 
-    outfile = 'plot/pathways/dynamic_' + conv_sp[0]+"-"+conv_sp[1]+'_' + "{:0.1E}".format(p_ana) + '_bar_T' + str(int(T_ana))+'_path.png'
+    outfile = 'plot/pathway/dynamic_' + conv_sp[0]+"-"+conv_sp[1]+'_' + "{:0.1E}".format(p_ana) + '_bar_T' + str(int(T_ana))+'_path.png'
     gdot.write_png(outfile)
     plot = Image.open(outfile)
     plot.show()
-    gdot.write_pdf('plot/pathways/dynamic_' + conv_sp[0]+"-"+conv_sp[1]+'_' + "{:0.1E}".format(p_ana) + '_bar_T' + str(int(T_ana))+'_path.pdf')
+    gdot.write_pdf('plot/pathway/dynamic_' + conv_sp[0]+"-"+conv_sp[1]+'_' + "{:0.1E}".format(p_ana) + '_bar_T' + str(int(T_ana))+'_path.pdf')
 

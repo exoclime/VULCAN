@@ -19,7 +19,7 @@ vul_ini = 'output/moses_HD189.vul'
 output_dir = 'output/'
 plot_dir = 'plot/'
 movie_dir = 'plot/movie/new-HD189/'
-out_name =  'db01-HD189.vul'
+out_name =  'HD189.vul'
 
 # ====== Setting up the elemental abundance ======
 use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
@@ -42,7 +42,7 @@ sl_angle = 48 /180.*3.14159 # the zenith angle of the star in degree
 excit_sp = ['O_1', 'CH2_1'] # N_D not included due to lack of NASA9 Gibbs energy
 scat_sp = ['H2', 'He'] # the bulk compositions that contribute to Rayleigh scattering
 edd = 0.669 #(cos(48 deg) ) # the Eddington coefficient 
-dbin = 0.1  # the uniform bin width
+dbin = 0.2  # the uniform bin width
 # frequency to update the flux and optical depth
 ini_update_photo_frq = 100
 final_update_photo_frq = 10
@@ -133,7 +133,7 @@ use_PIL = True
 live_plot_frq = 10
 save_movie_rate = live_plot_frq
 y_time_freq = 1  #  storing data for every 'y_time_freq' step
-plot_spec = ['H', 'CH4', 'CO', 'CO2','C2H2','HCN'  ,'N2H4','CH3NH2']  
+plot_spec = ['H', 'CH4', 'CO', 'CO2','C2H2', 'NH3', 'HCN']  
 # output:
 output_humanread = False
 use_shark = False
