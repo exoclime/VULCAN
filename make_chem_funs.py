@@ -337,8 +337,9 @@ def make_chemdf(re_table, ofname):
     # save output
     chem_dict_r = {}
     spec_list = []
-        
-    ofstr = "#!/usr/bin/python\n\nfrom scipy import *\nimport numpy as np\nfrom phy_const import kb, Navo\nimport vulcan_cfg\n\n"
+    
+    python_executable_path = sys.executable    
+    ofstr = "#!" + python_executable_path + "\nfrom scipy import *\nimport numpy as np\nfrom phy_const import kb, Navo\nimport vulcan_cfg\n\n"
     ofstr += "'''\n## Reaction ##\n\n"
     ofstr += re_table + "\n\n"
 

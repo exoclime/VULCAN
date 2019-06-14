@@ -62,6 +62,8 @@ os.environ["OMP_NUM_THREADS"] = "1"
 if len(sys.argv) < 2 or sys.argv[1] != '-n': 
     # running prepipe to construch chem_funs.py
     print ('Making chem_funs.py ...')
+    python_executable = sys.executable
+    os.system(python_executable + ' make_chem_funs.py')
     os.system('python make_chem_funs.py')
 else: pass
 

@@ -42,7 +42,7 @@ make
 
 After compiling finished, go back to the main directory of VULCAN and run 
 ```
-python vulcan.py -n 
+python vulcan.py
 ```
 
 You should see the default model for HD 189733b starts running with real-time plotting, how cool is that! This will take about 10-15 minutes to complete depending on your comuputer. Don't resist yourself from just staring at this live plotting -- it is almost like mindfulness meditation.
