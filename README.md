@@ -1,5 +1,6 @@
 # VULCAN
 #### Authors: Shang-Min (Shami) Tsai ####
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 Photochemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python code.
 VULCAN is implemented with the equilibrium chemistry code [FastChem](https://github.com/exoclime/FastChem)  created by Daniel Kitzmann, Joachim Stock, to initialise a state in chemical equilibrium. 
 
@@ -42,7 +43,7 @@ make
 
 After compiling finished, go back to the main directory of VULCAN and run 
 ```
-python vulcan.py
+python vulcan.py -n 
 ```
 
 You should see the default model for HD 189733b starts running with real-time plotting, how cool is that! This will take about 10-15 minutes to complete depending on your comuputer. Don't resist yourself from just staring at this live plotting -- it is almost like mindfulness meditation.
@@ -142,10 +143,6 @@ After changing the network, you can examine all the readable information, like t
 All the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc, are prescribed in ```vulcan_cfg.py```. A useful summary describing what every parameter does can be found in ```vulcan_cfg_readme.txt```.
 
 ### Boundary Condistions ###
-
-
-## License
-VULCAN is distributed under the terms of the GNU General Public License (GPL) license. For more information, see ```GPL_license.txt``` in the main directory.
 
 ## Remarks
 The project is financially support from the Center for Space and Habitability (CSH), the PlanetS NCCR framework and the Swiss-based MERAC Foundation.
