@@ -2169,6 +2169,11 @@ class Output(object):
         
     def save_cfg(self, dname):
         output_dir, out_name = vulcan_cfg.output_dir, vulcan_cfg.out_name
+        if not os.path.exists(output_dir):
+            print ('The output directory assigned in vulcan_cfg.py does not exist.')
+            print( 'Directory ' , output_dir,  " created.")
+            os.mkdir(output_dir)
+
         # copy the vulcan_cfg.py file
         with open('vulcan_cfg.py' ,'r') as f:
             cfg_str = f.read()
@@ -2177,7 +2182,12 @@ class Output(object):
     def save_out(self, var, atm, para, dname): 
         output_dir, out_name = vulcan_cfg.output_dir, vulcan_cfg.out_name
         output_file = dname + '/' + output_dir + out_name
-
+        
+        if not os.path.exists(output_dir):
+            print ('The output directory assigned in vulcan_cfg.py does not exist.')
+            print( 'Directory ' , output_dir,  " created.")
+            os.mkdir(output_dir)
+            
         # convert lists into numpy arrays
         for key in var.var_evol_save:
             as_nparray = np.array(getattr(var, key))
