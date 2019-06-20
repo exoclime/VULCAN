@@ -1,11 +1,11 @@
 ### Physical const (in cgs)
-kb = 1.38*10**-16    #Boltzmann constant (erg K^-1)
-Navo = 6.022*10**23
-#The universal gas constant R = kn*Navo and the specific gas constant = R_uni/molar mass)
+# values taken from the astropy package (http://docs.astropy.org/en/stable/index.html) 
+kb = 1.38064852E-16    #Boltzmann constant (erg K^-1)
+Navo = 6.02214086E+23  #Avogadro's number 
+#The universal gas constant R = kb * Navo and the specific gas constant = R_uni/molar mass)
 
-# Planck constant times the light speed
-hc = 1.98644568E-9 # erg.nm
-au = 1.4959787E13  # cm
-r_sun = 6.957E10 # cm
-ag0 = 0 # the asymmetry factor (0 for isotropic scattering)
-#edd = 1. # the first Edditon coefficient (0.5-1)
+hc = 1.98644582E-9 # Planck constant times the light speed (erg nm)
+au = 1.49597871E13  # Astronomical Unit (cm)
+r_sun = 6.957E10 # solar radius (cm)
+r_jup = 7.1492E9 # Jupiter equatorial radius (cm)
+ag0 = 0 # the asymmetry factor in RT (0 for isotropic scattering)
