@@ -117,10 +117,6 @@ class AtmData(object):
             self.exc_conden = [_ for _ in range(ni) if spec_list[_] not in vulcan_cfg.non_gas_sp]
         # TEST condensation excluding non-gaseous species
         
-        # # put in build atm ?
-        # if vulcan_cfg.atm_base == 'H2'
-        #     self.Dzz = dict([( (sp, ) , np.zeros(nz)) for sp in var.photo_sp for bn in range(n_branch[sp]+1) ])
-        #
 
 class Parameters(object):
     """

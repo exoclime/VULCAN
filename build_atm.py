@@ -13,7 +13,7 @@ import chem_funs
 from chem_funs import ni, nr  # number of species and reactions in the network
 species = chem_funs.spec_list
 
-###
+### read in the basic chemistry data
 with open(vulcan_cfg.com_file, 'r') as f:
     columns = f.readline() # reading in the first line
     num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass") 
@@ -151,14 +151,12 @@ class InitialAbun(object):
               vul_data = pickle.load(handle) 
             
             y_ini = np.copy(vul_data['variable']['y'])
-            data_var.y = np.copy(y_ini)
         
         elif vulcan_cfg.ini_mix == 'const_mix':
-            
             y_ini = np.zeros((nz,ni))
             for sp in vulcan_cfg.const_mix.keys():
                 y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp]
-            data_var.y = np.copy(y_ini)
+
             
         else:
             
@@ -272,7 +270,7 @@ class Atm(object):
             
             if self.Kzz_prof == 'const':     
                 atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
-                p_file, T_file = atm_table['Pressure'], atm_table['Temp']
+                p_file, T_file = atm_table['Pressure']*1e6, atm_table['Temp']
             
             elif self.Kzz_prof == 'file':
                 atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
