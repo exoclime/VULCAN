@@ -875,7 +875,6 @@ class ODESolver(object):
         function of eddy diffusion without molecular diffusion, with zero-flux boundary conditions and non-uniform grids (dzi)
         in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
         """
-        
         y = y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
@@ -919,7 +918,15 @@ class ODESolver(object):
         tmp2 = (A[nz-1]*y[nz-1] +C[nz-1]*y[nz-2]) 
         diff = np.append(np.append(tmp0, tmp1), tmp2)
         diff = diff.reshape(nz,ni)
-
+        
+        if vulcan_cfg.use_topflux == True:
+            # Don't forget dz!!! -d phi/ dz
+            ### the const flux has no contribution to the jacobian ### 
+            diff[-1] += atm.top_flux / atm.dz[-1]
+        if vulcan_cfg.use_botflux == True:
+            ### the deposition term needs to be included in the jacobian!!!   
+            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) / atm.dz[0]
+            
         return diff
     
     def diffdf(self, y, atm): 
@@ -1675,14 +1682,9 @@ class ODESolver(object):
         # Note!!! Matej's mu is defined in the outgoing hemisphere so his mu<0
         # My cos[sl_angle] is always 0<=mu<=1
         # Converting my mu to Matej's mu (e.g. 45 deg -> 135 deg)
-        
-        
-        
-        
+      
         mu_ang = -1.*np.cos(vulcan_cfg.sl_angle)
-    
         edd = vulcan_cfg.edd
-        
         tau = var.tau
         
         # delta_tau (length nz) is used in the transmission function
@@ -1945,7 +1947,7 @@ class Ros2(ODESolver):
         if vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == False:
             diffdf = self.diffdf
             jac_tot = self.lhs_jac_tot
-        if vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == True:
+        elif vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == True:
             diffdf = self.diffdf_settling
             jac_tot = self.lhs_jac_settling
         else:
