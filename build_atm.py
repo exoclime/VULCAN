@@ -153,7 +153,6 @@ class InitialAbun(object):
             y_ini = np.copy(vul_data['variable']['y'])
         
         elif vulcan_cfg.ini_mix == 'const_mix':
-            y_ini = np.zeros((nz,ni))
             for sp in vulcan_cfg.const_mix.keys():
                 y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp]
 
@@ -196,8 +195,9 @@ class InitialAbun(object):
         else:
             ysum = np.sum(y_ini, axis=1).reshape((-1,1))
         
-        data_var.ymix = y_ini/ysum
         data_var.y_ini = np.copy(y_ini)
+        data_var.ymix = y_ini/ysum
+        
         return data_var
         
 
