@@ -36,7 +36,17 @@ if not os.path.exists(plot_dir):
 plot_spec = tuple(plot_spec.split(','))
 nspec = len(plot_spec)
 
-colors = ['c','b','g','r','m','y','k','orange','pink','grey','darkred','darkblue','salmon','chocolate','steelblue','plum','hotpink']
+# These are the "Tableau 20" colors as RGB.    
+tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
+             (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),    
+             (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),    
+             (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),    
+             (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]    
+
+# Scale the RGB values to the [0, 1] range, which is the format matplotlib accepts.    
+for i in range(len(tableau20)):    
+    r, g, b = tableau20[i]    
+    tableau20[i] = (r / 255., g / 255., b / 255.)
 
 # tex labels for plotting
 tex_labels = {'H':'H','H2':'H$_2$','O':'O','OH':'OH','H2O':'H$_2$O','CH':'CH','C':'C','CH2':'CH$_2$','CH3':'CH$_3$','CH4':'CH$_4$','HCO':'HCO','H2CO':'H$_2$CO', 'C4H2':'C$_4$H$_2$',\
@@ -50,17 +60,16 @@ with open(vul_data, 'rb') as handle:
 
 color_index = 0
 vulcan_spec = data['variable']['species']
-for sp in plot_spec:
+for color_index,sp in enumerate(plot_spec):
     if color_index == len(colors): # when running out of colors
         colors.append(tuple(np.random.rand(3)))
     
     if sp in tex_labels: sp_lab = tex_labels[sp]
     else: sp_lab = sp  
     
-    plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['pco']/1.e6, color=colors[color_index], label=sp_lab, lw=1.5)
-    plt.plot(data['variable']['y_ini'][:,vulcan_spec.index(sp)]/data['atm']['n_0'], data['atm']['pco']/1.e6, color=colors[color_index], ls=':', lw=1.5) # plotting the initial (equilibrium) abundances
-    
-    color_index +=1
+    plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['pco']/1.e6, color=tableau20[color_index], label=sp_lab, lw=1.5)
+    plt.plot(data['variable']['y_ini'][:,vulcan_spec.index(sp)]/data['atm']['n_0'], data['atm']['pco']/1.e6, color=tableau20[color_index], ls=':', lw=1.5) # plotting the initial (equilibrium) abundances
+
       
 plt.gca().set_xscale('log')       
 plt.gca().set_yscale('log') 

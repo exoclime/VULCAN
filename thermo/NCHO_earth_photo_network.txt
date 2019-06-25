@@ -271,7 +271,7 @@
 507	[ O_1 + NO2 -> O2 + NO               ]  3.01E-10     0.000       0.0      1975GAU/SNE27          300
 509	[ CH2_1 + H2 -> CH3 + H              ]  1.27E-10     0.000       0.0                        
 511	[ CH2_1 + H2 -> CH2 + H2             ]  1.26E-11     0.000       0.0
-513	[ He -> He                           ]  0            0.          0.0      dummy reaction    
+513	[ Ar -> Ar                           ]  0            0.          0.0      dummy reaction    
 
 # 3-body and Disscoiation Reactions
 # id	# Reactions                         	A_0     	B_0     	C_0     	A_inf   	B_inf   	C_inf		Ref 		  	Temp

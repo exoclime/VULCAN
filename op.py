@@ -716,9 +716,9 @@ class Integration(object):
         y, ymix, y_time, t_time = var.y.copy(), var.ymix.copy(), var.y_time, var.t_time
         count = para.count
         
-        slope_min = min( np.amin(atm.Kzz)/np.amax(0.1*atm.Hp)**2 , 1.e-8)
+        #slope_min = min( np.amin(atm.Kzz)/np.amax(0.1*atm.Hp)**2 , 1.e-8)
+        slope_min = min( np.amin(atm.Kzz/(0.1*atm.Hpi)**2) , 1.e-8)
         slope_min = max(slope_min, 1.e-12)
-        
         #print ('slope_min= ' + "{:.2e}".format(slope_min))
         
         # if t < trun_min: indx = -100
@@ -815,8 +815,9 @@ class Integration(object):
                 var.k[re+1] = np.abs(var.k[re+1])
                 
                 # TEST capping
-                var.k[re] = np.minimum(var.k[re], 1.e-6)
-                var.k[re+1] = np.minimum(var.k[re+1], 0)
+                rate_mix = np.amax(atm.Kzz/(0.5*atm.Hpi)**2) # the max rate (shortest tau_dyn)
+                var.k[re] = np.minimum(var.k[re], rate_mix)
+                var.k[re+1] = 0
                 
                 # var.k[re] *= 1e-6
 #                 var.k[re+1] *= 1e-20
@@ -1980,7 +1981,8 @@ class Ros2(ODESolver):
             #pass
             for sp in self.non_gas_sp:
                 sol[0,species.index(sp)] = 0
-                #sol[-1,species.index(sp)] = 0
+                # TEST top sink
+                # sol[-1,species.index(sp)] = 0
                 
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
@@ -2236,20 +2238,20 @@ class Output(object):
         plt.figure('live mixing ratios')
         plt.ion()
         color_index = 0
-        for sp in vulcan_cfg.plot_spec:
+        for color_index, sp in enumerate(vulcan_cfg.plot_spec):
             if sp in tex_labels: sp_lab = tex_labels[sp]
             else: sp_lab = sp
             if vulcan_cfg.plot_height == False:
-                line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = colors[color_index], label=sp_lab)
+                line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab)
                 plt.gca().set_yscale('log')
                 plt.gca().invert_yaxis()
                 plt.ylabel("Pressure (bar)")
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
-                line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp_lab)
+                line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab)
+                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
                 plt.ylabel("Height (km)")
                 
-            color_index +=1
             images.append((line,))
         
         plt.title(str(para.count)+' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
@@ -2308,6 +2310,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp)
+                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
                 plt.ylabel("Height (km)")
             color_index +=1
                   
