@@ -64,7 +64,6 @@ if len(sys.argv) < 2 or sys.argv[1] != '-n':
     print ('Making chem_funs.py ...')
     python_executable = sys.executable
     os.system(python_executable + ' make_chem_funs.py')
-    os.system('python make_chem_funs.py')
 else: pass
 
 # import VULCAN modules
@@ -114,9 +113,8 @@ data_atm =  make_atm.load_TPK(data_atm)
 # Only setting up ms (the species molecular weight) if vulcan_cfg.use_moldiff == False
 make_atm.mol_diff(data_atm)
 
-# TEST
 # calculating the saturation pressure
-make_atm.sp_sat(data_atm)
+if vulcan_cfg.use_condense == True: make_atm.sp_sat(data_atm)
 
 # for reading rates
 rate = op.ReadRate()
