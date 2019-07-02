@@ -265,13 +265,13 @@ class ReadRate(object):
         Tco = atm.Tco.copy()
         
         # reversing rates and storing into data_var
-        print ('Rates larger than 1e-8:')
+        print ('Rates greater than 1e-6:')
         for i in rev_list: 
             var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
             var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
             
-            if np.any(var.k[i] > 1.e-8): print ('R' + str(i) + ':  ' + str(np.amax(var.k[i])) )
-            if np.any(var.k[i-1] > 1.e-8): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )
+            if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + ':  ' + str(np.amax(var.k[i])) )
+            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )
         return var
         
     
@@ -815,7 +815,7 @@ class Integration(object):
                 var.k[re+1] = np.abs(var.k[re+1])
                 
                 # TEST capping
-                rate_mix = np.amax(atm.Kzz/(0.5*atm.Hpi)**2) # the max rate (shortest tau_dyn)
+                rate_mix = np.amax(atm.Kzz/(atm.Hpi)**2) # the max rate (shortest tau_dyn)
                 var.k[re] = np.minimum(var.k[re], rate_mix)
                 var.k[re+1] = 0
                 
@@ -2204,7 +2204,7 @@ class Output(object):
         else: plt.close()
         
         # making the save dict
-        var_save = {'species':species}
+        var_save = {'species':species, 'nr':nr}
         
         for key in var.var_save:
             var_save[key] = getattr(var, key)
@@ -2249,7 +2249,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab)
-                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
+                plt.ylim((atm.zco[0]/1e5,80))
                 plt.ylabel("Height (km)")
                 
             images.append((line,))
@@ -2310,7 +2310,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp)
-                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
+                plt.ylim((atm.zco[0]/1e5,80))
                 plt.ylabel("Height (km)")
             color_index +=1
                   

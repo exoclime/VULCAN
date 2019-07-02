@@ -15,23 +15,60 @@ import vulcan_cfg
 from phy_const import kb, Navo
 import chem_funs
 
+# The chemical network in vulcan_cfg.py needs to be the same as the one used in the vulcan ouput file (vul_data)
+# no arguments or not setting '-n' (no re-making chem_funs.py) option
+if len(sys.argv) < 2 or sys.argv[1] != '-n': 
+    # running prepipe to construch chem_funs.py
+    print ('Making chem_funs.py ...')
+    python_executable = sys.executable
+    os.system(python_executable + ' make_chem_funs.py')
+else: pass
 
-species = chem_funs.spec_list
-re_dict = chem_funs.re_dict
-re_wM_dict = chem_funs.re_wM_dict
-
-# the pathway (conversion of the 2 species) to analise
-conv_sp = ('CH4', 'CO')
-# the pressure level to analise (in cgs unit)
-p_ana_list = [1e6, 1e3]
+# the pressure level to analise (in cgs)
+p_ana_list = [1e0]
 
 vul_data = 'output/HD189.vul'
 with open(vul_data, 'rb') as handle:
   data = pickle.load(handle)
-
 vulcan_spec = data['variable']['species']
 
+### read in the basic chemistry data
+with open(vulcan_cfg.com_file, 'r') as f:
+    columns = f.readline() # reading in the first line
+    num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass") 
+type_list = ['int' for i in range(num_ele)]
+type_list.insert(0,'U20'); type_list.append('float')
+compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=type_list)
+# dtype=None in python 2.X but Sx -> Ux in python3
+compo_row = list(compo['species'])
 
+species = chem_funs.spec_list
+re_dict = chem_funs.re_dict
+re_wM_dict = chem_funs.re_wM_dict
+np.set_printoptions(threshold=np.inf)
+
+# the pathway (conversion of the 2 species) to analise
+conv_sp = ('N2', 'HCN')
+# Chooseing the common element of the two species to track, e.g. for CH4 -> CO, one should be interested in the flow of C
+atom = 'N'
+# species to analize
+tmp_list, ana_sp = list(species), []
+for sp in tmp_list:
+    if not compo[compo_row.index(sp)][atom] == 0: 
+        ana_sp.append(sp)
+print ('Including species with ' + str(atom) + ':\n' + str(ana_sp))
+
+# all the combination from ana_sp
+ana_comb = list(itertools.combinations(ana_sp, 2))
+
+remove_fw_re = []
+remove_re = list(remove_fw_re)
+[remove_re.append(re+1) for re in remove_fw_re]
+remove_pair = []
+for pair in remove_pair:  
+    if pair in ana_comb: ana_comb.remove(pair)
+    if pair[::-1] in ana_comb: ana_comb.remove(pair[::-1])
+        
 for p_ana in p_ana_list:
     # Find the index of pco closest to p_ana
     p_indx = min( range(len(data['atm']['pco'])), key=lambda i: abs(data['atm']['pco'][i]-p_ana))
@@ -40,33 +77,6 @@ for p_ana in p_ana_list:
     T_ana = data['atm']['Tco'][p_indx]
     # the third body
     mm = p_ana*1.e6/kb/T_ana
-
-    # species to analize
-    ana_sp = list(species)
-    ana_sp.remove('He')
-    ana_sp.remove('H')
-    ana_sp.remove('H2')
-    ana_sp.remove('OH')
-    ana_sp.remove('H2O')
-
-    # all C species
-    #ana_sp = [ 'CH4', 'CH3', 'CH2', 'CH', 'C', 'CO', 'CO2','C2',  'C2H3', 'C2H5', 'C2H6', 'C2H4', 'H2CO', 'HCO', 'CH2OH', 'CH3OH', 'CH3O',  'CH3CO', 'C2H', 'C2H2']
-
-    # all N species
-    #ana_sp = [ 'CH4', 'CH3',  'N', 'NH', 'CN', 'HCN', 'NO', 'NH2', 'N2', 'NH3', 'N2H2', 'N2H', 'N2H3', 'N2H4', 'CH3NH', 'CH2NH', 'CH2NH2', 'CH3NH2', 'HNO', 'H2CN', 'HNCO', 'CH3NO', 'NO2', 'HNO2']
-
-    #remove_fw_re = [523,197,383,207,193,127,153, 309] # 295,293,319
-    remove_fw_re = [547,566,368]
-    remove_re = list(remove_fw_re)
-    [remove_re.append(re+1) for re in remove_fw_re]
-
-
-    # all the combination from ana_sp
-    ana_comb = list(itertools.combinations(ana_sp, 2))
-    remove_pair = []
-    for pair in remove_pair:  
-        if pair in ana_comb: ana_comb.remove(pair)
-        if pair[::-1] in ana_comb: ana_comb.remove(pair[::-1])
 
     # store the combination of prod and reac
     re_comb = {}
@@ -117,21 +127,28 @@ for p_ana in p_ana_list:
             # collecting rates (not rate constants) for each combination in ana_comb
             for pair in re_comb[re]:
                 if pair in ana_comb or pair[::-1] in ana_comb:
-                    rate_const = data['variable']['k'][re][p_indx]
-                    this_rate = rate_const
-                    for sp in re_wM_dict[re][0]: # Looping all the "reactants" including M
-
-                        if not sp == 'M': 
-                            this_rate *= float(data['variable']['y'][p_indx,vulcan_spec.index(sp)]) 
+                    # for the reverse of the photodissociation
+                    #print (re)
+                    if np.all(data['variable']['k'][re]== 0): 
+                        #print (str(re) + '  passs')
+                        pass
                     
-                        elif sp == 'M': this_rate *= mm
-                        else: raise IOError ('\nUnknow species name in the network.')
+                    else:
+                        rate_const = data['variable']['k'][re][p_indx]
+                        this_rate = rate_const
+                        for sp in re_wM_dict[re][0]: # Looping all the "reactants" including M
 
-                    if np.abs(this_rate) > maxRate[pair][0]: 
-                        maxRate[pair][0] = np.abs(this_rate)
-                        maxRate[pair][1] = re
-                    netRate_pair[pair] +=  this_rate
+                            if not sp == 'M': 
+                                this_rate *= float(data['variable']['y'][p_indx,vulcan_spec.index(sp)]) 
+                    
+                            elif sp == 'M': this_rate *= mm
+                            else: raise IOError ('\nUnknow species name in the network.')
 
+                        if np.abs(this_rate) > maxRate[pair][0]: 
+                            maxRate[pair][0] = np.abs(this_rate)
+                            maxRate[pair][1] = re
+                        netRate_pair[pair] +=  this_rate
+                        
     # Calculating the contribution of the main reactions in maxRate
     for pair in ana_comb:
         if netRate_pair[pair] == 0:
@@ -159,7 +176,7 @@ for p_ana in p_ana_list:
         
     g = Graph()
 
-    def shortest_path(graph, ini, end):
+    def shortest_path(graph, ini, end, skip):
         edges = graph.edges.copy()
         distance = graph.distance.copy()
 
@@ -167,7 +184,7 @@ for p_ana in p_ana_list:
         distance_indx = defaultdict(lambda:np.inf)
         distance_indx[ini] = 0
         unvisited_distance = {node: np.inf for node in list(graph.nodes)}
-        visited, path = [], []
+        visited, path, path_re = [], [], []
         prev = {}
         nodes = set(graph.nodes)
         # the current node
@@ -175,30 +192,12 @@ for p_ana in p_ana_list:
 
         while unvisited_distance: # while unvisited_distance is not empty
             for neighbor in edges[now]:
-                #if neighbor == 'CO': print ((now,neighbor))
-                
-                if math.isnan(distance[(now, neighbor)][1]) == True: connection = False
-                else: connection = True
-                
-                # or chekcing the pathway in the end and remove the CH3 + CO one???
-                
-                # if neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
-                #     print (distance[(now, neighbor)][1])
-                #
-                #
-                #
-                # if neighbor in unvisited_distance.keys() and connection == False or \
-                # neighbor in unvisited_distance.keys() and connection == True and end not in re_reat[ distance[(now, neighbor)][1] ]:
-                    
                 if neighbor in unvisited_distance.keys(): # never check the visited nodes again!
-                #and neighbor != ini and neighbor != end
-                    
-                    #if connection==True:
-                        #print (re_reat[ distance[(now, neighbor)][1] ])
-                
-    
                     rate = distance[(now, neighbor)][0]
-                    if not rate == 0:
+                    if not rate == 0 and end not in re_prod[ distance[(now, neighbor)][1] ] and distance[(now, neighbor)][1] not in skip\
+                    and (ini not in re_prod[ distance[(now, neighbor)][1] ] and ini not in re_reat[ distance[(now, neighbor)][1] ] or now == ini): # meaning it is connected (otherewise rate would be 0)
+                    # and the end product is not allowed to participate the reaction
+
                         temp_distance = distance_indx[now] + 1./rate 
 
                         if temp_distance < distance_indx[neighbor]: 
@@ -214,16 +213,18 @@ for p_ana in p_ana_list:
             # select the node that is marked with the smallest distance_indx from ALL unvisited nodes
             next_now = min(unvisited_distance,key=unvisited_distance.get) # key = xx.get gives the access to the values
             now = next_now
-    
+            
             # check if stops 
-            if now == end: 
+            if now == end:
+                # visited sotres all the "footprints" including all attemps
                 visited.append(now)
                 path.append(now)
                 goback = now
                 while not goback==ini:
                     path.append(prev[goback])
+                    path_re.append(maxRate[(goback,prev[goback])][1])
                     goback = prev[goback]
-                return (path[::-1], distance_indx)
+                return (path[::-1], path_re[::-1], distance_indx)
             elif unvisited_distance[next_now] == np.inf:
                 print ('Not connected!')
                 break
@@ -231,7 +232,7 @@ for p_ana in p_ana_list:
 
     # Plotting     
     # Creating path graph
-    gdot = pydot.Dot(graph_type='digraph', rankdir="LR", center='True') # graph_type='graph' for non-directional
+    gdot = pydot.Dot(graph_type='digraph',  center='True') # graph_type='graph' for non-directional
 
     # to weed out taking the same reaction twice
     # e.g. R1: A + B -> C + D 
@@ -242,8 +243,65 @@ for p_ana in p_ana_list:
     # the dominant reaction for B -> C to be B + X -> C + "A" should not be allowed!!!
 
 
-
-    path, time_lables = shortest_path(g, conv_sp[0], conv_sp[1])
+    repet_re = []
+    loop_indx = 1
+    while True:
+        round_trip = False
+        path, path_re, time_lables = shortest_path(g, conv_sp[0], conv_sp[1], repet_re)
+        print ('Try ' + str(loop_indx) + ':' )
+        print (path_re)
+        for re in path_re:
+            if re % 2 ==1: # only checking the forward reactions is enough
+                if re+1 in path_re:
+                    # when a round trip has been taken i.e. R1 forward and R2 back
+                    # Try remove R1 and keep R2, then remove R2 and keep R1
+                    # If still casues a loop, remove both R1 and R2
+                    
+                    temp_skip = repet_re.copy()
+                    path_1, path_re_1, time_lables_1 = shortest_path(g, conv_sp[0], conv_sp[1], temp_skip + [re])
+                    path_2, path_re_2, time_lables_2 = shortest_path(g, conv_sp[0], conv_sp[1], temp_skip + [re+1])
+                    
+                    for re in path_re_1:
+                        if re % 2 ==1: 
+                            if re+1 in path_re_1: rm_1 = False
+                            else: rm_1 = True
+                            
+                    for re in path_re_2:
+                        if re % 2 ==1: 
+                            if re+1 in path_re_2: rm_2 = False
+                            else: rm_2 = True
+                    
+                    if path_re_1 and path_re_2:
+                        min_rate_1, min_rate_2 = np.inf, np.inf
+                        max_rate_1, max_rate_2 = 0., 0.
+                        for sp in path_1:
+                            if not sp==path_1[-1]:
+                                pair = (sp, (path_1[path_1.index(sp)+1]))
+                                if maxRate[pair][0] < min_rate_1:
+                                    min_rate_1 = maxRate[pair][0]
+                        for sp in path_2:
+                            if not sp==path_2[-1]:
+                                pair = (sp, (path_2[path_2.index(sp)+1]))
+                                if maxRate[pair][0] < min_rate_2:
+                                    min_rate_2 = maxRate[pair][0]
+                        
+                        if max_rate_1 > max_rate_2: path, path_re, time_lables = path_1, path_re_1, time_lables_1
+                        else:  path, path_re, time_lables = path_2, path_re_2, time_lables_2
+                        break
+                        
+                    elif path_re1:
+                        path, path_re, time_lables = path_1, path_re_1, time_lables_1
+                        break
+                    elif path_re2:
+                        path, path_re, time_lables = path_2, path_re_2, time_lables_2
+                        break
+                    else:
+                        repet_re.append(re)
+                        repet_re.append(re+1)
+                        round_trip = True
+            
+        if round_trip == False: break
+        
     pathway = {}
     min_rate = np.inf
     max_rate = 0.
@@ -306,7 +364,12 @@ for p_ana in p_ana_list:
 
             gdot.add_edge(edge)
 
-
+    
+    if not os.path.exists('plot/pathway/'):
+        print ('The directory for pathway plots does not exist.')
+        print( 'Directory ' , 'plot/pathway/',  " created.")
+        os.mkdir('plot/pathway/')
+        
     outfile = 'plot/pathway/dynamic_' + conv_sp[0]+"-"+conv_sp[1]+'_' + "{:0.1E}".format(p_ana) + '_bar_T' + str(int(T_ana))+'_path.png'
     gdot.write_png(outfile)
     plot = Image.open(outfile)
