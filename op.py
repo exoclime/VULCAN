@@ -717,7 +717,7 @@ class Integration(object):
         count = para.count
         
         #slope_min = min( np.amin(atm.Kzz)/np.amax(0.1*atm.Hp)**2 , 1.e-8)
-        slope_min = min( np.amin(atm.Kzz/(0.1*atm.Hpi)**2) , 1.e-8)
+        slope_min = min( np.amin(atm.Kzz/(0.1*atm.Hp[:-1])**2) , 1.e-8)
         slope_min = max(slope_min, 1.e-12)
         #print ('slope_min= ' + "{:.2e}".format(slope_min))
         

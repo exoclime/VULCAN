@@ -37,11 +37,8 @@ plot_spec = tuple(plot_spec.split(','))
 nspec = len(plot_spec)
 
 # These are the "Tableau 20" colors as RGB.    
-tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
-             (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),    
-             (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),    
-             (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),    
-             (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]    
+tableau20 = [(31, 119, 180),(255, 127, 14),(44, 160, 44),(214, 39, 40),(148, 103, 189),(140, 86, 75), (227, 119, 194),(127, 127, 127),(188, 189, 34),(23, 190, 207),\
+(174, 199, 232),(255, 187, 120),(152, 223, 138),(255, 152, 150),(197, 176, 213),(196, 156, 148),(247, 182, 210),(199, 199, 199),(219, 219, 141),(158, 218, 229)] 
 
 # Scale the RGB values to the [0, 1] range, which is the format matplotlib accepts.    
 for i in range(len(tableau20)):    
@@ -61,8 +58,8 @@ with open(vul_data, 'rb') as handle:
 color_index = 0
 vulcan_spec = data['variable']['species']
 for color_index,sp in enumerate(plot_spec):
-    if color_index == len(colors): # when running out of colors
-        colors.append(tuple(np.random.rand(3)))
+    if color_index == len(tableau20): # when running out of colors
+        tableau20.append(tuple(np.random.rand(3)))
     
     if sp in tex_labels: sp_lab = tex_labels[sp]
     else: sp_lab = sp  
