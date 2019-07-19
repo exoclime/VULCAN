@@ -270,12 +270,11 @@ class Atm(object):
             
             if self.Kzz_prof == 'const':     
                 atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
-                p_file, T_file = atm_table['Pressure']*1e6, atm_table['Temp']
+                p_file, T_file = atm_table['Pressure'], atm_table['Temp']
             
             elif self.Kzz_prof == 'file':
                 atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
                 p_file, T_file, Kzz_file = atm_table['Pressure'], atm_table['Temp'], atm_table['Kzz']
-            
             else: raise IOError ('\n"Kzz_prof" (the type of Kzz profile) cannot be recongized.\nPlease assign it as "file" or "const" in vulcan_cfg.')
 
             if self.vz_prof == 'const': data_atm.vz = np.repeat(self.const_vz,nz-1)
@@ -290,7 +289,7 @@ class Atm(object):
             # store Tco in data_atm
             try:
                 data_atm.Tco = PTK_fun['pT'](data_atm.pco)
-            
+                
             # for SciPy earlier than v0.18.0
             except ValueError:
                 PTK_fun['pT'] = interpolate.interp1d(p_file, T_file, assume_sorted = False, bounds_error=False, fill_value=T_file[np.argmin(p_file)] )  
@@ -455,9 +454,7 @@ class Atm(object):
         for n, ld in enumerate(var.bins):
             var.sflux_top[n] = inter_sflux(ld) * (vulcan_cfg.r_star*r_sun/(au*vulcan_cfg.orbit_radius) )**2 # 1/Pi for a half-hemisphere
             # not converting to actinic flux yet *1/(hc/ld)  
-            
-            # for TOA 1AU Earth
-            #var.sflux_top[n] = inter_sflux(ld) * (1./vulcan_cfg.orbit_radius)**2 /(hc/ld)
+
     
     def mol_diff(self, atm):
         '''

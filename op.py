@@ -2241,6 +2241,8 @@ class Output(object):
         for color_index, sp in enumerate(vulcan_cfg.plot_spec):
             if sp in tex_labels: sp_lab = tex_labels[sp]
             else: sp_lab = sp
+            if color_index == len(para.tableau20): # when running out of colors
+                tableau20.append(tuple(np.random.rand(3)))
             if vulcan_cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab)
                 plt.gca().set_yscale('log')
