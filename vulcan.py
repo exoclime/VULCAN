@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 # ==============================================================================
 # This is the main file of VULCAN: the chemical kinetics code.                      

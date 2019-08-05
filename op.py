@@ -1830,8 +1830,8 @@ class ODESolver(object):
         # change it to trapezoid integral!!!
         flux = var.aflux
         
-        cross = var.cross
-        #cross = var.cross_J
+        #cross = var.cross
+        cross = var.cross_J
         
         bins = var.bins
         n_branch = var.n_branch
