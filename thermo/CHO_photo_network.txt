@@ -117,8 +117,7 @@
 483	[ O_1 + CH4 -> H2CO + H2             ]  7.51E-12     0.000       0.0                        
 485	[ O_1 + C2H6 -> C2H5 + OH            ]  6.29E-10     0.000       0.0                        
 487	[ O_1 + H2O -> OH + OH               ]  1.62E-10     0.000     -65.0                        
-489	[ O_1 + CO2 -> O + CO2               ]  7.41E-11     0.000    -120.0                        
-491	[ O_1 + NH3 -> OH + NH2              ]  2.51E-10     0.000       0.0                        
+489	[ O_1 + CO2 -> O + CO2               ]  7.41E-11     0.000    -120.0                                            
 493	[ CH2_1 + H2 -> CH3 + H              ]  1.27E-10     0.000       0.0                        
 495	[ CH2_1 + H2 -> CH2 + H2             ]  1.26E-11     0.000       0.0
 221	[  He -> He  ]                      	0.00E+00	0.000   	0.0 
@@ -167,28 +166,28 @@
  
 # photo disscoiation (no reversals!) 		# use sp to link br_index to RXXX
 # id	# Reactions                         sp		br_index #(starting from 1)			
-599	[ H2O -> H + OH                      ]       		H2O		1			 
+599	[ H2O -> H + OH                      ]              H2O		1			 
 601	[ H2O -> H2 + O_1                    ]              H2O		2	
 603	[ H2O -> H + H + O                   ]              H2O		3      
-605	[ CH4 -> CH3 + H                     ]       		CH4		1     
+605	[ CH4 -> CH3 + H                     ]              CH4		1     
 607	[ CH4 -> CH2_1 + H2                  ]              CH4		2	
 609	[ CH4 -> CH2_1 + H + H               ]              CH4		3  
-611	[ CH4 -> CH + H2 + H                 ] 				CH4		4
-613	[ CH3 -> CH + H2                     ] 				CH3		1
+611	[ CH4 -> CH + H2 + H                 ]              CH4		4
+613	[ CH3 -> CH + H2                     ]              CH3		1
 615	[ CH3 -> CH2_1 + H                   ]              CH3		2
-617	[ CO -> C + O                        ]				CO		1
-619	[ H2 -> H + H                        ] 				H2		1
-621	[ C2H2 -> C2H + H                    ]				C2H2	1
-623	[ C2H2 -> C2 + H2                    ]				C2H2	2
-625	[ CO2 -> CO + O                      ]				CO2		1
+617	[ CO -> C + O                        ]              CO		1
+619	[ H2 -> H + H                        ]              H2		1
+621	[ C2H2 -> C2H + H                    ]              C2H2	1
+623	[ C2H2 -> C2 + H2                    ]              C2H2	2
+625	[ CO2 -> CO + O                      ]              CO2		1
 627	[ CO2 -> CO + O_1                    ]              CO2     2
-629	[ C2H4 -> C2H2 + H2	                 ]				C2H4	1
-631	[ C2H4 -> C2H2 + H + H	             ]				C2H4	2
-633	[ C2H4 -> C2H3 + H		             ]				C2H4	3
-635	[ C2H6 -> C2H4 + H2                  ]				C2H6	1
-637	[ C2H6 -> C2H4 + H + H               ]				C2H6	2
-639	[ C2H6 -> C2H2 + H2 + H2             ]				C2H6	3
-641	[ C2H6 -> CH4 + CH2_1                ]				C2H6	4
+629	[ C2H4 -> C2H2 + H2	                 ]              C2H4	1
+631	[ C2H4 -> C2H2 + H + H	             ]              C2H4	2
+633	[ C2H4 -> C2H3 + H		             ]              C2H4	3
+635	[ C2H6 -> C2H4 + H2                  ]              C2H6	1
+637	[ C2H6 -> C2H4 + H + H               ]              C2H6	2
+639	[ C2H6 -> C2H2 + H2 + H2             ]              C2H6	3
+641	[ C2H6 -> CH4 + CH2_1                ]              C2H6	4
 643	[ C2H6 -> CH3 + CH3                  ]              C2H6	5
 645	[ OH -> H + O                        ]              OH      1
 647	[ HCO -> H + CO                      ]              HCO     1
