@@ -41,7 +41,7 @@ sl_angle = 48 /180.*3.14159 # the zenith angle of the star in degree
 # radiation parameters 
 excit_sp = ['O_1', 'CH2_1'] # N_D not included due to lack of NASA9 Gibbs energy
 scat_sp = ['H2', 'He'] # the bulk compositions that contribute to Rayleigh scattering
-edd = 0.669 #(cos(48 deg) ) # the Eddington coefficient 
+edd = 0.5  # the Eddington coefficient 
 dbin = 0.2  # the uniform bin width
 # frequency to update the flux and optical depth
 ini_update_photo_frq = 100
