@@ -1716,7 +1716,7 @@ class ODESolver(object):
         ''' Beer's law for the intensity'''
         var.sflux = var.sflux_top *  np.exp(-1.*tau/np.cos(vulcan_cfg.sl_angle) ) 
         # converting the intensity to flux for the raditive transfer calculation
-        dir_flux = var.sflux*np.cos(vulcan_cfg.sl_angle)
+        dir_flux = var.sflux # without multiplying the zenith angle
         
         # scattering
         # the transmission function (length nz)
