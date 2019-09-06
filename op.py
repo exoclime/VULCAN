@@ -1716,7 +1716,7 @@ class ODESolver(object):
         ''' Beer's law for the intensity'''
         var.sflux = var.sflux_top *  np.exp(-1.*tau/np.cos(vulcan_cfg.sl_angle) ) 
         # converting the intensity to flux for the raditive transfer calculation
-        dir_flux = var.sflux # without multiplying the zenith angle
+        dir_flux = var.sflux*np.cos(vulcan_cfg.sl_angle) # multiplied by the zenith angle for calculating the diffuse flux
         
         # scattering
         # the transmission function (length nz)
@@ -1741,10 +1741,7 @@ class ODESolver(object):
         ll = np.minimum(ll, 1.e10)
         ll = np.maximum(ll, -1.e10)
         
-        
-        
-        
-        
+
         # 2D: nz * nbins
         chi = zeta_m**2*tran**2 - zeta_p**2
         xi = zeta_p*zeta_m*(1.-tran**2)
@@ -1773,8 +1770,7 @@ class ODESolver(object):
         for j in range(1,nz+1):        
             var.dflux_u[j] = 1./chi[j-1]*(phi[j-1]*var.dflux_u[j-1] - xi[j-1]*var.dflux_d[j] + i_u[j-1]/mu_ang )
         
-        
-        
+
         #print ("time passed...")
         #print (timeit.default_timer() - start_time)
         
@@ -1787,11 +1783,12 @@ class ODESolver(object):
         
         
         # the average flux from the direct beam
-        ave_dir_flux = 0.5*( dir_flux[:-1] + dir_flux[1:]) 
+        # !!! WITHOUT multiplied by the cos zenith angle (flux per unit area perpendicular to the direction of propagationat) !!! 
+        ave_dir_flux = 0.5*( var.sflux[:-1] + var.sflux[1:]) 
         # devided by the Eddington coefficient to recover the intensity then multiplied by 4pi to get the integrated flux
         tot_flux = ave_dir_flux + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1])/edd 
         
-        
+    
         # ### Debug
         
         #var.ave_int = ave_int
@@ -1808,7 +1805,6 @@ class ODESolver(object):
         # var.tot_scat = tot_scat
         # var.tran = tran
         # var.delta_tau = delta_tau
-        
         
         ### Debug
         if np.any(tot_flux< -1.e-20):
