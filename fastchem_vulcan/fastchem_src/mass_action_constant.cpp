@@ -35,7 +35,8 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 {
   double_type thermal_energy = 1.0e-6 * CONST_K * temperature;
   double_type log_K;
-  double_type log_C, log_H, log_N, log_O, log_Ti, log_V;
+  double_type log_C, log_H, log_N, log_O, log_Ti, log_V, log_Cl, log_S, log_P, log_Si, log_Km, log_Na, log_Mg, log_F;
+  // Km: potassium since log_K has already been used
 
   if (temperature <= 1000.0) {
 	log_K = mass_action_coeff[0]/2.* std::pow(temperature, -2.)
@@ -88,6 +89,79 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 	- 1./12*1.372845314E-08*pow(temperature, 3.)
 	+ 1./20*4.168388810E-12*pow(temperature, 4.)
 	- 5.820664360E+04/temperature + 9.524567490E+00;
+ 
+   log_Cl = 2.276215854E+04/2.* std::pow(temperature, -2.)
+	+ 2.168413293E+02*( (1+std::log(temperature))/temperature )
+	- 2.745185115E+00*(1-std::log(temperature))
+	+ 1./2*2.451101694E-03*temperature
+	- 1./6*5.458011990E-06*std::pow(temperature, 2.)
+	+ 1./12*4.417986880E-09*std::pow(temperature, 3.)
+	- 1./20*1.288134004E-12*std::pow(temperature, 4.)
+	- 1.501357068E+04/temperature + 3.102963457E+00;
+	   
+   log_Km = 9.665143930E+00/2.* std::pow(temperature, -2.)
+	+ 1.458059455E-01*( (1+std::log(temperature))/temperature )
+	- 2.500865861E+00*(1-std::log(temperature))
+	- 1./2*2.601219276E-06*temperature
+	+ 1./6*4.187306580E-09*std::pow(temperature, 2.)
+	- 1./12*3.439722110E-12*std::pow(temperature, 3.)
+	+ 1./20*1.131569009E-15*std::pow(temperature, 4.)
+	- 9.959493490E+03/temperature + 5.035822260E+00;
+
+   log_Na = 0.000000000E+00/2.* std::pow(temperature, -2.)
+	- 0.000000000E+00*( (1+std::log(temperature))/temperature )
+	- 2.500000000E+00*(1-std::log(temperature))
+	+ 1./2*0.000000000E+00*temperature
+	+ 1./6*0.000000000E+00*std::pow(temperature, 2.)
+	+ 1./12*0.000000000E+00*std::pow(temperature, 3.)
+	+ 1./20*0.000000000E+00*std::pow(temperature, 4.)
+	- 1.218382949E+04/temperature + 4.244028180E+00;
+
+   log_Mg = 0.000000000E+00/2.* std::pow(temperature, -2.)
+	- 0.000000000E+00*( (1+std::log(temperature))/temperature )
+	- 2.500000000E+00*(1-std::log(temperature))
+	+ 1./2*0.000000000E+00*temperature
+	+ 1./6*0.000000000E+00*std::pow(temperature, 2.)
+	+ 1./12*0.000000000E+00*std::pow(temperature, 3.)
+	+ 1./20*0.000000000E+00*std::pow(temperature, 4.)
+	- 1.694658761E+04/temperature + 3.634330140E+00;
+	   
+   log_S = -3.174841820E+02/2.* std::pow(temperature, -2.)
+	+ 1.924704923E+02*( (1+std::log(temperature))/temperature )
+	- 4.686825930E+00*(1-std::log(temperature))
+	- 1./2*5.841365600E-03*temperature
+	+ 1./6*7.538533520E-06*std::pow(temperature, 2.)
+	- 1./12*4.863586040E-09*std::pow(temperature, 3.)
+	+ 1./20*1.256976992E-12*std::pow(temperature, 4.)
+	- 3.323592180E+04/temperature - 5.718523969E+00;
+                 
+   log_P = 5.040866570E+01/2.* std::pow(temperature, -2.)
+	+ 7.639418650E-01*( (1+std::log(temperature))/temperature )
+	- 2.504563992E+00*(1-std::log(temperature))
+	- 1./2*1.381689958E-05*temperature
+	+ 1./6*2.245585515E-08*std::pow(temperature, 2.)
+	- 1./12*1.866399889E-11*std::pow(temperature, 3.)
+	+ 1./20*6.227063395E-15*std::pow(temperature, 4.)
+	- 3.732421910E+04/temperature + 5.359303481E+00;
+   
+   log_Si = 9.836140810E+01/2.* std::pow(temperature, -2.)
+	- 1.546544523E+02*( (1+std::log(temperature))/temperature )
+	- 1.876436670E+00*(1-std::log(temperature))
+	+ 1./2*1.320637995E-03*temperature
+	- 1./6*1.529720059E-06*std::pow(temperature, 2.)
+	+ 1./12*8.950562770E-10*std::pow(temperature, 3.)
+	- 1./20*1.952873490E-13*std::pow(temperature, 4.)
+	- 5.263510310E+04/temperature + 9.698288880E+00;
+
+   log_F = 1.137409088E+03/2.* std::pow(temperature, -2.)
+	+ 1.453392797E+02*( (1+std::log(temperature))/temperature )
+	- 4.077403610E+00*(1-std::log(temperature))
+	- 1./2*4.303360140E-03*temperature
+	+ 1./6*5.728897740E-06*std::pow(temperature, 2.)
+	- 1./12*3.819312900E-09*std::pow(temperature, 3.)
+	+ 1./20*1.018322509E-12*std::pow(temperature, 4.)
+	- 9.311110120E+03/temperature -3.558982650E+00;
+	
 	} else {
 		
    log_K =  mass_action_coeff[10]/2.* std::pow(temperature, -2.)
@@ -152,6 +226,79 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
   	- 1./12*1.785922508E-10*pow(temperature, 3.)
   	+ 1./20*8.113013866E-15*pow(temperature, 4.)
   	- 9.170740910E+04/temperature -4.768336320E+01;
+   
+  log_Cl = -1.697932930E+05/2.* std::pow(temperature, -2.)
+	- 6.081726460E+02*( (1+std::log(temperature))/temperature )
+	- 2.128664090E+00*(1-std::log(temperature))
+	+ 1./2*1.307367034E-04*temperature
+	- 1./6*2.644883596E-08*std::pow(temperature, 2.)
+	+ 1./12*2.842504775E-12*std::pow(temperature, 3.)
+	- 1./20*1.252911731E-16*std::pow(temperature, 4.)
+	- 9.934387400E+03/temperature + 8.844772103E+00;
+
+  log_Km =  -3.566422360E+06/2.* std::pow(temperature, -2.)
+	- 1.085289825E+04*( (1+std::log(temperature))/temperature )
+	+ 1.054134898E+01*(1-std::log(temperature))
+	+ 1./2*8.009801350E-03*temperature
+	- 1./6*2.696681041E-06*std::pow(temperature, 2.)
+	+ 1./12*4.715294150E-10*std::pow(temperature, 3.)
+	- 1./20*2.976897350E-14*std::pow(temperature, 4.)
+	+ 5.875337010E+04/temperature + 9.738551240E+01;
+  
+  log_Na =  9.525723380E+05/2.* std::pow(temperature, -2.)
+	+ 2.623807254E+03*( (1+std::log(temperature))/temperature )
+	- 5.162596620E+00*(1-std::log(temperature))
+	- 1./2*1.210218586E-03*temperature
+	+ 1./6*2.306301844E-07*std::pow(temperature, 2.)
+	- 1./12*1.249597843E-11*std::pow(temperature, 3.)
+	+ 1./20*7.226771190E-16*std::pow(temperature, 4.)
+	- 2.912963564E+04/temperature -1.519717061E+01;
+  
+  log_Mg =  -5.364831550E+05/2.* std::pow(temperature, -2.)
+	- 1.973709576E+03*( (1+std::log(temperature))/temperature )
+	+ 3.633776900E-01*(1-std::log(temperature))
+	+ 1./2*2.071795561E-03*temperature
+	- 1./6*7.738051720E-07*std::pow(temperature, 2.)
+	+ 1./12*1.359277788E-10*std::pow(temperature, 3.)
+	- 1./20*7.766898397E-15*std::pow(temperature, 4.)
+	- 4.829188110E+03/temperature + 2.339104998E+01;
+
+  log_S =  -4.854244790E+05/2.* std::pow(temperature, -2.)
+	- 1.438830408E+03*( (1+std::log(temperature))/temperature )
+	- 1.258504116E+00*(1-std::log(temperature))
+	+ 1./2*3.797990430E-04*temperature
+	+ 1./6*1.630685864E-09*std::pow(temperature, 2.)
+	- 1./12*9.547095850E-12*std::pow(temperature, 3.)
+	+ 1./20*8.041466646E-16*std::pow(temperature, 4.)
+	- 2.334995270E+04/temperature + 1.559554855E+01;
+
+  log_P =  1.261794642E+06/2.* std::pow(temperature, -2.)
+	+ 4.559838190E+03*( (1+std::log(temperature))/temperature )
+	- 8.918079310E+00*(1-std::log(temperature))
+	- 1./2*4.381401460E-03*temperature
+	+ 1./6*1.454286224E-06*std::pow(temperature, 2.)
+	- 1./12*2.030782763E-10*std::pow(temperature, 3.)
+	+ 1./20*1.021022887E-14*std::pow(temperature, 4.)
+	- 6.541723960E+04/temperature -3.915974795E+01;
+
+  log_Si =  -6.169298850E+05/2.* std::pow(temperature, -2.)
+	- 2.240683927E+03*( (1+std::log(temperature))/temperature )
+	+ 4.448619320E-01*(1-std::log(temperature))
+	+ 1./2*1.710056321E-03*temperature
+	- 1./6*4.107714160E-07*std::pow(temperature, 2.)
+	+ 1./12*4.558884780E-11*std::pow(temperature, 3.)
+	+ 1./20*-1.889515353E-15*std::pow(temperature, 4.)
+	- 3.953558760E+04/temperature + 2.679668061E+01;
+
+  log_F =  1.473506226E+04/2.* std::pow(temperature, -2.)
+	- 8.149927360E+01*( (1+std::log(temperature))/temperature )
+	- 2.444371819E+00*(1-std::log(temperature))
+	+ 1./2*2.120210026E-05*temperature
+	- 1./6*4.546918620E-09*std::pow(temperature, 2.)
+	+ 1./12*5.109528730E-13*std::pow(temperature, 3.)
+	- 1./20*2.333894647E-17*std::pow(temperature, 4.)
+	- 8.388374650E+03/temperature + 5.478710640E+00;
+ 
 }
    
 	// in the order of the element_abundances.dat file
@@ -161,8 +308,18 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 	unsigned int index_O = 4;
 	unsigned int index_Ti = 8;
 	unsigned int index_V = 9;
+	
+	unsigned int index_P = 5;
+	unsigned int index_S = 6;
+	unsigned int index_Si = 7;
+	unsigned int index_Cl = 10;
+	unsigned int index_Km = 11; 
+	unsigned int index_Na = 12;
+	unsigned int index_Mg = 13;
+	unsigned int index_F = 14;
 
   log_K -= stoichometric_vector[index_C]*log_C + stoichometric_vector[index_H]*log_H + stoichometric_vector[index_N]*log_N + stoichometric_vector[index_O]*log_O + stoichometric_vector[index_Ti]*log_Ti+ stoichometric_vector[index_V]*log_V;
+  log_K -= stoichometric_vector[index_P]*log_P + stoichometric_vector[index_S]*log_S + stoichometric_vector[index_Si]*log_Si + stoichometric_vector[index_Cl]*log_Cl + stoichometric_vector[index_Km]*log_Km + stoichometric_vector[index_Na]*log_Na + stoichometric_vector[index_Mg]*log_Mg + stoichometric_vector[index_F]*log_F;
   mass_action_constant = log_K - sigma * std::log(thermal_energy);
   
 }

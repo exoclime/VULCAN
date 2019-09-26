@@ -1,4 +1,5 @@
-# VULCAN N-C-H-O network for Earth-like temperatures based on v926 (removed "most" of the rate constants 
+# VULCAN N-C-H-O network for Earth-like temperatures based on v926 (removed "most" of the rate constants
+# using HNO3 + M -> HO2 + NO + M instead of the recombination reaction 
 # that are not validated to ~300 K)
 # v106: corrected some Q yields; completed O_1 reactions; CN + M -> C + N + M (high T) removed; NO2 + CH4 -> HNO2 + CH3 removed
 # v813: Add CH3HN2, CH3HN, CH2NH2, and CH2NH; v814 reduced from v813 and reromved a few reactions involving CH2NH
@@ -256,8 +257,7 @@
 477	[ CH3 + HNO -> NO + CH4              ]  2.44E-13     0.76      175.0      2005CHO/LIN261-274    298-2500
 479	[ HNO2 + NCO -> HNCO + NO2           ]  5.99E-12     0.          0.       1992TSA753-791        500-2500
 481	[ CN + CO2 -> CO + NCO               ]  2.31E-14     0.000       0.0      1984LI/SAY833         300
-483	[ HCN + O -> NCO + H                 ]  3.30E-16     1.470    3770.0      1985PER/MEL639        300
-	
+483	[ HCN + O -> NCO + H                 ]  3.30E-16     1.470    3770.0      1985PER/MEL639        300	
 485	[ O_1 + O2 -> O + O2                 ]  3.20E-11     0.        -70.0      1997DEM/SAN1-266      200-300
 487	[ O_1 + O3 -> O2 + O2                ]  1.20E-10     0.          0.0      1997DEM/SAN1-266      200-300	
 489	[ O_1 + O3 -> O2 + O + O             ]  1.20E-10     0.          0.0      1997DEM/SAN1-266      200-300	
@@ -274,6 +274,11 @@
 511	[ O_1 + NO2 -> O2 + NO               ]  3.01E-10     0.000       0.0      1975GAU/SNE27          300
 513	[ CH2_1 + H2 -> CH3 + H              ]  1.27E-10     0.000       0.0                        
 515	[ CH2_1 + H2 -> CH2 + H2             ]  1.26E-11     0.000       0.0
+503	[ N_2D + H2 -> NH + H                ]  4.20E-11     0.000     880.0       1999HER1453-1483         200-300 
+505	[ N_2D + H2O -> NH + OH              ]  4.00E-11     0.000       0.0       1999HER1453-1483         298 
+507	[ N_2D + NH3 -> NH + NH2             ]  5.00E-11     0.000       0.0       1999HER1453-1483         200-300
+    [ N_2D + O2 -> 􏱄NO + 􏱁O                ]  9.70E-12     0.000     185.0       1999HER1453-1483         200-500
+    [ N_2D + N2O -> 􏱄N2 + N􏱁O              ]  1.50E-11     0.000     570.0       1999HER1453-1483         200-400
 517	[ Ar -> Ar                           ]  0            0.          0.0      dummy reaction    
 
 # 3-body and Disscoiation Reactions
@@ -315,11 +320,13 @@
 585	[ O + O2 + M -> O3 + M               ]  5.09E-27    -2.800       0.0      2.81E-12     0.          0.        1997ATK/BAU1329-1499 / 1989ATK/BAU881-1097                  200-300, 200-300
 587	[ H + O2 + M -> HO2 + M              ]  2.17E-29    -1.100       0.0      7.51E-11     0.          0.        2012TUR/NAG284-302 / 1997ATK/BAU1329-1499                   300-1850, 200-400                                      
 589	[ HO2 + HO2 + M -> H2O2 + O2 + M     ]  1.90E-33     0.       -980.0      2.20E-13     0.       -600.        1997ATK/BAU1329-1499 / 2004ATK/BAU1461-1738                 200-300, 230-420
-591	[ HO2 + NO + M -> HNO3 + M          ]  9.57E-36      0.       -2800.0     6.40E-17     0.       -1644.0       2003ZHU/LIN10667-10677 / 2003ZHU/LIN10667-10677             295-1200, 295-1200 
-593	[ NO2 + OH + M -> HNO3 + M           ]  4.49E-19   -4.5         0.0      2.70E-11     0.          0.        2012TRO6387-6393 / 2012TRO6387-6393                         300-430, 220-430
+591	[ HNO3 + M -> HO2 + NO + M           ]  1.29E+15    -6.550   26000.0      2.30E+23    -2.27    26300.0       2003ZHU/LIN10667-10677 / 2003ZHU/LIN10667-10677             295-1200, 295-1200
+593	[ NO2 + OH + M -> HNO3 + M           ]  4.49E-19   -4.5         0.0      2.70E-11     0.          0.         2012TRO6387-6393 / 2012TRO6387-6393                         300-430, 220-430
 595	[ NO2 + NO3 + M -> N2O5 + M          ]  1.28E-21   -3.50         0.0      6.43E-13     0.2         0.        1997ATK/BAU1329-1499 / 1997ATK/BAU1329-1499                 200-400, 200-500          
 597	[ HNO2 + M -> OH + NO + M            ]  5.00E+06    -3.800   25300.0      1.20E+19     1.23    25000.        1991TSA/HER609-663 / 1991TSA/HER609-663                     300-2500, 300-2500  
-599	[ CH3 + O2 + M -> CH3O2 + M          ]  4.49E-31    -3.000       0.       1.21E-12     1.20        0.        1997DEM/SAN1-266 / 1992BAU/COB411-429     200-300 / 300-800 
+599	[ CH3 + O2 + M -> CH3O2 + M          ]  4.49E-31    -3.000       0.       1.21E-12     1.20        0.        1997DEM/SAN1-266 / 1992BAU/COB411-429                       200-300 / 300-800 
+669	[ NO + OH + M -> HNO2 + M            ]  1.40E-24    -2.51      -34.0      3.31E-12    -0.050     363.0       1991TSA/HER609-663 / 1991TSA/HER609-663                     200-2500 / 200-2500
+
     	
 # 3-body reactions without high-pressure rates
 # id	# Reactions                         	A_0      B_0       C_0     	Ref												
@@ -327,6 +334,7 @@
 601	[ H + N + M -> NH + M                ]	5.02E-32	 0.000		 0.0        1973BRO663               298
 603	[ O + N + M -> NO + M                ]	5.46E-33	 0.	 	  -155.0		1973CAM/GRA607           196-298
 605	[ O + O + M -> O2 + M                ]	5.21E-35	 0.		   -900.		1986TSA/HAM1087
+611	[ N_2D + M -> N + M                  ]  1.70e-14     0.000       0.0        1999HER1453-1483         200-300
 	
 # special cases
 # id	# Reactions 
