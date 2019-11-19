@@ -2247,7 +2247,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab)
-                plt.ylim((atm.zco[0]/1e5,80))
+                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
                 plt.ylabel("Height (km)")
                 
             images.append((line,))
@@ -2308,7 +2308,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp)
-                plt.ylim((atm.zco[0]/1e5,80))
+                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
                 plt.ylabel("Height (km)")
             color_index +=1
                   

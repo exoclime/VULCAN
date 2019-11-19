@@ -83,7 +83,7 @@ use_botflux = True
 use_fix_sp_bot = {'H2O':0.01}
 
 # ====== Reactions to be switched off  ======
-remove_list = [601,602] # in pairs e.g. [1,2]
+remove_list = [] # in pairs e.g. [1,2]
 
 # == Condensation (Ongoing testing!)  ======
 use_condense = True
@@ -93,7 +93,7 @@ condesne_sp = ["H2O"]    # , 'NH3'
 non_gas_sp = ["H2O_l_s"]
 
 # ====== steady state check ======
-st_factor = 0.8
+st_factor = 0.9
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
