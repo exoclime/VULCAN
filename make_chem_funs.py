@@ -337,9 +337,8 @@ def make_chemdf(re_table, ofname):
     # save output
     chem_dict_r = {}
     spec_list = []
-    
-    python_executable_path = sys.executable    
-    ofstr = "#!" + python_executable_path + "\nfrom scipy import *\nimport numpy as np\nfrom phy_const import kb, Navo\nimport vulcan_cfg\n\n"
+        
+    ofstr = "#!/usr/bin/python\n\nfrom scipy import *\nimport numpy as np\nfrom phy_const import kb, Navo\nimport vulcan_cfg\n\n"
     ofstr += "'''\n## Reaction ##\n\n"
     ofstr += re_table + "\n\n"
 
@@ -634,7 +633,7 @@ def make_Gibbs(re_table, gibbs_text, ofname):
     for _ in gibbs_dict:
         gstr += '\t G['.expandtabs(3) +str(_)+'] = lambda T: ' + str(gibbs_dict[_]) + '\n'
 
-    gstr += '\t return G[i](T) \n\n'.expandtabs(3)
+    gstr += '\t return G[i](T)\n\n'.expandtabs(3)
 
     with open(ofname, 'a+') as f:
         f.write(gstr)
