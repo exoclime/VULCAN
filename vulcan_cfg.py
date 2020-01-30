@@ -46,7 +46,7 @@ edd = 0.1 # the Eddington coefficient
 dbin = 0.1 # the uniform bin width
 # frequency to update the flux and optical depth
 ini_update_photo_frq = 100
-final_update_photo_frq = 5
+final_update_photo_frq = 2
 
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: affects molecular diffsion
