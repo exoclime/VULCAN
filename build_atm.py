@@ -178,14 +178,30 @@ class InitialAbun(object):
                 #if not vulcan_cfg.ini_mix == 'vulcan_ini':
                     # TEST Cold trap
                     # np.argmax stops at the first TRUE value and returns its index
-                conden_lev = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
-                if not conden_lev == 0: 
-                    print ( sp + " condensed from nz = " + str(conden_lev) + " (cold trap)")
-                    data_var.y[conden_lev:,species.index(sp)] = 0
-                    data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
+                # the level where condensation starts    
+                conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                # conden_status: ture if the partial p >= the saturation p
+                sat_mix = data_atm.n_0 * data_atm.sat_mix[sp]
+                conden_status = data_var.y[:,species.index(sp)] >= sat_mix
+                # take the min between the mixing ratio and the saturation mixing ratio
+                data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
+                
+                # the level where condensation ends (when it tranisions from conden = True to conden = Fasle)
+                #conden_top = [indx+1 for indx, _ in enumerate(conden_status) if _ == True and conden_status[indx+1] == False][0]
+                
+                conden_min_lev = np.argmin( data_var.y[conden_status,species.index(sp)] )
+                
+                
+                if not conden_bot == 0: 
+                    print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
+                    #data_var.y[conden_lev:,species.index(sp)] = 0
+                    data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
+                    
+                    
                 else:
                     print ( sp + " should be condensed from the surface!")
-        
+                    data_var.y[conden_lev:,species.index(sp)] = (y_ini[conden_top,species.index(sp)]/data_atm.n_0[conden_top]) *data_atm.n_0[conden_top:]
+                    
         # re-normalisation 
         # TEST
         # Excluding the non-gaseous species
@@ -544,13 +560,18 @@ class Atm(object):
             
             # scaling with (15.27) in [Aeronomy part B by Banks & Kockarts(1973)]
             # *( m_ref/mi*(mi+ m_base)/m_tot )**0.5 (m_ref is the molecular mass of the ref-base e.g. CH4 in CH4-H2 in Moses 2000a)
+            # because D is proportional to (1/m1 + 1/m2)**0.5
             
         elif vulcan_cfg.atm_base == 'N2': # use CH4-N2 in Aeronomy [Banks ] as a reference to scale by the molecular mass
             Dzz_gen = lambda T, n_tot, mi: 7.34E16*T**0.75/n_tot *( 16.04/mi*(mi+28.014)/44.054 )**0.5
         elif vulcan_cfg.atm_base == 'O2': # use CH4-O2 in Aeronomy [Banks ] as a reference to scale by the molecular mass
-            Dzz_gen = lambda T, n_tot, mi: 7.51E16*T**0.759/n_tot *( 16.04/mi*(mi+32)/48.04 )**0.5
+            Dzz_gen = lambda T, n_tot, mi: 7.51E16*T**0.759/n_tot *( 16.04/mi*(mi+32.)/48.04 )**0.5
         elif vulcan_cfg.atm_base == 'CO2': # use H2-CO2 in Hu seager as a reference to scale by the molecular mass
             Dzz_gen = lambda T, n_tot, mi: 2.15E17*T**0.750/n_tot *( 2.016/mi*(mi+44.001)/46.017 )**0.5
+        elif vulcan_cfg.atm_base == 'H2O': # use H2O-O2 from Marrero 1972 as a reference to scale by the molecular mass
+            Dzz_gen = lambda T, n_tot, mi: 2.0E17*T**0.750/n_tot *( 32./mi*(mi+32.)/50.016 )**0.5
+            # scale the new reduced mass while replacing O2 but keeping H2O (H2O-atm) by the old one     
+            
         else: raise IOError ('\n Unknow atm_base!')
         
         for i in range(len(species)):

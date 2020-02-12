@@ -718,7 +718,7 @@ class Integration(object):
         
         #slope_min = min( np.amin(atm.Kzz)/np.amax(0.1*atm.Hp)**2 , 1.e-8)
         slope_min = min( np.amin(atm.Kzz/(0.1*atm.Hp[:-1])**2) , 1.e-8)
-        slope_min = max(slope_min, 1.e-12)
+        slope_min = max(slope_min, 1.e-10)
         #print ('slope_min= ' + "{:.2e}".format(slope_min))
         
         # if t < trun_min: indx = -100
@@ -730,9 +730,9 @@ class Integration(object):
         longdy[ymix < mtol_conv] = 0
         longdy[y < atol] = 0
         
-        if vulcan_cfg.use_condense == True: 
-            for sp in self.non_gas_sp:
-                longdy[:,species.index(sp)] = 0
+        # if vulcan_cfg.use_condense == True:
+        #     for sp in self.non_gas_sp:
+        #         longdy[:,species.index(sp)] = 0
          
         #indx_max = np.nanargmax(longdy[ymix>0]/ymix[ymix>0]) # this index is effectively from species[ymix>0]
         longdy = np.amax( longdy[ymix>0]/ymix[ymix>0] )
@@ -799,14 +799,15 @@ class Integration(object):
             if var.Rf[re] == 'H2O -> H2O_l_s':
                 m = 18./Navo
                 rho_p = 0.9
-                r_p = 1.e-4 # assuming 1 micron from the stratospheric aerosols in Table 2. [Toon & Farlow]
-            
+                r_p = 1.e-3 # assuming 10 micron from the stratospheric aerosols in Table 2. [Toon & Farlow]
+                
                 rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2O')]-atm.sat_p['H2O']/kb/atm.Tco)/r_p
                 
-                #var.rate_c = rate_c
+                # how many gas molecules are contained in one particle with the assumed size r_p
+                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
                 
-                var.k[re] = rate_c
-                var.k[re+1] = rate_c
+                var.k[re] = rate_c 
+                var.k[re+1] = rate_c /n_mol
                 
                 # positive: condensation
                 var.k[re] = np.maximum(var.k[re], 0)
@@ -814,10 +815,19 @@ class Integration(object):
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
                 
+                # print ('conden:')
+                # print (var.k[re][15:25])
+                #
+                # print ('evapo:')
+                # print (var.k[re+1][15:25])
+                
+                
                 # TEST capping
                 rate_mix = np.amax(atm.Kzz/(atm.Hpi)**2) # the max rate (shortest tau_dyn)
-                var.k[re] = np.minimum(var.k[re], rate_mix)
-                var.k[re+1] = 0
+                
+                
+                #var.k[re] = np.minimum(var.k[re], rate_mix)
+                #var.k[re+1] = np.minimum(var.k[re+1], rate_mix)
                 
                 # var.k[re] *= 1e-6
 #                 var.k[re+1] *= 1e-20
@@ -869,8 +879,12 @@ class ODESolver(object):
         
         self.mtol = vulcan_cfg.mtol
         self.atol = vulcan_cfg.atol
-        self.non_gas_sp = vulcan_cfg.non_gas_sp       
+        self.non_gas_sp = vulcan_cfg.non_gas_sp
         
+        if vulcan_cfg.use_condense == True:  self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
+        self.fix_sp_bot_index = [species.index(sp) for sp in vulcan_cfg.use_fix_sp_bot.keys()]
+        self.fix_sp_bot_mix = np.array([vulcan_cfg.use_fix_sp_bot[sp] for sp in vulcan_cfg.use_fix_sp_bot.keys()])
+  
     def diffdf_no_mol(self, y, atm): 
         """
         function of eddy diffusion without molecular diffusion, with zero-flux boundary conditions and non-uniform grids (dzi)
@@ -879,7 +893,8 @@ class ODESolver(object):
         y = y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -940,7 +955,8 @@ class ODESolver(object):
         
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
     
@@ -1042,7 +1058,8 @@ class ODESolver(object):
         
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
     
@@ -1146,7 +1163,8 @@ class ODESolver(object):
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1218,7 +1236,8 @@ class ODESolver(object):
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1289,7 +1308,8 @@ class ODESolver(object):
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1336,7 +1356,8 @@ class ODESolver(object):
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1406,7 +1427,8 @@ class ODESolver(object):
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1456,7 +1478,8 @@ class ODESolver(object):
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
+            ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1539,7 +1562,8 @@ class ODESolver(object):
         # store y and ymix
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            var.y, var.ymix = y, var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1)) 
+            #var.y, var.ymix = y, var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1)) 
+            var.y, var.ymix = y, y/np.vstack(np.sum(y,axis=1))
         else: var.y, var.ymix = y, y/np.vstack(np.sum(y,axis=1))
         # TEST condensation excluding non-gaseous species
         
@@ -1823,7 +1847,6 @@ class ODESolver(object):
         
         
     def compute_J(self, var, atm): # the vectorised version
-        # change it to trapezoid integral!!!
         flux = var.aflux
         
         #cross = var.cross
@@ -1969,16 +1992,29 @@ class Ros2(ODESolver):
         k2 = k2.reshape(y.shape)
         
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2
+
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
-            for sp in vulcan_cfg.use_fix_sp_bot.keys():
-                sol[0,species.index(sp)] = vulcan_cfg.use_fix_sp_bot[sp]*atm.n_0[0]
+            sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
+
         # surface sink (and top BC for the particles?)
         if vulcan_cfg.use_condense == True:
-            #pass
-            for sp in self.non_gas_sp:
-                sol[0,species.index(sp)] = 0
-                # TEST top sink
-                # sol[-1,species.index(sp)] = 0
+            sol[0,self.non_gas_sp_index] = 0
+            # TEST top sink for settling to work
+            # print (self.non_gas_sp_index)
+            # print (sol[:,self.non_gas_sp_index])
+            # print ('---')
+            #print (np.maximum(sol[:,self.non_gas_sp_index],atm.n_0*1e-12))
+            #print (sol[:,self.non_gas_sp_index])
+            
+            
+            # TEST
+            #sol[:,-1] = np.minimum(sol[:,-1],atm.n_0*1e-10) 
+            
+            
+            # for sp in self.non_gas_sp:
+            #     sol[0,species.index(sp)] = 0
+            #     # TEST top sink
+            #     # sol[-1,species.index(sp)] = 0
                 
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
@@ -1986,15 +2022,15 @@ class Ros2(ODESolver):
 
         # TEST condensation
         if vulcan_cfg.use_condense == True:
-            for sp in vulcan_cfg.non_gas_sp:
-                delta[:,species.index(sp)] = 0
+            sol[0,self.non_gas_sp_index] = 0
         # TEST condensation
         delta = np.amax( delta[sol>0]/sol[sol>0] )
 
         var.y = sol
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1)) 
+            #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
+            var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
         else: var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
         # TEST condensation excluding non-gaseous species
         para.delta = delta    
@@ -2057,7 +2093,8 @@ class Ros2(ODESolver):
         
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1)) 
+            #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
+            var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
         else: var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
         # TEST condensation excluding non-gaseous species
 
@@ -2090,7 +2127,7 @@ class Ros2(ODESolver):
             
            if self.step_ok(var, para): break
            elif self.step_reject(var, para): break # giving up and moving on
-               
+                  
         return var, para                    
         
     def step_size(self, var, para, dt_var_min = vulcan_cfg.dt_var_min, dt_var_max = vulcan_cfg.dt_var_max, dt_min = vulcan_cfg.dt_min, dt_max = vulcan_cfg.dt_max):  
@@ -2247,7 +2284,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab)
-                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
+                plt.ylim((atm.zco[0]/1e5,80))
                 plt.ylabel("Height (km)")
                 
             images.append((line,))
@@ -2308,7 +2345,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp)
-                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
+                plt.ylim((atm.zco[0]/1e5,80))
                 plt.ylabel("Height (km)")
             color_index +=1
                   
