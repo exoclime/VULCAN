@@ -48,6 +48,10 @@ dbin = 0.1 # the uniform bin width
 ini_update_photo_frq = 100
 final_update_photo_frq = 2
 
+# ====== Setting up ionchemistry ======
+use_ion = False
+
+
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: affects molecular diffsion
 nz = 150   # number of vertical layers

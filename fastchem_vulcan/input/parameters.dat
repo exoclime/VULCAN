@@ -5,7 +5,7 @@ input/element_abundances_vulcan.dat
 fastchem_src/chem_input/chemical_elements.dat
 
 #species data file    
-input/nasa9_logK_NCHOTi.dat
+input/nasa9_logK_SNCHOTi_ion.dat
 
 #accuracy of chemistry iteration
 1.0e-4

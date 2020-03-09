@@ -36,6 +36,7 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
   double_type thermal_energy = 1.0e-6 * CONST_K * temperature;
   double_type log_K;
   double_type log_C, log_H, log_N, log_O, log_Ti, log_V, log_Cl, log_S, log_P, log_Si, log_Km, log_Na, log_Mg, log_F;
+  double_type log_Ca;
   // Km: potassium since log_K has already been used
 
   if (temperature <= 1000.0) {
@@ -162,6 +163,15 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 	+ 1./20*1.018322509E-12*std::pow(temperature, 4.)
 	- 9.311110120E+03/temperature -3.558982650E+00;
 	
+   log_Ca = 0.000000000E+00/2.* std::pow(temperature, -2.)
+	- 0.000000000E+00*( (1+std::log(temperature))/temperature )
+	- 2.500000000E+00*(1-std::log(temperature))
+	+ 1./2*0.000000000E+00*temperature
+	+ 1./6*0.000000000E+00*std::pow(temperature, 2.)
+	+ 1./12*0.000000000E+00*std::pow(temperature, 3.)
+	+ 1./20*0.000000000E+00*std::pow(temperature, 4.)
+	- 2.063892786E+04/temperature + 4.384548330E+00;
+		   
 	} else {
 		
    log_K =  mass_action_coeff[10]/2.* std::pow(temperature, -2.)
@@ -298,6 +308,15 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 	+ 1./12*5.109528730E-13*std::pow(temperature, 3.)
 	- 1./20*2.333894647E-17*std::pow(temperature, 4.)
 	- 8.388374650E+03/temperature + 5.478710640E+00;
+  
+  log_Ca = 7.547341240E+06/2.* std::pow(temperature, -2.)
+  + 2.148642662E+04*( (1+std::log(temperature))/temperature )
+  - 2.530849567E+01*(1-std::log(temperature))
+  - 1./2*1.103773705E-02*temperature
+  + 1./6*2.293249636E-06*std::pow(temperature, 2.)
+  - 1./12*1.209075383E-10*std::pow(temperature, 3.)
+  - 1./20*4.015333268E-15*std::pow(temperature, 4.)
+  - 1.585862323E+05/temperature -1.609512955E+02;          
  
 }
    
@@ -317,9 +336,10 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 	unsigned int index_Na = 12;
 	unsigned int index_Mg = 13;
 	unsigned int index_F = 14;
+	unsigned int index_Ca = 15;
 
   log_K -= stoichometric_vector[index_C]*log_C + stoichometric_vector[index_H]*log_H + stoichometric_vector[index_N]*log_N + stoichometric_vector[index_O]*log_O + stoichometric_vector[index_Ti]*log_Ti+ stoichometric_vector[index_V]*log_V;
-  log_K -= stoichometric_vector[index_P]*log_P + stoichometric_vector[index_S]*log_S + stoichometric_vector[index_Si]*log_Si + stoichometric_vector[index_Cl]*log_Cl + stoichometric_vector[index_Km]*log_Km + stoichometric_vector[index_Na]*log_Na + stoichometric_vector[index_Mg]*log_Mg + stoichometric_vector[index_F]*log_F;
+  log_K -= stoichometric_vector[index_P]*log_P + stoichometric_vector[index_S]*log_S + stoichometric_vector[index_Si]*log_Si + stoichometric_vector[index_Cl]*log_Cl + stoichometric_vector[index_Km]*log_Km + stoichometric_vector[index_Na]*log_Na + stoichometric_vector[index_Mg]*log_Mg + stoichometric_vector[index_F]*log_F + stoichometric_vector[index_Ca]*log_Ca;
   mass_action_constant = log_K - sigma * std::log(thermal_energy);
   
 }
