@@ -60,9 +60,9 @@ class ReadRate(object):
         
     def read_rate(self, var, atm):
         
-        Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k, k_fun, k_inf, kinf_fun, k_fun_new, pho_rate_index = \
+        Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k, k_fun, k_inf, kinf_fun, k_fun_new, pho_rate_index, ion_rate_index = \
         var.Rf, var.Rindx, var.a, var.n, var.E, var.a_inf, var.n_inf, var.E_inf, var.k, var.k_fun, var.k_inf, var.kinf_fun, var.k_fun_new,\
-         var.pho_rate_index
+         var.pho_rate_index, var.ion_rate_index
         
         i = self.i
         re_tri, re_tri_k0 = self.re_tri, self.re_tri_k0
@@ -74,10 +74,13 @@ class ReadRate(object):
         special_re = False
         conden_re = False
         photo_re = False
+        ion_re = False
         end_re = False
         br_read  = False
+        ion_br_read = False
         
-        photo_sp = [] 
+        photo_sp = []
+        ion_sp = [] 
                
         with open(vulcan_cfg.network) as f:
             all_lines = f.readlines()
@@ -102,8 +105,15 @@ class ReadRate(object):
                     conden_re = False
                     special_re = False # turn off reading in the special form
                     photo_re = True
-                    var.photo_indx = i  
-                
+                    var.photo_indx = i 
+                     
+                elif line.startswith("# ionisation"):
+                    conden_re = False
+                    special_re = False # turn off reading in the special form
+                    photo_re = False
+                    ion_re = True
+                    var.ion_indx = i
+                    
                 elif line.startswith("# re_end"):
                     end_re = True
                     
@@ -112,16 +122,22 @@ class ReadRate(object):
        
                 elif line.startswith("# braching info end"):
                     br_read = False
-                    
+                
+                elif line.startswith("# ion braching info start"):
+                    ion_br_read = True
+       
+                elif line.startswith("# ion braching info end"):
+                    ion_read = False
+                      
                 # skip common lines and blank lines
                 # ========================================================================================
-                if not line.startswith("#") and line.strip() and special_re == False and conden_re == False and photo_re == False and end_re == False: # if not starts
+                if not line.startswith("#") and line.strip() and special_re == False and conden_re == False and photo_re == False and ion_re == False and end_re == False: # if not starts
                     
                     Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
                     li = line.partition(']')[-1].strip()
                     columns = li.split()
                     Rindx[i] = int(line.partition('[')[0].strip())
-                              
+        
                     a[i] = float(columns[0])
                     n[i] = float(columns[1])
                     E[i] = float(columns[2])
@@ -216,6 +232,27 @@ class ReadRate(object):
                     
                     i += 2
                 
+                # setting photo ionization reactions to zeros
+                elif ion_re == True and line.strip() and not line.startswith("#") and end_re == False:
+                    
+                    k[i] = np.zeros(nz)
+                    Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
+                    
+                    # chekcing if it already existed in the photo species
+                    if Rf[i].split()[0] not in photo_sp: print (str(Rf[i].split()[0]) + ' not present in the photo disccoiation but only in ionization!')
+                    ion_sp.append(Rf[i].split()[0])
+                    
+                    li = line.partition(']')[-1].strip()
+                    columns = li.split()
+                    Rindx[i] = int(line.partition('[')[0].strip())
+                    # columns[0]: the species being dissocited; branch index: columns[1]
+                    ion_rate_index[(columns[0],int(columns[1]))] = Rindx[i]
+                    
+                    # store the number of branches
+                    var.ion_branch[columns[0]] = int(columns[1])
+                    
+                    i += 2
+                    
                 # end_re == True
                 elif br_read == True and not line.startswith("#"):
                     # read in the quantum yields of photolysis reactions
@@ -227,6 +264,16 @@ class ReadRate(object):
                     var.wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
                     var.br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
                 
+                elif ion_br_read == True and not line.startswith("#"):
+                    # read in the quantum yields of photolysis reactions
+                    sp_list = line.partition(':')
+                    sp = sp_list[0]
+                    lists = sp_list[-1]
+                    wavelen_yield = lists.partition(';')
+                    # wavelen_yield is tuple of string in wavelength seitch, ;, Q yield e.g. ('[165.]', ';', '[(1.,0),(0,1.)]')
+                    var.ion_wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
+                    var.ion_br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
+                
         k_fun.update(k_fun_new)
     
         # store k into data_var
@@ -236,7 +283,8 @@ class ReadRate(object):
         var.kinf_fun = kinf_fun
         
         var.photo_sp = set(photo_sp)
-
+        if vulcan_cfg.use_ion == True: var.ion_sp = set(ion_sp)
+        
         return var
         
     def rev_rate(self, var, atm):
@@ -261,7 +309,7 @@ class ReadRate(object):
             # setting the reversal of both condensation and photolisys rates to zero
             for i in range(var.photo_indx+1, nr+1,2):
                 var.k[i] = np.zeros(nz)
-                
+
         Tco = atm.Tco.copy()
         
         # reversing rates and storing into data_var
@@ -272,6 +320,7 @@ class ReadRate(object):
             
             if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + ':  ' + str(np.amax(var.k[i])) )
             if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )
+
         return var
         
     
@@ -440,12 +489,18 @@ class ReadRate(object):
         to avoid photons with w0=1 (pure scatteing) in certain wavelengths
         '''
         photo_sp = list(var.photo_sp)
+        ion_sp = list(var.ion_sp)
+        absp_sp = photo_sp + ion_sp
         sp0 = photo_sp[0]
         
         cross_raw, scat_raw = {}, {}
         # reading in cross sections into dictionary
-        for n, sp in enumerate(photo_sp):
-            try: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+        for n, sp in enumerate(absp_sp):
+            try: 
+                if vulcan_cfg.use_ion == True:
+                    cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                else: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+            
             except: print ('\nMissing the cross section from ' + sp)
             if cross_raw[sp]['cross'][0] == 0 or cross_raw[sp]['cross'][-1] ==0:
                 raise IOError ('\n Please remove the zeros in the cross file of ' + sp)
@@ -486,22 +541,35 @@ class ReadRate(object):
         
         # read_cross
         # creat a dict of cross section with key=sp and values=bins in data_var
-        var.cross = dict([(sp, np.zeros(var.nbin)) for sp in var.photo_sp])
+        var.cross = dict([(sp, np.zeros(var.nbin)) for sp in absp_sp ]) # including photo_sp and ion_sp 
         
         #read cross of disscoiation
-        var.cross_J = dict([(sp, np.zeros(var.nbin)) for sp in var.photo_sp])
-        
+        var.cross_J = dict([(sp, np.zeros(var.nbin)) for sp in photo_sp])
         var.cross_scat = dict([(sp, np.zeros(var.nbin)) for sp in vulcan_cfg.scat_sp])
         
-        for sp in var.photo_sp:
+        #read cross of ionisation
+        var.cross_Jion = dict([(sp, np.zeros(var.nbin)) for sp in ion_sp])
+        
+        for sp in photo_sp:
             # for values outside the boundary => fill_value = 0
             inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
             inter_cross_J = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['disso'], bounds_error=False, fill_value=0)
-            
+             
             for n, ld in enumerate(bins):
                 var.cross[sp][n] = inter_cross(ld)
                 var.cross_J[sp][n] = inter_cross_J(ld)
+ 
+        if vulcan_cfg.use_ion == True: 
+            for sp in ion_sp:
                 
+                inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
+                inter_cross_Jion = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['ion'], bounds_error=False, fill_value=0)
+  
+                for n, ld in enumerate(bins):
+                    var.cross_Jion[sp][n] = inter_cross_Jion(ld)
+                    # the photoionisation cross section also contribute to the total absorption
+                    var.cross[sp][n] = inter_cross(ld) 
+                         
         # reading in cross sections of Rayleigh Scattering
         for sp in vulcan_cfg.scat_sp:
             scat_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder + 'rayleigh/' + sp+'_scat.txt',dtype=float,\
@@ -512,38 +580,7 @@ class ReadRate(object):
             
             for n, ld in enumerate(bins):
                 var.cross_scat[sp][n] = inter_scat(ld)
-        
-    # def read_cross(self, var):
-    #     # flux stored in a 2D array: lambda, flux
-    #     # using flux[np.where(flux[:,0]==lambda),1]
-    #
-    #     # creat a dict of cross section with key=sp and values=bins in data_var
-    #     var.cross = dict([(sp, np.zeros(var.nbin)) for sp in var.photo_sp])
-    #     var.cross_scat = dict([(sp, np.zeros(var.nbin)) for sp in vulcan_cfg.scat_sp])
-    #
-    #     for sp in var.photo_sp:
-    #         # for values outside the boundary => fill_value = 0
-    #         inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
-    #         for n, ld in enumerate(bins):
-    #             var.cross[sp][n] = inter_cross(ld)
-        
-        
-        # cross_raw, scat_raw = {}, {}
-        # # creat a dict of cross section with key=sp and values=bins in data_var
-        # var.cross = dict([(sp, np.zeros(var.nbin)) for sp in var.photo_sp])
-        # var.cross_scat = dict([(sp, np.zeros(var.nbin)) for sp in vulcan_cfg.scat_sp])
-        # bins = var.bins
-        #
-        # # reading in cross sections into dictionary
-        # for sp in var.photo_sp:
-        #     cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross'])
-        #
-        #     # for values outside the boundary => fill_value = 0
-        #     inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
-        #     for n, ld in enumerate(bins):
-        #         var.cross[sp][n] = inter_cross(ld)
-            
-        # reading in cross sections of Rayleigh Scattering
+
         for sp in vulcan_cfg.scat_sp:
             scat_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder + 'rayleigh/' + sp+'_scat.txt',dtype=float,\
             skip_header=1, names = ['lambda','cross'])
@@ -553,6 +590,7 @@ class ReadRate(object):
             
             for n, ld in enumerate(bins):
                 var.cross_scat[sp][n] = inter_scat(ld)
+                
 
 class Integration(object):
     """
@@ -572,7 +610,7 @@ class Integration(object):
         self.use_settling = vulcan_cfg.use_settling 
         self.g = vulcan_cfg.g
         
-        # TEST
+        # including photoionisation
         if vulcan_cfg.use_photo == True: self.update_photo_frq = vulcan_cfg.ini_update_photo_frq
         
         
@@ -596,7 +634,9 @@ class Integration(object):
                 self.odesolver.compute_tau(var, atm)
                 self.odesolver.compute_flux(var, atm)
                 self.odesolver.compute_J(var, atm)
-            
+                if vulcan_cfg.use_ion == True: # photoionisation rate
+                    self.odesolver.compute_Jion(var, atm)
+                    
             # Testing condensation
             # updating the condensation rates
             if vulcan_cfg.use_condense == True and var.t > vulcan_cfg.start_conden_time:
@@ -626,7 +666,7 @@ class Integration(object):
             var = self.odesolver.step_size(var, para)
             
             if use_print_prog == True and para.count % vulcan_cfg.print_prog_num==0:
-                self.output.print_prog(var)
+                self.output.print_prog(var,para)
                 
             if vulcan_cfg.use_live_flux == True and vulcan_cfg.use_photo == True and para.count % vulcan_cfg.live_plot_frq ==0:
                 #plt.figure('flux')
@@ -670,7 +710,7 @@ class Integration(object):
         # Calculating the settling velocity
         if self.use_settling == True:
             # Using Gao 2018 (50)
-            r_p = 1.e-4
+            r_p = 5.e-3
             R_uni = kb*Navo # the universal gas const
         
             Ti = data_atm.Ti
@@ -799,7 +839,7 @@ class Integration(object):
             if var.Rf[re] == 'H2O -> H2O_l_s':
                 m = 18./Navo
                 rho_p = 0.9
-                r_p = 1.e-3 # assuming 10 micron from the stratospheric aerosols in Table 2. [Toon & Farlow]
+                r_p = 5.e-3 # assuming 50 micron from the stratospheric aerosols in Table 2. [Toon & Farlow]
                 
                 rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2O')]-atm.sat_p['H2O']/kb/atm.Tco)/r_p
                 
@@ -816,14 +856,14 @@ class Integration(object):
                 var.k[re+1] = np.abs(var.k[re+1])
                 
                 # print ('conden:')
-                # print (var.k[re][15:25])
-                #
-                # print ('evapo:')
-                # print (var.k[re+1][15:25])
+#                 print (var.k[re])
+#                 #
+#                 print ('evapo:')
+#                 print (var.k[re+1])
                 
                 
                 # TEST capping
-                rate_mix = np.amax(atm.Kzz/(atm.Hpi)**2) # the max rate (shortest tau_dyn)
+                #rate_mix = np.amax(atm.Kzz/(atm.Hpi)**2) # the max rate (shortest tau_dyn)
                 
                 
                 #var.k[re] = np.minimum(var.k[re], rate_mix)
@@ -1106,10 +1146,10 @@ class ODESolver(object):
         1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]  
         Bi[0] = 1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] +\
         1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]<0)*vs[0] )/dzi[0]
-        Ci[0] = 0 
+        #Ci[0] = 0 
         Ai[nz-1] = -1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] \
         -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]<0)*vs[-1] )/dzi[-1]
-        Bi[nz-1] = 0
+        #Bi[nz-1] = 0
         Ci[nz-1] = 1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] \
         -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]>0)*vs[-1] )/dzi[-1]
         
@@ -1127,7 +1167,7 @@ class ODESolver(object):
             
             # Ai in the shape of nz*ni and Ai[j] in the shape of ni 
             # Including the settling velocity of the particles
-            Ai[j] = -1./dz_ave * ( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j] -( (vs[j]>0)*vs[j] + (vs[j-1]<0)*vs[j-1] )/dz_ave
+            Ai[j] = -1./dz_ave * ( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j] -( (vs[j]>0)*vs[j] - (vs[j-1]<0)*vs[j-1] )/dz_ave
             Bi[j] = 1./dz_ave * Dzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]  -( (vs[j]<0)*vs[j] )/dz_ave
             Ci[j] = 1./dz_ave * Dzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
             
@@ -1688,7 +1728,7 @@ class ODESolver(object):
         
         for j in range(nz-1,-1,-1):
             
-            for sp in var.photo_sp:
+            for sp in set.union(var.photo_sp,var.ion_sp):
             # summing over all photo species
                 var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross[sp] # only the j-th laye
             
@@ -1920,7 +1960,74 @@ class ODESolver(object):
                 if var.pho_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
                     var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)]
           
+    def compute_Jion(self, var, atm): 
+        '''
+        compute the photoionisation rate
+        '''
+        flux = var.aflux
+        cross = var.cross_Jion
+        
+        bins = var.bins
+        n_branch = var.ion_branch
+        wavelen = var.ion_wavelen
+        br_ratio = var.ion_br_ratio
 
+        # reset to zeros every time
+        var.Jion_sp = dict([( (sp,bn) , np.zeros(nz)) for sp in var.ion_sp for bn in range(n_branch[sp]+1) ])
+
+        for sp in var.ion_sp:
+            # shape: flux (nz,nbin) cross (nbin)
+            
+            # the number of wavelength regions
+            wl_num = len(wavelen[sp])
+
+            # convert to actinic flux *1/(hc/ld)
+            if wl_num == 0:
+                for nbr in range(1, n_branch[sp]+1):
+                    # axis=1 is to sum over all wavelength 
+                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * flux * cross[sp] * var.dbin, axis=1)
+                    var.Jion_sp[(sp, nbr)] -= 0.5* br_ratio[sp][0][nbr-1] * flux[:,0] * cross[sp][0] * var.dbin +\
+                    0.5* br_ratio[sp][0][nbr-1] * flux[:,-1] * cross[sp][-1] * var.dbin
+
+            elif wl_num == 1:
+                for nbr in range(1, n_branch[sp]+1):
+                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * (bins<wavelen[sp]) * flux * cross[sp] * var.dbin + br_ratio[sp][1][nbr-1] * (bins>=wavelen[sp]) * flux * cross[sp] * var.dbin, axis=1)
+                    var.Jion_sp[(sp, nbr)] -= 0.5* ( br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp]) * flux[:,0] * cross[sp][0] * var.dbin +\
+                        br_ratio[sp][1][nbr-1] * (bins[0]>=wavelen[sp]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][0][nbr-1] * (bins[-1]<wavelen[sp]) * flux[:,-1] * cross[sp][-1] * var.dbin +\
+                        br_ratio[sp][1][nbr-1] * (bins[-1]>=wavelen[sp]) * flux[:,-1] * cross[sp][-1] * var.dbin )
+ 
+            elif wl_num >= 2:
+                for nbr in range(1, n_branch[sp]+1):
+                    # the first wavelength region
+                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * (bins<wavelen[sp][0]) * flux * cross[sp] * var.dbin ,axis=1)
+                    # the last wavelength region
+                    var.Jion_sp[(sp, nbr)] += np.sum( br_ratio[sp][-1][nbr-1] * (bins>=wavelen[sp][-1]) * flux * cross[sp] * var.dbin, axis=1)
+                    
+                    # trapezoid integral
+                    var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp][0]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp][0]) * flux[:,-1] * cross[sp][-1] * var.dbin)
+                    var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][-1][nbr-1] * (bins[-1]>=wavelen[sp][-1]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][-1][nbr-1] * (bins[-1]>=wavelen[sp][-1]) * flux[:,-1] * cross[sp][-1] * var.dbin)
+                    
+                    for region_num in range(1,wl_num):
+                        
+                        var.Jion_sp[(sp, nbr)] += np.sum(br_ratio[sp][region_num][nbr-1] * (np.array(bins>=wavelen[sp][region_num-1]) & np.array(bins<wavelen[sp][region_num])) * flux * cross[sp] * var.dbin, axis=1)
+                        # trapezoid integral
+                        var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][region_num][nbr-1] * (bins[0]>=wavelen[sp][region_num-1] and bins[0]<wavelen[sp][region_num]) * flux[:,0] * cross[sp][0] * var.dbin +\
+                        br_ratio[sp][region_num][nbr-1] * (bins[-1]>=wavelen[sp][region_num-1] and bins[-1]<wavelen[sp][region_num]) * flux[:,-1] * cross[sp][-1] * var.dbin)
+
+            else:
+                raise IOError ('\n Too many wavelength switches! Check the photo-network file.')
+
+            # end of the loop: for sp in var.photo_sp:
+
+            # 0 is the total dissociation rate
+            # summing all branches
+            for nbr in range(1, n_branch[sp]+1):
+                var.Jion_sp[(sp, 0)] += var.Jion_sp[(sp, nbr)]
+                # incoperating J into rate coefficients
+                if var.ion_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
+                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)]
+                    
+                    
 class Ros2(ODESolver):
     '''
     class inheritance from ODEsolver for 2nd order Rosenbrock solver 
@@ -1995,44 +2102,34 @@ class Ros2(ODESolver):
 
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
+        
+        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
+        if vulcan_cfg.use_ion == True:
+            # clear e
+            sol[:,species.index('e')] = 0
+            # set e such that the net chare is zero
+            for sp in var.ion_list:
+                sol[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
 
         # surface sink (and top BC for the particles?)
-        if vulcan_cfg.use_condense == True:
-            sol[0,self.non_gas_sp_index] = 0
-            # TEST top sink for settling to work
-            # print (self.non_gas_sp_index)
-            # print (sol[:,self.non_gas_sp_index])
-            # print ('---')
-            #print (np.maximum(sol[:,self.non_gas_sp_index],atm.n_0*1e-12))
-            #print (sol[:,self.non_gas_sp_index])
-            
-            
-            # TEST
-            #sol[:,-1] = np.minimum(sol[:,-1],atm.n_0*1e-10) 
-            
-            
-            # for sp in self.non_gas_sp:
-            #     sol[0,species.index(sp)] = 0
-            #     # TEST top sink
-            #     # sol[-1,species.index(sp)] = 0
+        # should let the deposition velocity in BC handles 
                 
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
 
         # TEST condensation
-        if vulcan_cfg.use_condense == True:
-            sol[0,self.non_gas_sp_index] = 0
-        # TEST condensation
         delta = np.amax( delta[sol>0]/sol[sol>0] )
 
         var.y = sol
-        # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
-            var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
-        else: var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
-        # TEST condensation excluding non-gaseous species
+        var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
+        
+        # # TEST condensation excluding non-gaseous species
+        # if vulcan_cfg.use_condense == True:
+        #     #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
+        #     var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+        # else: var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+        # # TEST condensation excluding non-gaseous species
         para.delta = delta    
         
         return var, para
@@ -2074,24 +2171,26 @@ class Ros2(ODESolver):
         k2 = k2.reshape(y.shape)
         
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2  
-        # for sp in :
-#             sol[0,species.index(sp)] = bottom*atm.n_0[0,species.index(sp)]
+        
+        # fixed the bottom layer to yini (in chemical EQ)
         sol[0] = bottom*atm.n_0[0] 
         
+        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
+        if vulcan_cfg.use_ion == True:
+            # clear e
+            sol[:,species.index('e')] = 0
+            # set e such that the net chare is zero
+            for sp in var.ion_list:
+                sol[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
+                
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
-
-        # TEST condensation
-        # if vulcan_cfg.use_condense == True:
-#             for sp in vulcan_cfg.non_gas_sp:
-#                 delta[:,species.index(sp)] = 0
-        # TEST condensation
+        
         delta = np.amax( delta[sol>0]/sol[sol>0] )
 
         var.y = sol
         
-        # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
             #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
             var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
@@ -2174,15 +2273,10 @@ class Output(object):
             
             print ('Warning... the output file: ' + str(out_name) + ' already exists.\n')
         
-    def print_prog(self, var):
-        print ('time: ' +str("{:.2e}".format(var.t)) + '  and dt= ' + str(var.dt) )
-        print ('longdy=' + str(var.longdy) + ' and longdy/dt= ' + str(var.longdydt) )
-        
-        # TEST
-        #print ('dn/dt =')
-        #print ('dn/dt =')
-        
-        print ('------------------------------------------------------' )
+    def print_prog(self, var, para):
+        print ('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(vulcan_cfg.count_max) ) 
+        print ('longdy = ' + "{:.3e}".format(var.longdy) + '     || longdy/dt = ' + "{:.3e}".format(var.longdydt) + ' || dt = '+ "{:.3f}".format(var.dt) )      
+        print ('------------------------------------------------------------------------' )
 
     def print_end_msg(self, var, para ): 
         print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time') 

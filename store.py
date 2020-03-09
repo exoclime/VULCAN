@@ -54,6 +54,8 @@ class Variables(object):
         self.k, self.k_fun, self.k_inf = [{} for i in range(3)] 
         self.photo_sp = set()  
         self.pho_rate_index, self.n_branch, self.wavelen, self.br_ratio = {}, {}, {}, {}
+        self.ion_rate_index, self.ion_branch, self.ion_wavelen, self.ion_br_ratio = {}, {}, {}, {}
+        self.ion_list, self.ion_sp = [], set() # ion_list: ions(with non-zero charge) ion_sp: species subjected to photoionisation
         
         self.kinf_fun = {}
         self.k_fun_new = {}
@@ -62,15 +64,23 @@ class Variables(object):
         # if photochemistry is off, the value remaines 0 for checking convergence
         self.aflux_change = 0.
         
-        self.def_bin_min = 2. 
-        self.def_bin_max = 800.1
+        # The temporary wavelegth range (nm) given by the stellar flux
+        # It will later be adjusted in make_bins_read_cross in op.py considering all molecules the absorbe photons, taking the smaller range of the two 
+        sflux_data = np.genfromtxt(vulcan_cfg.sflux_file, dtype=float, skip_header=1, names = ['lambda', 'flux'])
+        
+        self.def_bin_min = sflux_data['lambda'][0] 
+        self.def_bin_max = sflux_data['lambda'][-1]
 
         # Define what variables to save in the output file!
         self.var_save = ['k','y','ymix','y_ini','t','dt','longdy','longdydt',\
         'atom_ini','atom_sum','atom_loss','atom_conden','aflux_change','Rf'] 
-        if vulcan_cfg.use_photo == True: self.var_save.extend(['nbin','bins','dbin','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','wavelen','n_branch','br_ratio'])
+        if vulcan_cfg.use_photo == True: 
+            self.var_save.extend(['nbin','bins','dbin','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','wavelen','n_branch','br_ratio'])
+            if vulcan_cfg.use_ion == True: self.var_save.extend(['ion_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
+        # 'ion_list' stores all the non-neutral species in build.atm whereas 'ion_sp' is for the species that actually have ionisation reactions in the network 
         self.var_evol_save = ['y_time','t_time']
-        self.conden_re_list = []        
+        self.conden_re_list = []
+        
         
         ### ### ### ### ### ### ### ### ### ### ###
         # List the names variables defined in op here!

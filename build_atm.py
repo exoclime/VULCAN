@@ -122,17 +122,27 @@ class InitialAbun(object):
         ini = np.zeros(ni)
         y_ini = data_var.y
         gas_tot = data_atm.M
-      
+        ion_list = [] # list of ion species
+        
         if vulcan_cfg.ini_mix == 'EQ':
         
             self.ini_fc(data_var, data_atm)
             fc = np.genfromtxt('fastchem_vulcan/output/vulcan_EQ.dat', names=True, dtype=None, skip_header=0)
             neutral_sp = [sp for sp in species if sp not in vulcan_cfg.excit_sp]
-
+            
             for sp in neutral_sp:
                 if sp in fc.dtype.names:
                     y_ini[:,species.index(sp)] = fc[sp]*gas_tot
+                
                 else: print (sp + ' not included in fastchem.')
+                
+                if vulcan_cfg.use_ion == True:
+                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+            
+            if vulcan_cfg.use_ion == True:
+                for sp in vulcan_cfg.excit_sp: 
+                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+            
             
             # remove the fc output
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
@@ -145,20 +155,24 @@ class InitialAbun(object):
             fc = np.genfromtxt(pre_fc, names=True, dtype=None, skip_header=0)   
             for sp in species:
                 y_ini[:,species.index(sp)] = fc[sp]*gas_tot
-        
+                if vulcan_cfg.use_ion == True:
+                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+                     
         elif vulcan_cfg.ini_mix == 'vulcan_ini':
             with open(vulcan_cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle) 
             
             y_ini = np.copy(vul_data['variable']['y'])
-        
+            if vulcan_cfg.use_ion == True: ion_list = vul_data['variable']['ion_list']
+            
         elif vulcan_cfg.ini_mix == 'const_mix':
             for sp in vulcan_cfg.const_mix.keys():
                 y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp]
-
-            
+            if vulcan_cfg.use_ion == True:
+                for sp in species: 
+                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+                
         else:
-            
             for i in range(nz):
                 
                 if vulcan_cfg.ini_mix == 'const_lowT':
@@ -174,34 +188,17 @@ class InitialAbun(object):
         if vulcan_cfg.use_condense == True:
             for sp in vulcan_cfg.condesne_sp:
                 data_atm.sat_mix[sp] = data_atm.sat_p[sp]/data_atm.pco
+                  
+                if list(data_var.y[conden_status,species.index(sp)]): # if it condenses
                 
-                #if not vulcan_cfg.ini_mix == 'vulcan_ini':
-                    # TEST Cold trap
-                    # np.argmax stops at the first TRUE value and returns its index
-                # the level where condensation starts    
-                conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
-                # conden_status: ture if the partial p >= the saturation p
-                sat_mix = data_atm.n_0 * data_atm.sat_mix[sp]
-                conden_status = data_var.y[:,species.index(sp)] >= sat_mix
-                # take the min between the mixing ratio and the saturation mixing ratio
-                data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
-                
-                # the level where condensation ends (when it tranisions from conden = True to conden = Fasle)
-                #conden_top = [indx+1 for indx, _ in enumerate(conden_status) if _ == True and conden_status[indx+1] == False][0]
-                
-                conden_min_lev = np.argmin( data_var.y[conden_status,species.index(sp)] )
-                
-                
-                if not conden_bot == 0: 
-                    print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
-                    #data_var.y[conden_lev:,species.index(sp)] = 0
-                    data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
-                    
-                    
-                else:
-                    print ( sp + " should be condensed from the surface!")
-                    data_var.y[conden_lev:,species.index(sp)] = (y_ini[conden_top,species.index(sp)]/data_atm.n_0[conden_top]) *data_atm.n_0[conden_top:]
-                    
+                    conden_lev = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                    if not conden_lev == 0: 
+                        print ( sp + " condensed from nz = " + str(conden_lev) + " (cold trap)")
+                        data_var.y[conden_lev:,species.index(sp)] = 0
+                        data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
+                    else:
+                        print ( sp + " should be condensed from the surface!")
+        
         # re-normalisation 
         # TEST
         # Excluding the non-gaseous species
@@ -213,6 +210,10 @@ class InitialAbun(object):
         
         data_var.y_ini = np.copy(y_ini)
         data_var.ymix = y_ini/ysum
+        
+        if vulcan_cfg.use_ion == True: 
+            ion_list.remove('e') 
+            data_var.ion_list = ion_list
         
         return data_var
         
@@ -560,18 +561,13 @@ class Atm(object):
             
             # scaling with (15.27) in [Aeronomy part B by Banks & Kockarts(1973)]
             # *( m_ref/mi*(mi+ m_base)/m_tot )**0.5 (m_ref is the molecular mass of the ref-base e.g. CH4 in CH4-H2 in Moses 2000a)
-            # because D is proportional to (1/m1 + 1/m2)**0.5
             
         elif vulcan_cfg.atm_base == 'N2': # use CH4-N2 in Aeronomy [Banks ] as a reference to scale by the molecular mass
             Dzz_gen = lambda T, n_tot, mi: 7.34E16*T**0.75/n_tot *( 16.04/mi*(mi+28.014)/44.054 )**0.5
         elif vulcan_cfg.atm_base == 'O2': # use CH4-O2 in Aeronomy [Banks ] as a reference to scale by the molecular mass
-            Dzz_gen = lambda T, n_tot, mi: 7.51E16*T**0.759/n_tot *( 16.04/mi*(mi+32.)/48.04 )**0.5
+            Dzz_gen = lambda T, n_tot, mi: 7.51E16*T**0.759/n_tot *( 16.04/mi*(mi+32)/48.04 )**0.5
         elif vulcan_cfg.atm_base == 'CO2': # use H2-CO2 in Hu seager as a reference to scale by the molecular mass
             Dzz_gen = lambda T, n_tot, mi: 2.15E17*T**0.750/n_tot *( 2.016/mi*(mi+44.001)/46.017 )**0.5
-        elif vulcan_cfg.atm_base == 'H2O': # use H2O-O2 from Marrero 1972 as a reference to scale by the molecular mass
-            Dzz_gen = lambda T, n_tot, mi: 2.0E17*T**0.750/n_tot *( 32./mi*(mi+32.)/50.016 )**0.5
-            # scale the new reduced mass while replacing O2 but keeping H2O (H2O-atm) by the old one     
-            
         else: raise IOError ('\n Unknow atm_base!')
         
         for i in range(len(species)):
