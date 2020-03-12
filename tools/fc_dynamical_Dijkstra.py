@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '../') # including the upper level of directory for the path of modules
+
 import numpy as np 
 from collections import defaultdict
 from scipy import interpolate

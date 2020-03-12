@@ -69,7 +69,7 @@ class Variables(object):
         sflux_data = np.genfromtxt(vulcan_cfg.sflux_file, dtype=float, skip_header=1, names = ['lambda', 'flux'])
         
         self.def_bin_min = sflux_data['lambda'][0] 
-        self.def_bin_max = sflux_data['lambda'][-1]
+        self.def_bin_max = min(sflux_data['lambda'][-1],700.)
 
         # Define what variables to save in the output file!
         self.var_save = ['k','y','ymix','y_ini','t','dt','longdy','longdydt',\

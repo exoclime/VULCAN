@@ -142,7 +142,13 @@ After changing the network, you can examine all the readable information, like t
 ### Configuration File ###
 All the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc, are prescribed in ```vulcan_cfg.py```. A useful summary describing what every parameter does can be found in ```vulcan_cfg_readme.txt```.
 
-### Boundary Condistions ###
+### Boundary Conditions ###
+If both use_topflux and use_botflux in vulcan_cfg.py are set to False, it will use the default boundary condition -- zero flux boundary i.e. nothing coming in or out. When use_topflux = True, it reads the file prescribed in top_BC_flux_file as the incoming/outgoing flux at the top boundary. Similarly, when use_botflux = True, the file prescribed in bot_BC_flux_file is read in for the surface pressure and sinks at the bottom boundary. In addition, you can also use the dictionary use_fix_sp_bot to set fixed mole fraction at the surface. e.g. use_fix_sp_bot = {'CO2': 0.01} sets the surface CO<sub>2</sub> mixing ratio to 0.01. 
+
+### Reading Output Files###
+The preceding ```plot_vulcan.py``` should be a good example of how to access to output files. The first step is to use "pickle.load" to unpack the binary files. 
+The main variables are stored in three basic classes: data['variable'], data['atm'], and data['parameter'].
+You can also find all the names of variables and the class structure in ```store.py```.
 
 ## Remarks
 The project is financially support from the Center for Space and Habitability (CSH), the PlanetS NCCR framework and the Swiss-based MERAC Foundation.

@@ -5,6 +5,7 @@ from scipy import interpolate
 import scipy.optimize as sop
 import subprocess
 import pickle
+from shutil import copyfile 
 
 import vulcan_cfg
 from phy_const import kb, Navo, r_sun, au
@@ -76,8 +77,18 @@ class InitialAbun(object):
             
     def ini_fc(self, data_var, data_atm):
         # reading-in the default elemental abundances from Lodders 2009
-        #with open('fastchem_vulcan/chemistry/elements/element_abundances_lodders.dat' ,'r') as f:
-        with open('fastchem_vulcan/input/element_abundances_lodders.dat' ,'r') as f:
+        # depending on including ion or not (whether there is e- in the fastchem elemental abundance dat)
+        tmp_str = ""
+        if vulcan_cfg.use_ion == True: 
+            solar_ele = 'fastchem_vulcan/input/solar_element_abundances_ion.dat'
+            # copy and overwrite the parameters with the logK file with ions
+            copyfile('fastchem_vulcan/input/parameters_ion.dat', 'fastchem_vulcan/input/parameters.dat')
+                         
+        else: 
+            solar_ele = 'fastchem_vulcan/input/solar_element_abundances_wo_ion.dat'
+            copyfile('fastchem_vulcan/input/parameters_wo_ion.dat', 'fastchem_vulcan/input/parameters.dat')
+            
+        with open(solar_ele ,'r') as f:
             new_str = ""
             ele_list = list(vulcan_cfg.atom_list)
             ele_list.remove('H')
@@ -128,9 +139,9 @@ class InitialAbun(object):
         
             self.ini_fc(data_var, data_atm)
             fc = np.genfromtxt('fastchem_vulcan/output/vulcan_EQ.dat', names=True, dtype=None, skip_header=0)
-            neutral_sp = [sp for sp in species if sp not in vulcan_cfg.excit_sp]
+            nonexcited_sp = [sp for sp in species if sp not in vulcan_cfg.excit_sp]
             
-            for sp in neutral_sp:
+            for sp in nonexcited_sp:
                 if sp in fc.dtype.names:
                     y_ini[:,species.index(sp)] = fc[sp]*gas_tot
                 

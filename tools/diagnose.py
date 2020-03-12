@@ -1,5 +1,8 @@
 # Diagnostic tool for plotting diffdf and k[i] at each level
 
+import sys
+sys.path.insert(0, '../') # including the upper level of directory for the path of modules
+
 import numpy as np 
 import matplotlib.pyplot as plt
 import matplotlib.legend as lg
@@ -15,7 +18,7 @@ import chem_funs, op
 from chem_funs import nr, re_wM_dict
 
 # Setting the 2nd input argument as the filename of vulcan output   
-vul_data = 'output/st99-nz60-cap1e6e0-2nd-Earth.vul'
+vul_data = 'output/XXX.vul'
 
 # setting the numerical solver to the desinated one in vulcan_cfg
 solver_str = vulcan_cfg.ode_solver

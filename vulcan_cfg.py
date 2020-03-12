@@ -46,17 +46,21 @@ edd = 0.1 # the Eddington coefficient
 dbin = 0.1 # the uniform bin width
 # frequency to update the flux and optical depth
 ini_update_photo_frq = 100
-final_update_photo_frq = 2
+final_update_photo_frq = 5
 
 # ====== Setting up ionchemistry ======
 use_ion = False
+if use_photo == False and use_ion == True:
+    use_ion = False
+    print ('use_ion is turn off because use_photo = False')
+# photoionization needs to run together with photochemistry
 
 
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: affects molecular diffsion
-nz = 150   # number of vertical layers
-P_b = 1e9 #1.E9 # pressure at the bottom (dyne/cm^2)
-P_t = 1.e-2 #1.e-2 # pressure at the top (dyne/cm^2)
+nz = 140   # number of vertical layers
+P_b = 1e9  # pressure at the bottom (dyne/cm^2)
+P_t = 1.e-2 # pressure at the top (dyne/cm^2)
 use_Kzz = True
 use_moldiff = True
 use_vz = False
@@ -80,7 +84,6 @@ update_frq = 100
 # Boundary Conditions:
 use_topflux = False
 use_botflux = False
-#use_fix_all_bot = True
 use_fix_sp_bot = {}
 
 # ====== Reactions to be switched off  ======
@@ -107,7 +110,7 @@ dt_min = 1.E-14
 dt_max = runtime*1e-5
 dt_var_max = 2.
 dt_var_min = 0.5
-count_min = 120
+count_min = 100
 count_max = int(2E5)
 atol = 1.E-2 # Try decreasing this if the solutions are not stable
 mtol = 1.E-24
