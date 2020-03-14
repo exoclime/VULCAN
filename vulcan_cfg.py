@@ -58,7 +58,7 @@ if use_photo == False and use_ion == True:
 
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: affects molecular diffsion
-nz = 140   # number of vertical layers
+nz = 120   # number of vertical layers
 P_b = 1e9  # pressure at the bottom (dyne/cm^2)
 P_t = 1.e-2 # pressure at the top (dyne/cm^2)
 use_Kzz = True
