@@ -36,7 +36,7 @@ plt.figure()
 plt.plot(sun['lambda'],sun['flux']  , c='orange', label='Sun' , lw=0.9, alpha = 0.7)
 plt.plot(GJ436['lambda'],GJ436['flux'] , c='r' ,label='GJ436', alpha = 0.7, lw=0.7 )
 
-au = 1.4959787E14  # cm
+au = 1.4959787E13  # cm
 r_sun = 6.957E10 # cm
 
 plt.plot(eri['lambda']/10.,eri['flux']*10. *(662449.475*au/r_sun*0.735)**2 , c='b' ,label='$\epsilon$ Eri', alpha = 0.7, lw=0.7 )
