@@ -79,13 +79,10 @@ class InitialAbun(object):
         # reading-in the default elemental abundances from Lodders 2009
         # depending on including ion or not (whether there is e- in the fastchem elemental abundance dat)
         tmp_str = ""
-        if vulcan_cfg.use_ion == True: 
-            solar_ele = 'fastchem_vulcan/input/solar_element_abundances_ion.dat'
-            # copy and overwrite the parameters with the logK file with ions
+        solar_ele = 'fastchem_vulcan/input/solar_element_abundances.dat'
+        if vulcan_cfg.use_ion == True:
             copyfile('fastchem_vulcan/input/parameters_ion.dat', 'fastchem_vulcan/input/parameters.dat')
-                         
-        else: 
-            solar_ele = 'fastchem_vulcan/input/solar_element_abundances_wo_ion.dat'
+        else:
             copyfile('fastchem_vulcan/input/parameters_wo_ion.dat', 'fastchem_vulcan/input/parameters.dat')
             
         with open(solar_ele ,'r') as f:
@@ -110,9 +107,8 @@ class InitialAbun(object):
                             line = sp + '\t' + "{0:.4f}".format(fc_abun) + '\n'
                             print ("{:4}".format(sp) + "{0:.4E}".format(sp_abun))
                         new_str += line
-            
+                
             # make the new elemental abundance file
-            #with open('fastchem_vulcan/chemistry/elements/element_abundances_vulcan.dat', 'w') as f: f.write(new_str)
             with open('fastchem_vulcan/input/element_abundances_vulcan.dat', 'w') as f: f.write(new_str)
             
         # write a T-P text file for fast_chem
@@ -139,9 +135,8 @@ class InitialAbun(object):
         
             self.ini_fc(data_var, data_atm)
             fc = np.genfromtxt('fastchem_vulcan/output/vulcan_EQ.dat', names=True, dtype=None, skip_header=0)
-            nonexcited_sp = [sp for sp in species if sp not in vulcan_cfg.excit_sp]
-            
-            for sp in nonexcited_sp:
+
+            for sp in species:
                 if sp in fc.dtype.names:
                     y_ini[:,species.index(sp)] = fc[sp]*gas_tot
                 
@@ -149,11 +144,6 @@ class InitialAbun(object):
                 
                 if vulcan_cfg.use_ion == True:
                     if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
-            
-            if vulcan_cfg.use_ion == True:
-                for sp in vulcan_cfg.excit_sp: 
-                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
-            
             
             # remove the fc output
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
@@ -199,17 +189,23 @@ class InitialAbun(object):
         if vulcan_cfg.use_condense == True:
             for sp in vulcan_cfg.condesne_sp:
                 data_atm.sat_mix[sp] = data_atm.sat_p[sp]/data_atm.pco
-                  
-                if list(data_var.y[conden_status,species.index(sp)]): # if it condenses
                 
-                    conden_lev = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
-                    if not conden_lev == 0: 
-                        print ( sp + " condensed from nz = " + str(conden_lev) + " (cold trap)")
-                        data_var.y[conden_lev:,species.index(sp)] = 0
-                        data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
-                    else:
-                        print ( sp + " should be condensed from the surface!")
-        
+                # the level where condensation starts    
+                conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                # conden_status: ture if the partial p >= the saturation p
+                sat_rho = data_atm.n_0 * data_atm.sat_mix[sp]
+                conden_status = data_var.y[:,species.index(sp)] >= sat_rho
+
+                # take the min between the mixing ratio and the saturation mixing ratio
+                data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
+
+                if list(data_var.y[conden_status,species.index(sp)]): # if it condenses
+                    min_sat = np.amin(data_atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
+                    conden_min_lev = np.where(data_atm.sat_mix[sp] == min_sat)[0][0]
+                    
+                    print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
+                    data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
+                           
         # re-normalisation 
         # TEST
         # Excluding the non-gaseous species
