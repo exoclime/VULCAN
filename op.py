@@ -773,14 +773,15 @@ class Integration(object):
         # if vulcan_cfg.use_condense == True:
         #     for sp in self.non_gas_sp:
         #         longdy[:,species.index(sp)] = 0
+        
+        with np.errstate(divide='ignore',invalid='ignore'): # ignoring nan when devided by zero
+            where_varies_most = longdy/ymix
+        para.where_varies_most = where_varies_most
          
-        #indx_max = np.nanargmax(longdy[ymix>0]/ymix[ymix>0]) # this index is effectively from species[ymix>0]
         longdy = np.amax( longdy[ymix>0]/ymix[ymix>0] )
         longdydt = longdy/(t_time[-1]-t_time[indx])
         # store longdy and longdydt
         var.longdy, var.longdydt = longdy, longdydt
-        
-        #if para.count % print_freq==0: print ('from... ' + str(int(indx_max/ni)) + ' , ' + species[indx_max%ni])
         
         if (longdy < yconv_cri and longdydt < slope_cri or longdy < yconv_min and longdydt < slope_min) and var.aflux_change<vulcan_cfg.flux_cri: 
             return True
@@ -2103,14 +2104,6 @@ class Ros2(ODESolver):
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
         
-        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
-        if vulcan_cfg.use_ion == True:
-            # clear e
-            sol[:,species.index('e')] = 0
-            # set e such that the net chare is zero
-            for sp in var.ion_list:
-                sol[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
-
         # surface sink (and top BC for the particles?)
         # should let the deposition velocity in BC handles 
                 
@@ -2174,15 +2167,7 @@ class Ros2(ODESolver):
         
         # fixed the bottom layer to yini (in chemical EQ)
         sol[0] = bottom*atm.n_0[0] 
-        
-        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
-        if vulcan_cfg.use_ion == True:
-            # clear e
-            sol[:,species.index('e')] = 0
-            # set e such that the net chare is zero
-            for sp in var.ion_list:
-                sol[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
-                
+                    
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
@@ -2274,8 +2259,10 @@ class Output(object):
             print ('Warning... the output file: ' + str(out_name) + ' already exists.\n')
         
     def print_prog(self, var, para):
+        indx_max = np.nanargmax(para.where_varies_most)
         print ('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(vulcan_cfg.count_max) ) 
-        print ('longdy = ' + "{:.3e}".format(var.longdy) + '     || longdy/dt = ' + "{:.3e}".format(var.longdydt) + ' || dt = '+ "{:.3f}".format(var.dt) )      
+        print ('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )      
+        print ('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
         print ('------------------------------------------------------------------------' )
 
     def print_end_msg(self, var, para ): 

@@ -145,6 +145,7 @@ class Parameters(object):
         self.end_case = 0
         self.solver_str = '' # for assigning the name of solver
         self.switch_final_photo_frq = False
+        self.where_varies_most = np.zeros((nz, ni)) # recording from where and what species flucating from convergence
         
         # These are the "Tableau 20" colors as RGB.    
         self.tableau20 = [(31, 119, 180),(255, 127, 14),(44, 160, 44),(214, 39, 40),(148, 103, 189),(140, 86, 75), (227, 119, 194),(127, 127, 127),(188, 189, 34),(23, 190, 207),\
