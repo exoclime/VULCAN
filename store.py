@@ -68,7 +68,8 @@ class Variables(object):
         # It will later be adjusted in make_bins_read_cross in op.py considering all molecules the absorbe photons, taking the smaller range of the two 
         sflux_data = np.genfromtxt(vulcan_cfg.sflux_file, dtype=float, skip_header=1, names = ['lambda', 'flux'])
         
-        self.def_bin_min = sflux_data['lambda'][0] 
+        # setting the spectral bins based on the stellar spectrum, bun not shorter than 2nm ann not longer than 700 nm. This will further be ajusted in op.py while reading cross sections
+        self.def_bin_min = max(sflux_data['lambda'][0],2.)  
         self.def_bin_max = min(sflux_data['lambda'][-1],700.)
 
         # Define what variables to save in the output file!
