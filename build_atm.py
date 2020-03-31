@@ -164,6 +164,8 @@ class InitialAbun(object):
               vul_data = pickle.load(handle) 
             
             y_ini = np.copy(vul_data['variable']['y'])
+            data_var.y = np.copy(y_ini)
+            
             if vulcan_cfg.use_ion == True: ion_list = vul_data['variable']['ion_list']
             
         elif vulcan_cfg.ini_mix == 'const_mix':
