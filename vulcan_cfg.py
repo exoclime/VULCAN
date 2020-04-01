@@ -3,32 +3,35 @@
 # ============================================================================= 
 
 # ====== Setting up the elements included in the network ======
-atom_list = ['H', 'O', 'C', 'He', 'N']
+atom_list = ['H', 'O', 'C', 'He', 'N' ]
 # ====== Setting up paths and filenames for the input and output files  ======
 # input:
 network = 'thermo/NCHO_photo_network.txt'
 gibbs_text = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder = 'thermo/photo_cross/'
 com_file = 'thermo/all_compose.txt'
-atm_file = 'atm/atm_HD189_Kzz.txt'
-sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' # This is the flux density at the stellar surface
+atm_file = 'atm/atm_HD209_Kzz.txt'
+sflux_file = 'atm/stellar_flux/Gueymard_solar.txt' # This is the flux density at the stellar surface
 top_BC_flux_file = 'atm/BC_top.txt'
 bot_BC_flux_file = 'atm/BC_bot.txt'
 vul_ini = 'output/'
 # output:
 output_dir = 'output/'
 plot_dir = 'plot/'
-movie_dir = 'plot/movie/new-HD189/'
-out_name =  'HD189.vul'
+movie_dir = 'plot/movie/new-HD209/'
+out_name =  'HD209-test.vul'
 
 # ====== Setting up the elemental abundance ======
-use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
+use_solar = True # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
 # customized elemental abundance (only reads when use_solar = False)
 O_H = 6.0618E-4 *(0.793)  
 C_H = 2.7761E-4  
 N_H = 8.1853E-5
 He_H = 0.09691
 ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
+
+#fc_logK = 'nasa9_logK_SNCHOTi_ion.dat'
+
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
 const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
 
@@ -38,29 +41,29 @@ use_photo = True
 r_star = 0.805 # stellar radius in solar radius
 orbit_radius = 0.03142 # planet-star distance in A.U.
 sl_angle = 48 /180.*3.14159 # the zenith angle of the star in degree
+f_diurnal = 1. # to account for the diurnal average of solar flux (i.e. 0.5 for Earth; 1 for tidally-locked planets) 
 # radiation parameters 
-excit_sp = ['O_1', 'CH2_1', 'N_2D'] # N_2D not included due to lack of NASA9 Gibbs energy
 scat_sp = ['H2', 'He'] # the bulk compositions that contribute to Rayleigh scattering
-atom_sp = ['H'] # Na and K? # atoms that do not participate in photodissociation but contribute to the absorption
-edd = 0.1 # the Eddington coefficient 
-dbin = 0.1 # the uniform bin width
+edd = 0.5 # the Eddington coefficient 
+dbin = 0.1  # the uniform bin width
 # frequency to update the flux and optical depth
 ini_update_photo_frq = 100
 final_update_photo_frq = 5
 
 # ====== Setting up ionchemistry ======
-use_ion = False
+use_ion = True
 if use_photo == False and use_ion == True:
-    use_ion = False
-    print ('use_ion is turn off because use_photo = False')
+    print ('Warning: use_ion = True but use_photo = False')
 # photoionization needs to run together with photochemistry
 
 
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: affects molecular diffsion
+# should also affect the thermal diffusion factor alpha_T???
+
 nz = 120   # number of vertical layers
-P_b = 1e9  # pressure at the bottom (dyne/cm^2)
-P_t = 1.e-2 # pressure at the top (dyne/cm^2)
+P_b = 1e9 #1.E9 # pressure at the bottom (dyne/cm^2)
+P_t = 1.e-2 #1.e-2 # pressure at the top (dyne/cm^2)
 use_Kzz = True
 use_moldiff = True
 use_vz = False
@@ -68,7 +71,7 @@ atm_type = 'file' # Options: 'isothermal', 'analytical', or 'file'
 Kzz_prof = 'file' # Options: 'const' or 'file'
 vz_prof = 'const' # Options: 'const' or 'file'
 g = 2140.         # gravity (cm/s^2)  (HD189:2140  HD209:936)
-Tiso = 5000. # only reads when atm_type = 'isothermal'
+Tiso = 4000. # only reads when atm_type = 'isothermal'
 # setting the parameters for the analytical T-P from (126)in Heng et al. 2014. Only reads when atm_type = 'analytical' 
 # T_int, T_irr, ka_L, ka_S, beta_S, beta_L
 para_warm = [120., 1500., 0.1, 0.02, 1., 1.]
@@ -84,17 +87,19 @@ update_frq = 100
 # Boundary Conditions:
 use_topflux = False
 use_botflux = False
+#use_fix_all_bot = True
 use_fix_sp_bot = {}
 
 # ====== Reactions to be switched off  ======
 remove_list = [] # in pairs e.g. [1,2]
+#remove_list = range(251,612)
 
 # == Condensation (Ongoing testing!)  ======
 use_condense = False
 use_settling = False
 start_conden_time = 1e10
 condesne_sp = ["H2O"]    # , 'NH3'
-non_gas_sp = ["H2O_l_s"]
+non_gas_sp = ["H2O_l_s", 'e']
 
 # ====== steady state check ======
 st_factor = 0.5
@@ -110,7 +115,7 @@ dt_min = 1.E-14
 dt_max = runtime*1e-5
 dt_var_max = 2.
 dt_var_min = 0.5
-count_min = 100
+count_min = 120
 count_max = int(2E5)
 atol = 1.E-2 # Try decreasing this if the solutions are not stable
 mtol = 1.E-24
@@ -128,7 +133,7 @@ rtol = 0.25
 # ====== Setting up numerical parameters for SemiEu/SparSemiEU ODE solver (Not used) ====== 
 PItol = 0.1
 
-# ====== Setting up for output and plotting ======
+# ====== Setting up for ouwtput and plotting ======
 # plotting:
 plot_TP = False
 use_live_plot = True
@@ -142,7 +147,8 @@ use_PIL = True
 live_plot_frq = 10
 save_movie_rate = live_plot_frq
 y_time_freq = 1  #  storing data for every 'y_time_freq' step
-plot_spec = ['H', 'CH4', 'CO', 'CO2','C2H2','HCN', 'NH3']  
+#plot_spec = ['H2', 'H', 'H_p','H_m', 'He_p','He_p', 'H3_p','C_p', 'C_m', 'OH_m',  'e']  
+plot_spec = ['H2', 'H', 'CH4', 'HCO']  
 # output:
 output_humanread = False
 use_shark = False

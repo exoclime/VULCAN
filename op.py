@@ -1959,7 +1959,7 @@ class ODESolver(object):
                 var.J_sp[(sp, 0)] += var.J_sp[(sp, nbr)]
                 # incoperating J into rate coefficients
                 if var.pho_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
-                    var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)]
+                    var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
           
     def compute_Jion(self, var, atm): 
         '''
@@ -2026,7 +2026,7 @@ class ODESolver(object):
                 var.Jion_sp[(sp, 0)] += var.Jion_sp[(sp, nbr)]
                 # incoperating J into rate coefficients
                 if var.ion_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
-                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)]
+                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
                     
                     
 class Ros2(ODESolver):
