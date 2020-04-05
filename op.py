@@ -979,11 +979,10 @@ class ODESolver(object):
         if vulcan_cfg.use_topflux == True:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux / atm.dz[-1]
+            diff[-1] += atm.top_flux
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
-            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) / atm.dz[0]
-            
+            diff[0] += atm.bot_flux - y[0]*atm.bot_vdep
         return diff
     
     def diffdf(self, y, atm): 
@@ -1081,10 +1080,10 @@ class ODESolver(object):
         if vulcan_cfg.use_topflux == True:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux / atm.dz[-1]
+            diff[-1] += atm.top_flux
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
-            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) / atm.dz[0]
+            diff[0] += atm.bot_flux - y[0]*atm.bot_vdep
         
         return diff
     
@@ -1187,10 +1186,10 @@ class ODESolver(object):
         if vulcan_cfg.use_topflux == True:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux / atm.dz[-1]
+            diff[-1] += atm.top_flux
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
-            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) / atm.dz[0]
+            diff[0] += atm.bot_flux - y[0]*atm.bot_vdep
         
         return diff
         
@@ -1253,7 +1252,7 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] += -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep / atm.dz[0]
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep
         
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
@@ -1324,7 +1323,7 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep / atm.dz[0]
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
@@ -1379,7 +1378,7 @@ class ODESolver(object):
     
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep / atm.dz[0]
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
 
@@ -1440,7 +1439,7 @@ class ODESolver(object):
             -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
     
         # deposition velocity (off with fixed all BC)
-        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep / atm.dz[0]
+        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
         
         # Fix bottom BC
         #print (dfdy[:, j_indx[0]])
@@ -1498,7 +1497,7 @@ class ODESolver(object):
     
         #dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         # deposition velocity (off with fixed all BC)
-        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep / atm.dz[0]
+        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
         
         # Fix bottom BC
         dfdy[:, j_indx[0]] = 0.
@@ -1567,7 +1566,7 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep / atm.dz[0]
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
