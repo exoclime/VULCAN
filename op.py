@@ -73,6 +73,7 @@ class ReadRate(object):
         
         special_re = False
         conden_re = False
+        recomb_re = False
         photo_re = False
         ion_re = False
         end_re = False
@@ -94,25 +95,46 @@ class ReadRate(object):
                     re_tri_k0 = True
                     
                 elif line.startswith("# special"): 
+                    re_tri = False
+                    re_tri_k0 = False
                     special_re = True # switch to reactions with special forms (hard coded)  
                 
                 elif line.startswith("# condensation"): 
+                    re_tri = False
+                    re_tri_k0 = False
                     special_re = False 
                     conden_re = True
                     var.conden_indx = i
+                
+                elif line.startswith("# radiative"):
+                    re_tri = False
+                    re_tri_k0 = False
+                    special_re = False 
+                    conden_re = False
+                    recomb_re = True
+                    var.recomb_indx = i
                     
                 elif line.startswith("# photo"):
-                    conden_re = False
+                    re_tri = False
+                    re_tri_k0 = False
                     special_re = False # turn off reading in the special form
+                    conden_re = False
+                    recomb_re = False
                     photo_re = True
                     var.photo_indx = i 
                      
                 elif line.startswith("# ionisation"):
-                    conden_re = False
+                    re_tri = False
+                    re_tri_k0 = False
                     special_re = False # turn off reading in the special form
+                    conden_re = False
+                    recomb_re = False
                     photo_re = False
                     ion_re = True
                     var.ion_indx = i
+                
+                elif line.startswith("# reverse stops"):
+                    var.stop_rev_indx = i
                     
                 elif line.startswith("# re_end"):
                     end_re = True
@@ -239,7 +261,7 @@ class ReadRate(object):
                     Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
                     
                     # chekcing if it already existed in the photo species
-                    if Rf[i].split()[0] not in photo_sp: print (str(Rf[i].split()[0]) + ' not present in the photo disccoiation but only in ionization!')
+                    #if Rf[i].split()[0] not in photo_sp: print (str(Rf[i].split()[0]) + ' not present in the photo disccoiation but only in ionization!')
                     ion_sp.append(Rf[i].split()[0])
                     
                     li = line.partition(']')[-1].strip()
@@ -286,41 +308,30 @@ class ReadRate(object):
         if vulcan_cfg.use_ion == True: var.ion_sp = set(ion_sp)
         
         return var
+    
         
     def rev_rate(self, var, atm):
-        # ToDo
-        # Re-organising these
-        if vulcan_cfg.use_photo == False and vulcan_cfg.use_condense == False:
-            rev_list = range(2,nr+1,2)
-        elif vulcan_cfg.use_photo == False and vulcan_cfg.use_condense == True:
-            rev_list = range(2,var.conden_indx,2)
-            # setting the reversal zeros
-            for i in range(var.conden_indx+1, nr+1,2):
-                var.k[i] = np.zeros(nz)
-        elif vulcan_cfg.use_photo == True and vulcan_cfg.use_condense == False:
-            try: rev_list = range(2,var.photo_indx,2)
-            except: print ('No photodissociation reaction provided while "use_photo" set True in vulcan_cfg.\n'); raise
-            # setting the reversal zeros
-            for i in range(var.photo_indx+1, nr+1,2):
-                var.k[i] = np.zeros(nz)
-        else: #vulcan_cfg.use_photo == True and vulcan_cfg.use_condense == True
-            try: rev_list = range(2,var.conden_indx,2)
-            except: print ('No condensation reaction provided while "use_photo" set True in vulcan_cfg.\n'); raise            
-            # setting the reversal of both condensation and photolisys rates to zero
-            for i in range(var.photo_indx+1, nr+1,2):
-                var.k[i] = np.zeros(nz)
-
+        
+        rev_list = range(2,  var.stop_rev_indx, 2)
+        # setting the rest reversal zeros
+        for i in range(var.stop_rev_indx+1, nr+1,2):
+            var.k[i] = np.zeros(nz)
+       
         Tco = atm.Tco.copy()
         
         # reversing rates and storing into data_var
+        print ('Reverse rates from R1 to R' + str(var.stop_rev_indx-2))
         print ('Rates greater than 1e-6:')
-        for i in rev_list: 
-            var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
-            var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
+        for i in rev_list:
+            if i in vulcan_cfg.remove_list:
+                 var.k[i] = np.repeat(0.,nz)
+            else:
+                var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
+                var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
             
             if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + ':  ' + str(np.amax(var.k[i])) )
-            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )
-
+            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )        
+        
         return var
         
     

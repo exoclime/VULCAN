@@ -154,4 +154,5 @@
 	
 # special cases
 # id	# Reactions 
-283	[  OH + CH3 + M -> CH3OH + M  ]                     
+283	[  OH + CH3 + M -> CH3OH + M  ]
+# reverse stops                     

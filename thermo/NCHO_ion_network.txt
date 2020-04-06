@@ -1,7 +1,7 @@
 # VULCAN N-C-H-O network for reducing atmospheres
 ##########################################################################################################################################################
-# logged history
-# removing 669	[ He_p + He + M -> He2_p + M         ]  3.18e-29    -1.000       0.0      2.30e-07    -2.000       0         Beaty_and_Patterson(1965);
+#
+# [ He_p + He + M -> He2_p + M         ]  3.18e-29    -1.000       0.0      2.30e-07    -2.000       0         Beaty_and_Patterson(1965);
 # cuz no Gibbs for He2+    
 # Assuming Ca the same recombination rate as Mg
 # ions added. Next: add Na and K Ca(WASP-33b) Mg OH- O-   C+ CN+ CN-   ask Jim: He2+ HeH+ (H2_V) 
@@ -266,52 +266,50 @@
 479	[ CN + OH -> NCO + H                 ]  7.01E-11     0.000       0.0       1992TSA753-791           500-2500
 481	[ HNCO + H -> NCO + H2               ]  2.91E-19     2.410    6190.0       1996NGU/SEN1615-1621     300-3300
 483	[ HNCO + O -> NCO + OH               ]  3.66E-18     2.110    5750.0       1992HE/LIN711-717        300-3000 
-485	[ HNCO + OH -> NCO + H2O             ]  1.06E-18     2.000    1290.0       1992TSA753-791           500-2500 
-487	[ O_1 + H2 -> OH + H                 ]  2.87E-10     0.000       0.0       1975TUL1893              100-2100                      
-489	[ O_1 + CH4 -> OH + CH3              ]  1.13E-10     0.000       0.0       1994DEM/SAN              200-300                        
-491	[ O_1 + H2O -> OH + OH               ]  1.62E-10     0.000     -65.0       2004DUN/RAV3333-3340     235-370
-493	[ O_1 + CO2 -> O + CO2               ]  2.52E-10     0.000       0.0       1975TUL1893              100-2100                     
-495	[ CH2_1 + H2 -> CH3 + H              ]  9.24E-11     0.000       0.0       Langford(1983)
-497	[ CH2_1 + H2 -> CH2 + H2             ]  1.26E-11     0.000       0.0       Braun(1970)
-499	[ CH2_1 + H2O -> CH2 + H2O           ]  5.00E-11     0.000       0.0       Wang&Frenklack(1997)
-501	[ CH2_1 + CO -> CH2 + CO             ]  5.00E-11     0.000       0.0       Wang&Frenklack(1997)  	
-503	[ N_2D + H2 -> NH + H                ]  4.20e-11     0.000     880.0       1999HER1453-1483         200-300 
-505	[ N_2D + H2O -> NH + OH              ]  4.00e-11     0.000       0.0       1999HER1453-1483         298
-507	[ N_2D + NH3 -> NH + NH2             ]  5.00e-11     0.000       0.0       1999HER1453-1483         200-300	 
-509	[ H2_p + H -> H_p + H2               ]  6.40e-10     0.000       0.0       Karpas_et_al(1979)       
-511	[ H2_p + H2 -> H3_p + H              ]  2.11e-09     0.000       0.0       Bowers_et_al(1969)
-513	[ H_p + O -> O_p + H                 ]  3.75e-10     0.000       0.0       Armentrout_et_al(1978)    	 
-515	[ OH_p + H2 -> H2O_p + H             ]  1.50e-09     0.000       0.0       Fehsenfeld_et_al(1967a)     
-517	[ OH_p + H2O -> H2O_p + OH           ]  2.87e-09     0.000       0.0       Lawson_et_al(1976)         
-519	[ O_p + H2 -> OH_p + H               ]  1.70e-09     0.000       0.0       Smith_et_al(1978)     
-521	[ O_p + H2O -> H2O_p + O             ]  3.20e-09     0.000       0.0       Smith_et_al(1978)    
-523	[ He_p + H -> H_p + He               ]  2.88e-16     0.250       0.0       Paul(Check KIDA)    
-525	[ He_p + H2 -> H2_p + He             ]  5.00e-13     0.000       0.0       Smith_et_al(1976)
-527	[ He_p + H2O -> OH_p + H + He        ]  4.57e-10     0.000       0.0       Paul(Check)
-529	[ H3_p + e -> H2 + H                 ]  4.54e-07    -0.520       0.0       Harada_et_al(2010)
-531	[ H3_p + e -> H + H + H              ]  8.46e-07    -0.520       0.0       Harada_et_al(2010)
-533	[ OH_m + H -> H2O + e                ]  1.40e-09     0.000       0.0       Howard_et_al(1974)	
-535	[ H_m + H2O -> H2 + OH_m             ]  4.80e-09     0.000       0.0       KIDA
-537	[ H2 + He_p -> H + He + H_p          ]  8.30E-14     0.000       0.0       KIDA
-539	[ H2 + H3_p -> H + H + H3_p          ]  1.73E-12	 0.500   52000.0       KIDA
+485	[ HNCO + OH -> NCO + H2O             ]  1.06E-18     2.000    1290.0       1992TSA753-791           500-2500
+487	[ NaH + H -> Na + H2                 ]  2.37E-12     0.690    2360.0       1966MAY/SCH385           990-1010
+489	[ FeO + H -> Fe + OH                 ]  1.66E-10     0.000    3020.0       Rumminger_et_al_1999	 	  	 
+491	[ O_1 + H2 -> OH + H                 ]  2.87E-10     0.000       0.0       1975TUL1893              100-2100                      
+493	[ O_1 + CH4 -> OH + CH3              ]  1.13E-10     0.000       0.0       1994DEM/SAN              200-300                        
+495	[ O_1 + H2O -> OH + OH               ]  1.62E-10     0.000     -65.0       2004DUN/RAV3333-3340     235-370
+497	[ O_1 + CO2 -> O + CO2               ]  2.52E-10     0.000       0.0       1975TUL1893              100-2100                     
+499	[ CH2_1 + H2 -> CH3 + H              ]  9.24E-11     0.000       0.0       Langford(1983)
+501	[ CH2_1 + H2 -> CH2 + H2             ]  1.26E-11     0.000       0.0       Braun(1970)
+503	[ CH2_1 + H2O -> CH2 + H2O           ]  5.00E-11     0.000       0.0       Wang&Frenklack(1997)
+505	[ CH2_1 + CO -> CH2 + CO             ]  5.00E-11     0.000       0.0       Wang&Frenklack(1997)  	
+507	[ N_2D + H2 -> NH + H                ]  4.20e-11     0.000     880.0       1999HER1453-1483         200-300 
+509	[ N_2D + H2O -> NH + OH              ]  4.00e-11     0.000       0.0       1999HER1453-1483         298
+511	[ N_2D + NH3 -> NH + NH2             ]  5.00e-11     0.000       0.0       1999HER1453-1483         200-300	 
+513	[ H2_p + H -> H_p + H2               ]  6.40e-10     0.000       0.0       Karpas_et_al(1979)       
+515	[ H2_p + H2 -> H3_p + H              ]  2.11e-09     0.000       0.0       Bowers_et_al(1969)
+517	[ H_p + O -> O_p + H                 ]  3.75e-10     0.000       0.0       Armentrout_et_al(1978)    	 
+519	[ OH_p + H2 -> H2O_p + H             ]  1.50e-09     0.000       0.0       Fehsenfeld_et_al(1967a)     
+521	[ OH_p + H2O -> H2O_p + OH           ]  2.87e-09     0.000       0.0       Lawson_et_al(1976)         
+523	[ O_p + H2 -> OH_p + H               ]  1.70e-09     0.000       0.0       Smith_et_al(1978)     
+525	[ O_p + H2O -> H2O_p + O             ]  3.20e-09     0.000       0.0       Smith_et_al(1978)    
+527	[ He_p + H -> H_p + He               ]  2.88e-16     0.250       0.0       Paul(Check KIDA)    
+529	[ He_p + H2O -> OH_p + H + He        ]  4.57e-10     0.000       0.0       Paul(Check)
+531	[ H3_p + e -> H2 + H                 ]  4.54e-07    -0.520       0.0       Harada_et_al(2010)
+533	[ H3_p + e -> H + H + H              ]  8.46e-07    -0.520       0.0       Harada_et_al(2010)
+535	[ OH_m + H -> H2O + e                ]  1.40e-09     0.000       0.0       Howard_et_al(1974)	
+537	[ H_m + H2O -> H2 + OH_m             ]  4.80e-09     0.000       0.0       KIDA
+539	[ H2 + He_p -> H + He + H_p          ]  8.30E-14     0.000       0.0       KIDA
 541	[ OH_m + H -> O_m + H2               ]  2.92e-11     0.000       0.0       Parkes(1972a)
 543	[ O_m + O -> O2 + e                  ]  1.90e-10     0.000       0.0       Fehsenfeld&Ferguson(1974)
 545	[ O_m + H2 -> H2O + e                ]  7.01e-10     0.000       0.0       Parkes(1972a)
 547	[ O_m + CO -> CO2 + e                ]  7.30e-10     0.000       0.0       Parkes(1972b)    
 549	[ H2_p + He -> HeH_p + H             ]  1.40e-10     0.000       0.0       Smith_et_al(1976)     
-551	[ He_p + H2O -> HeH_p + OH           ]  1.00e-10     0.000       0.0       Paul    
-553	[ HeH_p + e -> H + He                ]  5.20e-07    -5.000       0.00      Harada_et_al(2010) # dissociative re no M required	
-555	[ H2_p + e -> H2                     ]  1.00e-08     0.000       0.0       Atreya1986
-557	[ H_p + e -> H                       ]  1.90e-10    -0.700       0.0       Atreya1986 (radiative recomb.)
-559	[ He_p + e -> He                     ]  1.90e-10    -0.700       0.0       Atreya1986 (radiative recomb.)
-561	[ HeH_p + H2 -> H3_p + He            ]  1.85e-09     0.000       0.0       Atreya1986
-563	[ Na_p + e -> Na                     ]  1.00e-11     0.000   50895.0       Verner_et_al.(1996)
-565	[ K_p + e -> K                       ]  2.66e-25    -2.210      48.0       Verner_et_al.(1996)
-567	[ Mg_p + e -> Mg                     ]  1.00e-12     0.000       0.0       Est. 
-569	[ Ca_p + e -> Ca                     ]  1.00e-12     0.000       0.0       Est.
-571	[ O_p + e -> O                     ]  1.00e-12     0.000       0.0       Est. 
-573	[ C_p + e -> C                     ]  1.00e-12     0.000       0.0       Est.
-	
+551	[ He_p + H2O -> HeH_p + OH           ]  1.00e-10     0.000       0.0       Paul
+553	[ HeH_p + H2 -> H3_p + He            ]  1.85e-09     0.000       0.0       Atreya1986
+555	[ Na + H -> Na_p + H_m               ]  1.00e-11     0.000    50895.0      Lavvas_2014
+557	[ H_m + HCN -> CN_m + H2             ]  1.50e-08     0.000       0.0       Mackay_et_al(1976a) 
+559	[ OH_m + HCN -> CN_m + H2O           ]  4.10e-09     0.000       0.0       Mackay_et_al(1976a) 
+561	[ CN_m + OH -> O_m + HCN             ]  3.70e-09     0.000       0.0       Ausloos(1975)
+563	[ CH_p + H2 -> CH2_p + H             ]  1.20e-09     0.000       0.0       Adams_et_al(1978a)
+565	[ C_p + H2 -> CH_p + H               ]  1.50e-10     0.000    4640.0       KIDA
+567	[ H_p + H2 + H2 -> H3_p + H2         ]  3.20e-29     0.000       0.0       Atreya1986
+569	[ He_p + H2 -> H2_p + He             ]  2.00e-14     0.000       0.0       Atreya1986	
+571	[ He_p + H2 -> HeH_p + H             ]  2.00e-14     0.000       0.0       Atreya1986
 	
 # 3-body and Disscoiation Reactions
 # id	# Reactions                         	A_0     	B_0     	C_0     	A_inf   	B_inf   	C_inf		Ref 		  	Temp
@@ -357,101 +355,130 @@
 651	[ NH2 + CH3 + M -> CH3NH2 + M        ]  6.03E-18    -3.850       0.0      1.19E-11     0.420       0.0       1995JOD/RAT63-71 / 	1995JOD/RAT63-71 (Moses devided by 3) 200-400, 200-400
 653	[ NO + H + M -> HNO + M              ]  9.58E-29    -1.17      212.0      2.52E-9     -0.410       0.0       1991TSA/HER609-663 / 1991TSA/HER609-663                      230-4200 / 230-4200   
 655	[ NO + OH + M -> HNO2 + M            ]  1.40E-24    -2.51      -34.0      3.31E-12    -0.050     363.0       1991TSA/HER609-663 / 1991TSA/HER609-663                      200-2500 / 200-2500
-657	[ C + C + M -> C2 + M                ]  4.87E-27	-1.600  	 0.0      2.16E-11     0           0         50-200 / 50-200  KIDA /KIDA    
-659	[ H_p + e + M -> H + M               ]  3.12E-19	-2.500  	 0.0      2.26E+03    -3.500       0         Paul   
-661	[ H + e + M -> H_m + M               ]  1.29e-27    -1.500       0.0      1.73e-07    -0.500       0         Paul          
-663	[ H_p + H2 + M -> H3_p + M           ]  3.05e-29     0.000       0.0      2.20e-07    -1.000       0         Graham_et_al(1973)        
-665	[ O_p + e + M -> O + M               ]  1.56e-16    -2.500       0.0      1.13e+06    -3.500       0         Paul check
-667	[ O + e + M -> O_m + M               ]  1.30e-27    -1.500       0.0      1.73e-07    -0.500       0         Paul
-669	[ OH_p + e + M -> OH + M             ]  2.28e-16    -2.500       0.0      1.65E+06    -3.500       0         Paul
-671	[ OH + e + M -> OH_m + M             ]  1.30E-27    -1.500       0.0      1.73E-07    -0.500       0         Paul 
-673	[ C + e + M -> C_m + M               ]  1.30e-27    -1.500       0.0      1.73e-07    -0.500       0         Paul   
-675	[ C_p + e + M -> C + M               ]  6.73E-17    -2.500       0.0      4.86E+05    -3.500       0         Paul 
-677	[ Na_p + e + M -> Na + M             ]  3.43e-14    -3.770       0.0      1.00E-07     0.000       0         Su_et_al(2001) / Lavvas_2014
-679	[ K_p + e + M -> K + M               ]  3.43e-14    -3.770       0.0      1.00E-07     0.000       0         Su_et_al(2001) / Lavvas_2014
-681	[ Mg_p + e + M -> Mg + M             ]  3.46e-22    -2.500       0.0      8.37e-03    -3.500       0         Paul
-683	[ Ca_p + e + M -> Ca + M             ]  3.46e-22    -2.500       0.0      8.37e-03    -3.500       0         Mg
-
+657	[ C + C + M -> C2 + M                ]  4.87E-27	-1.600  	 0.0      2.16E-11     0           0         50-200 / 50-200  KIDA /KIDA 
+659	[ Na + H + M -> NaH + M              ]  1.90e-25    -2.210      41.0      1.00e-11     0           0                          Lavvas_2014 / Lavvas_2014
+661	[ K + H + M -> KH + M                ]  2.66e-25    -2.210      48.0      1.00e-11     0           0                          Lavvas_2014 / Lavvas_2014
+663	[ H_p + e + M -> H + M               ]  3.12E-19	-2.500  	 0.0      2.26E+03    -3.500       0         Paul   
+665	[ H + e + M -> H_m + M               ]  1.29e-27    -1.500       0.0      1.73e-07    -0.500       0         Paul          
+667	[ H_p + H2 + M -> H3_p + M           ]  3.05e-29     0.000       0.0      2.20e-07    -1.000       0         Graham_et_al(1973)    
+669	[ O_p + e + M -> O + M               ]  1.56e-16    -2.500       0.0      1.13e+06    -3.500       0         Paul
+671	[ O + e + M -> O_m + M               ]  1.30e-27    -1.500       0.0      1.73e-07    -0.500       0         Paul
+673	[ OH_p + e + M -> OH + M             ]  2.28e-16    -2.500       0.0      1.65E+06    -3.500       0         Paul
+675	[ OH + e + M -> OH_m + M             ]  1.30E-27    -1.500       0.0      1.73E-07    -0.500       0         Paul 
+677	[ C + e + M -> C_m + M               ]  1.30e-27    -1.500       0.0      1.73e-07    -0.500       0         Paul   
+679	[ C_p + e + M -> C + M               ]  6.73E-17    -2.500       0.0      4.86E+05    -3.500       0         Paul 
+681	[ Na_p + e + M -> Na + M             ]  3.43e-14    -3.770       0.0      1.00E-07     0.000       0         Su_et_al(2001) / Lavvas_2014
+683	[ K_p + e + M -> K + M               ]  3.43e-14    -3.770       0.0      1.00E-07     0.000       0         Su_et_al(2001) / Lavvas_2014
+685	[ Mg_p + e + M -> Mg + M             ]  3.46e-22    -2.500       0.0      8.37e-03    -3.500       0         Paul
+687	[ Ca_p + e + M -> Ca + M             ]  3.46e-22    -2.500       0.0      8.37e-03    -3.500       0         Mg
+689	[ Fe_p + e + M -> Fe + M             ]  5.47e-15    -2.500       0.0      3.97e+07    -3.500       0         Paul   
+691	[ CN_p + e + M -> CN + M             ]  6.84E-16    -2.500       0.0      4.96e+06    -3.500       0         Paul        
+693	[ CN + e + M -> CN_m + M             ]  1.30E-27    -1.500       0.0      1.73e-07    -0.500       0         Paul 
+695	[ CH_p + e + M -> CH + M             ]  1.07e-16    -2.500       0.0      7.76e+05    -3.500       0         Paul   
+697	[ CH2_p + e + M -> CH2 + M           ]  1.59e-16    -2.500       0.0      1.16e+06    -3.500       0         Paul
+    
+		
 # 3-body reactions without high-pressure rates
 # id	# Reactions                         	A_0     	B_0     	C_0        	Ref 		  	   Temp												
 
-685	[ C2H + M -> C2 + H + M              ]   2.92E+11	-5.160  	57400.0 
-687	[ O + C + M -> CO + M                ]   9.10E-22	-3.100  	2114.0
-689	[ NH + M -> H + N + M                ]	 2.99E-10	 0.	 	 	3.76E04		1998DEP/FRI1474-1485   2500-3400
-691	[ O + N + M -> NO + M                ]	 5.46E-33	 0.	 	 	-155.		1973CAM/GRA607
-693	[ CN + M -> C + N + M                ]	 4.20E-10	 0. 	 	7.10E04		1992TSA753-791
-695	[ N2H2 + M -> N2H + H + M            ]	 4.32E16	-8.53		36700.		DeanandBozzelli(2000)
-697	[ O + O + M -> O2 + M                ]	 5.21E-35	 0.		   -900.		1986TSA/HAM1087
-699	[ HNCO + M -> H + NCO                ]  1.66E-07     0.      56400.0        1990WU/WAN3344         2120-2570
-701	[ N_2D + M -> N + M                  ]  1.70e-14     0.000       0.0        1999HER1453-1483         200-300
-
+699	[ C2H + M -> C2 + H + M              ]   2.92E+11	-5.160  	57400.0 
+701	[ O + C + M -> CO + M                ]   9.10E-22	-3.100  	2114.0
+703	[ NH + M -> H + N + M                ]	 2.99E-10	 0.	 	 	3.76E04		1998DEP/FRI1474-1485   2500-3400
+705	[ O + N + M -> NO + M                ]	 5.46E-33	 0.	 	 	-155.		1973CAM/GRA607
+707	[ CN + M -> C + N + M                ]	 4.20E-10	 0. 	 	7.10E04		1992TSA753-791
+709	[ N2H2 + M -> N2H + H + M            ]	 4.32E16	-8.53		36700.		DeanandBozzelli(2000)
+711	[ O + O + M -> O2 + M                ]	 5.21E-35	 0.		   -900.		1986TSA/HAM1087
+713	[ HNCO + M -> H + NCO                ]  1.66E-07     0.      56400.0        1990WU/WAN3344         2120-2570
+715	[ N_2D + M -> N + M                  ]  1.70e-14     0.000       0.0        1999HER1453-1483         200-300
+	 	
 # special cases
 # id	# Reactions 
-703	[  OH + CH3 + M -> CH3OH + M         ]   
+717	[  OH + CH3 + M -> CH3OH + M         ]   
+
+# reverse stops
+# radiative and dissociative recombination
+719	[ HeH_p + e -> H + He                ]  5.20e-07    -5.000       0.00      Harada_et_al(2010) # dissociative re no M required	
+721	[ H2_p + e -> H2                     ]  1.00e-08     0.000       0.0       Atreya1986
+723	[ H_p + e -> H                       ]  1.90e-10    -0.700       0.0       Atreya1986 (radiative recomb.)
+725	[ He_p + e -> He                     ]  1.90e-10    -0.700       0.0       Atreya1986 (radiative recomb.)
+727	[ Na_p + e -> Na                     ]  4.02e-10    -0.825      38.0       Verner_&_Ferland(1996)
+729	[ K_p + e -> K                       ]  1.00e-12    0.000       0.0        Est.
+731	[ Mg_p + e -> Mg                     ]  3.68e-10    -0.855       0.0       Aldrovandi_&_Pequignot(1973)
+733	[ Ca_p + e -> Ca                     ]  3.68e-10    -0.855       0.0       Mg+
+735	[ O_p + e -> O                       ]  1.60e-10    -0.678       0.0       Aldrovandi_&_Pequignot(1973)
+737	[ C_p + e -> C                       ]  2.29e-10    -0.624       0.0       Aldrovandi_&_Pequignot(1973)
+739	[ Fe_p + e -> Fe                     ]  1.00e-12    0.000        0.0       Est.
+741	[ CN_p + e -> C + N                  ]  7.79e-06    -0.550       0.0       Harada_et_al(2010)
+743	[ H2O_p + e -> O + H + H             ]  5.28e-06    -0.500       0.0       Harada_et_al(2010)
 
 # photo disscoiation (no reversals!) 		            # use sp to link br_index to RXXX
 # id	# Reactions                                     sp		br_index #(starting from 1)			
-705	[ H2O -> H + OH                      ]       		H2O		1			 
-707	[ H2O -> H2 + O_1                    ]              H2O		2	
-709	[ H2O -> H + H + O                   ]              H2O		3      
-711	[ CH4 -> CH3 + H                     ]       		CH4		1     
-713	[ CH4 -> CH2_1 + H2                  ]              CH4		2	
-715	[ CH4 -> CH2_1 + H + H               ]              CH4		3  
-717	[ CH4 -> CH + H2 + H                 ] 				CH4		4
-719	[ CH3 -> CH + H2                     ] 				CH3		1
-721	[ CH3 -> CH2_1 + H                   ]              CH3		2
-723	[ CO -> C + O                        ]				CO		1
-725	[ H2 -> H + H                        ] 				H2		1
-727	[ C2H2 -> C2H + H                    ]				C2H2	1
-729	[ CO2 -> CO + O                      ]				CO2		1
-731	[ CO2 -> CO + O_1                    ]              CO2     2
-733	[ C2H4 -> C2H2 + H2	                 ]				C2H4	1
-735	[ C2H4 -> C2H2 + H + H	             ]				C2H4	2
-737	[ C2H4 -> C2H3 + H		             ]				C2H4	3
-739	[ C2H6 -> C2H4 + H2                  ]				C2H6	1
-741	[ C2H6 -> C2H4 + H + H               ]				C2H6	2
-743	[ C2H6 -> C2H2 + H2 + H2             ]				C2H6	3
-745	[ C2H6 -> CH4 + CH2_1                ]				C2H6	4
-747	[ C2H6 -> CH3 + CH3                  ]              C2H6	5
-749	[ OH -> H + O                        ]              OH      1
-751	[ HCO -> H + CO                      ]              HCO     1
-753	[ H2CO -> H2 + CO                    ]              H2CO    1
-755	[ H2CO -> H + HCO                    ]              H2CO    2
-757	[ CH3OH -> CH3 + OH                  ]              CH3OH   1 
-759	[ CH3OH -> H2CO + H2                 ]              CH3OH   2
-761	[ CH3OH -> CH3O + H                  ]              CH3OH   3
-763	[ CH3CHO -> CH4 + CO                 ]              CH3CHO  1
-765	[ CH3CHO -> CH3 + HCO                ]              CH3CHO  2
-767	[ N2 -> N + N			             ]				N2		1
-769	[ NH3 -> NH2 + H		             ]				NH3		1
-771	[ NH3 -> NH + H + H	                 ]				NH3		2
-773	[ HCN -> H + CN		                 ]              HCN		1
-775	[ NO  -> N + O                       ]              NO      1
-777	[ NO2 -> NO + O                      ]              NO2     1
-779	[ N2H4 -> N2H3 + H                   ]              N2H4    1
-781	[ HNCO -> NH + CO                    ]              HNCO    1
-783	[ HNCO -> H + NCO                    ]              HNCO    2
-
+745	[ H2O -> H + OH                      ]       		H2O		1			 
+747	[ H2O -> H2 + O_1                    ]              H2O		2	
+749	[ H2O -> H + H + O                   ]              H2O		3      
+751	[ CH4 -> CH3 + H                     ]       		CH4		1     
+753	[ CH4 -> CH2_1 + H2                  ]              CH4		2	
+755	[ CH4 -> CH2_1 + H + H               ]              CH4		3  
+757	[ CH4 -> CH + H2 + H                 ] 				CH4		4
+759	[ CH3 -> CH + H2                     ] 				CH3		1
+761	[ CH3 -> CH2_1 + H                   ]              CH3		2
+763	[ CO -> C + O                        ]				CO		1
+765	[ H2 -> H + H                        ] 				H2		1
+767	[ C2H2 -> C2H + H                    ]				C2H2	1
+769	[ CO2 -> CO + O                      ]				CO2		1
+771	[ CO2 -> CO + O_1                    ]              CO2     2
+773	[ C2H4 -> C2H2 + H2	                 ]				C2H4	1
+775	[ C2H4 -> C2H2 + H + H	             ]				C2H4	2
+777	[ C2H4 -> C2H3 + H		             ]				C2H4	3
+779	[ C2H6 -> C2H4 + H2                  ]				C2H6	1
+781	[ C2H6 -> C2H4 + H + H               ]				C2H6	2
+783	[ C2H6 -> C2H2 + H2 + H2             ]				C2H6	3
+785	[ C2H6 -> CH4 + CH2_1                ]				C2H6	4
+787	[ C2H6 -> CH3 + CH3                  ]              C2H6	5
+789	[ OH -> H + O                        ]              OH      1
+791	[ HCO -> H + CO                      ]              HCO     1
+793	[ H2CO -> H2 + CO                    ]              H2CO    1
+795	[ H2CO -> H + HCO                    ]              H2CO    2
+797	[ CH3OH -> CH3 + OH                  ]              CH3OH   1 
+799	[ CH3OH -> H2CO + H2                 ]              CH3OH   2
+801	[ CH3OH -> CH3O + H                  ]              CH3OH   3
+803	[ CH3CHO -> CH4 + CO                 ]              CH3CHO  1
+805	[ CH3CHO -> CH3 + HCO                ]              CH3CHO  2
+807	[ N2 -> N + N			             ]				N2		1
+809	[ NH3 -> NH2 + H		             ]				NH3		1
+811	[ NH3 -> NH + H + H	                 ]				NH3		2
+813	[ HCN -> H + CN		                 ]              HCN		1
+815	[ NO  -> N + O                       ]              NO      1
+817	[ NO2 -> NO + O                      ]              NO2     1
+819	[ N2H4 -> N2H3 + H                   ]              N2H4    1
+821	[ HNCO -> NH + CO                    ]              HNCO    1
+823	[ HNCO -> H + NCO                    ]              HNCO    2
+825	[ CN -> C + N                        ]              CN      1
+827	[ CH -> C + H                        ]              CH      1
+829	[ CH_p -> C + H_p                    ]              CH_p    1
+  
 # ionisation (using ionization cross sections; different from photodisscoiation. Needs to be placed after photodissociation.)
 # id	# Reactions                                     sp		br_index
-785	[ H2 -> H2_p + e                     ] 				H2		1
-787	[ H2 -> H_p + H + e                  ] 				H2		2
-789	[ H -> H_p + e                       ] 				H		1
-791	[ H_m -> H_p + e + e                 ] 				H_m		1
-793	[ H_m -> H + e                       ] 				H_m		2
-795	[ OH -> OH_p + e                     ]              OH      1
-797	[ H2O -> OH_p + H + e                ]              H2O     1
-799	[ H2O -> O_p + H2 + e                ]              H2O     2
-801	[ H2O -> H_p + OH + e                ]              H2O     3
-803	[ H2O -> H2O_p + e                   ]              H2O     4 
-805	[ O -> O_p + e                       ]              O       1 
-807	[ C -> C_p + e                       ]              C       1
-809	[ He -> He_p + e                     ]              He      1
-811	[ Na -> Na_p + e                     ]              Na      1
-813	[ K -> K_p + e                       ]              K       1
-815	[ Mg -> Mg_p + e                     ]              Mg      1
-817	[ Ca -> Ca_p + e                     ]              Ca      1 
-
+831	[ H2 -> H2_p + e                     ] 				H2		1
+833	[ H2 -> H_p + H + e                  ] 				H2		2
+835	[ H -> H_p + e                       ] 				H		1
+837	[ H_m -> H_p + e + e                 ] 				H_m		1
+839	[ H_m -> H + e                       ] 				H_m		2
+841	[ OH -> OH_p + e                     ]              OH      1
+843	[ H2O -> OH_p + H + e                ]              H2O     1
+845	[ H2O -> O_p + H2 + e                ]              H2O     2
+847	[ H2O -> H_p + OH + e                ]              H2O     3
+849	[ H2O -> H2O_p + e                   ]              H2O     4 
+851	[ O -> O_p + e                       ]              O       1 
+853	[ C -> C_p + e                       ]              C       1
+855	[ He -> He_p + e                     ]              He      1
+857	[ Na -> Na_p + e                     ]              Na      1
+859	[ K -> K_p + e                       ]              K       1
+861	[ Mg -> Mg_p + e                     ]              Mg      1
+863	[ Ca -> Ca_p + e                     ]              Ca      1 
+865	[ Fe -> Fe_p + e                     ]              Fe      1
+867	[ CH -> CH_p + e                     ]              CH      1
+	
 # re_end
 # braching info start
 H2O: [121.,122.,145.]; [(0.89,0.11,0),(0.78,0.1,0.12),(0.89,0.11,0),(1.,0.,0.)]
@@ -475,6 +502,9 @@ NO: []; [(1.,)]
 NO2: []; [(1.,)]
 N2H4: []; [(1.,)]
 HNCO: [250.]; [(0.5,0.5),(1.,0.)]
+CN: []; [(1.,)]
+CH: []; [(1.,)]
+CH_p: []; [(1.,)]
 # braching info end  
 
 # ion braching info start
@@ -491,4 +521,7 @@ Na: []; [(1.,)]
 K: []; [(1.,)]
 Mg: []; [(1.,)]
 Ca: []; [(1.,)]
+Fe: []; [(1.,)]
+CN: []; [(1.,)]
+CH: []; [(1.,)]
 # ion braching info end                             

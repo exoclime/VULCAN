@@ -183,7 +183,8 @@
 
 # condensation
 299	[ H2O -> H2O_l_s                     ]
-	
+
+# reverse stops	
 # photo disscoiation (no reversals!) 		            # use sp to link br_index to RXXX
 # id	# Reactions                                     sp		br_index #(starting from 1)			
 301	[ H2O -> H + OH                      ]       		H2O		1			 

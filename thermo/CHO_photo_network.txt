@@ -163,7 +163,8 @@
 # special cases
 # id	# Reactions 
 283	[  OH + CH3 + M -> CH3OH + M  ]   
- 
+
+# reverse stops 
 # photo disscoiation (no reversals!) 		# use sp to link br_index to RXXX
 # id	# Reactions                         sp		br_index #(starting from 1)			
 599	[ H2O -> H + OH                      ]              H2O		1			 
