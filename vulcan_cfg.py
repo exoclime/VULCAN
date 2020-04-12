@@ -51,7 +51,7 @@ ini_update_photo_frq = 100
 final_update_photo_frq = 5
 
 # ====== Setting up ionchemistry ======
-use_ion = True
+use_ion = False
 if use_photo == False and use_ion == True:
     print ('Warning: use_ion = True but use_photo = False')
 # photoionization needs to run together with photochemistry
