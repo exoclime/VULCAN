@@ -221,9 +221,12 @@ class InitialAbun(object):
         data_var.ymix = y_ini/ysum
         
         if vulcan_cfg.use_ion == True: 
-            ion_list.remove('e') 
-            data_var.ion_list = ion_list
-        
+            try:
+                ion_list.remove('e') 
+                data_var.ion_list = ion_list
+            except: 
+                print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
+                raise 
         return data_var
         
 
