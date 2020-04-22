@@ -2120,20 +2120,22 @@ class Ros2(ODESolver):
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
-
+        # TEST
+        if vulcan_cfg.use_fix_sp_bot: delta[0, :] = 0
+        
         # TEST condensation
+        if vulcan_cfg.use_condense == True: 
+            delta[:,self.non_gas_sp_index] = 0
+                
+        if para.count%100 == 0:
+            max_indx = np.argmax(delta)
+            print ( ("largest delta: nz = ") + str(int(max_indx/ni) ) + "  from " + str(species[max_indx%ni] )  )
+                  
         delta = np.amax( delta[sol>0]/sol[sol>0] )
-
         var.y = sol
         var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
-        
-        # # TEST condensation excluding non-gaseous species
-        # if vulcan_cfg.use_condense == True:
-        #     #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
-        #     var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
-        # else: var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
-        # # TEST condensation excluding non-gaseous species
-        para.delta = delta    
+        # TEST condensation excluding non-gaseous species
+        para.delta = delta
         
         return var, para
         

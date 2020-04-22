@@ -45,7 +45,7 @@ f_diurnal = 1. # to account for the diurnal average of solar flux (i.e. 0.5 for 
 # radiation parameters 
 scat_sp = ['H2', 'He'] # the bulk compositions that contribute to Rayleigh scattering
 edd = 0.5 # the Eddington coefficient 
-dbin = 0.1  # the uniform bin width
+dbin = 10.  # the uniform bin width
 # frequency to update the flux and optical depth
 ini_update_photo_frq = 100
 final_update_photo_frq = 5
