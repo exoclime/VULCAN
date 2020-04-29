@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib.legend as lg
 import time, os, pickle
 import csv, ast
+try: import numexpr as ne
+except ImportError: print ('Numexpr not installed (optional).')
 
 #from builtins import input
 #from collections import defaultdict
@@ -60,9 +62,9 @@ class ReadRate(object):
         
     def read_rate(self, var, atm):
         
-        Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k, k_fun, k_inf, kinf_fun, k_fun_new, pho_rate_index, ion_rate_index = \
+        Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k, k_fun, k_inf, kinf_fun, k_fun_new, pho_rate_index = \
         var.Rf, var.Rindx, var.a, var.n, var.E, var.a_inf, var.n_inf, var.E_inf, var.k, var.k_fun, var.k_inf, var.kinf_fun, var.k_fun_new,\
-         var.pho_rate_index, var.ion_rate_index
+         var.pho_rate_index
         
         i = self.i
         re_tri, re_tri_k0 = self.re_tri, self.re_tri_k0
@@ -73,15 +75,11 @@ class ReadRate(object):
         
         special_re = False
         conden_re = False
-        recomb_re = False
         photo_re = False
-        ion_re = False
         end_re = False
         br_read  = False
-        ion_br_read = False
         
-        photo_sp = []
-        ion_sp = [] 
+        photo_sp = [] 
                
         with open(vulcan_cfg.network) as f:
             all_lines = f.readlines()
@@ -95,47 +93,19 @@ class ReadRate(object):
                     re_tri_k0 = True
                     
                 elif line.startswith("# special"): 
-                    re_tri = False
-                    re_tri_k0 = False
                     special_re = True # switch to reactions with special forms (hard coded)  
                 
                 elif line.startswith("# condensation"): 
-                    re_tri = False
-                    re_tri_k0 = False
                     special_re = False 
                     conden_re = True
                     var.conden_indx = i
-                
-                elif line.startswith("# radiative"):
-                    re_tri = False
-                    re_tri_k0 = False
-                    special_re = False 
-                    conden_re = False
-                    recomb_re = True
-                    var.recomb_indx = i
                     
                 elif line.startswith("# photo"):
-                    re_tri = False
-                    re_tri_k0 = False
-                    special_re = False # turn off reading in the special form
                     conden_re = False
-                    recomb_re = False
+                    special_re = False # turn off reading in the special form
                     photo_re = True
-                    var.photo_indx = i 
-                     
-                elif line.startswith("# ionisation"):
-                    re_tri = False
-                    re_tri_k0 = False
-                    special_re = False # turn off reading in the special form
-                    conden_re = False
-                    recomb_re = False
-                    photo_re = False
-                    ion_re = True
-                    var.ion_indx = i
+                    var.photo_indx = i  
                 
-                elif line.startswith("# reverse stops"):
-                    var.stop_rev_indx = i
-                    
                 elif line.startswith("# re_end"):
                     end_re = True
                     
@@ -144,22 +114,16 @@ class ReadRate(object):
        
                 elif line.startswith("# braching info end"):
                     br_read = False
-                
-                elif line.startswith("# ion braching info start"):
-                    ion_br_read = True
-       
-                elif line.startswith("# ion braching info end"):
-                    ion_read = False
-                      
+                    
                 # skip common lines and blank lines
                 # ========================================================================================
-                if not line.startswith("#") and line.strip() and special_re == False and conden_re == False and photo_re == False and ion_re == False and end_re == False: # if not starts
+                if not line.startswith("#") and line.strip() and special_re == False and conden_re == False and photo_re == False and end_re == False: # if not starts
                     
                     Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
                     li = line.partition(']')[-1].strip()
                     columns = li.split()
                     Rindx[i] = int(line.partition('[')[0].strip())
-        
+                              
                     a[i] = float(columns[0])
                     n[i] = float(columns[1])
                     E[i] = float(columns[2])
@@ -254,27 +218,6 @@ class ReadRate(object):
                     
                     i += 2
                 
-                # setting photo ionization reactions to zeros
-                elif ion_re == True and line.strip() and not line.startswith("#") and end_re == False:
-                    
-                    k[i] = np.zeros(nz)
-                    Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
-                    
-                    # chekcing if it already existed in the photo species
-                    #if Rf[i].split()[0] not in photo_sp: print (str(Rf[i].split()[0]) + ' not present in the photo disccoiation but only in ionization!')
-                    ion_sp.append(Rf[i].split()[0])
-                    
-                    li = line.partition(']')[-1].strip()
-                    columns = li.split()
-                    Rindx[i] = int(line.partition('[')[0].strip())
-                    # columns[0]: the species being dissocited; branch index: columns[1]
-                    ion_rate_index[(columns[0],int(columns[1]))] = Rindx[i]
-                    
-                    # store the number of branches
-                    var.ion_branch[columns[0]] = int(columns[1])
-                    
-                    i += 2
-                    
                 # end_re == True
                 elif br_read == True and not line.startswith("#"):
                     # read in the quantum yields of photolysis reactions
@@ -286,16 +229,6 @@ class ReadRate(object):
                     var.wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
                     var.br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
                 
-                elif ion_br_read == True and not line.startswith("#"):
-                    # read in the quantum yields of photolysis reactions
-                    sp_list = line.partition(':')
-                    sp = sp_list[0]
-                    lists = sp_list[-1]
-                    wavelen_yield = lists.partition(';')
-                    # wavelen_yield is tuple of string in wavelength seitch, ;, Q yield e.g. ('[165.]', ';', '[(1.,0),(0,1.)]')
-                    var.ion_wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
-                    var.ion_br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
-                
         k_fun.update(k_fun_new)
     
         # store k into data_var
@@ -305,33 +238,42 @@ class ReadRate(object):
         var.kinf_fun = kinf_fun
         
         var.photo_sp = set(photo_sp)
-        if vulcan_cfg.use_ion == True: var.ion_sp = set(ion_sp)
-        
+
         return var
-    
         
     def rev_rate(self, var, atm):
-        
-        rev_list = range(2,  var.stop_rev_indx, 2)
-        # setting the rest reversal zeros
-        for i in range(var.stop_rev_indx+1, nr+1,2):
-            var.k[i] = np.zeros(nz)
-       
+        # ToDo
+        # Re-organising these
+        if vulcan_cfg.use_photo == False and vulcan_cfg.use_condense == False:
+            rev_list = range(2,nr+1,2)
+        elif vulcan_cfg.use_photo == False and vulcan_cfg.use_condense == True:
+            rev_list = range(2,var.conden_indx,2)
+            # setting the reversal zeros
+            for i in range(var.conden_indx+1, nr+1,2):
+                var.k[i] = np.zeros(nz)
+        elif vulcan_cfg.use_photo == True and vulcan_cfg.use_condense == False:
+            try: rev_list = range(2,var.photo_indx,2)
+            except: print ('No photodissociation reaction provided while "use_photo" set True in vulcan_cfg.\n'); raise
+            # setting the reversal zeros
+            for i in range(var.photo_indx+1, nr+1,2):
+                var.k[i] = np.zeros(nz)
+        else: #vulcan_cfg.use_photo == True and vulcan_cfg.use_condense == True
+            try: rev_list = range(2,var.conden_indx,2)
+            except: print ('No condensation reaction provided while "use_photo" set True in vulcan_cfg.\n'); raise            
+            # setting the reversal of both condensation and photolisys rates to zero
+            for i in range(var.photo_indx+1, nr+1,2):
+                var.k[i] = np.zeros(nz)
+                
         Tco = atm.Tco.copy()
         
         # reversing rates and storing into data_var
-        print ('Reverse rates from R1 to R' + str(var.stop_rev_indx-2))
         print ('Rates greater than 1e-6:')
-        for i in rev_list:
-            if i in vulcan_cfg.remove_list:
-                 var.k[i] = np.repeat(0.,nz)
-            else:
-                var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
-                var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
+        for i in rev_list: 
+            var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
+            var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
             
             if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + ':  ' + str(np.amax(var.k[i])) )
-            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )        
-        
+            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )
         return var
         
     
@@ -601,7 +543,6 @@ class ReadRate(object):
             
             for n, ld in enumerate(bins):
                 var.cross_scat[sp][n] = inter_scat(ld)
-                
 
 class Integration(object):
     """
@@ -621,8 +562,10 @@ class Integration(object):
         self.use_settling = vulcan_cfg.use_settling 
         self.g = vulcan_cfg.g
         
-        # including photoionisation
+        # TEST
         if vulcan_cfg.use_photo == True: self.update_photo_frq = vulcan_cfg.ini_update_photo_frq
+        #if vulcan_cfg.use_condense == True:  
+        self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
         
         
     def __call__(self, var, atm, para, make_atm):
@@ -643,19 +586,19 @@ class Integration(object):
             
             if vulcan_cfg.use_photo == True and para.count % self.update_photo_frq == 0:
                 self.odesolver.compute_tau(var, atm)
-                self.odesolver.compute_flux(var, atm)
+                getattr(self.odesolver, para.compute_flux_str)(var, atm)
                 self.odesolver.compute_J(var, atm)
-                if vulcan_cfg.use_ion == True: # photoionisation rate
-                    self.odesolver.compute_Jion(var, atm)
-                    
+            
             # Testing condensation
             # updating the condensation rates
             if vulcan_cfg.use_condense == True and var.t > vulcan_cfg.start_conden_time:
                 var = self.conden(var,atm)
-            
-                
+
             # integrating one step
             var, para = self.odesolver.one_step(var, atm, para)
+            
+            if vulcan_cfg.use_condense == True and vulcan_cfg.use_relax_water == True and var.t > vulcan_cfg.start_conden_time:
+                var = self.h2o_conden_relax(var,atm)
 
             if para.count % vulcan_cfg.update_frq == 0: # updating mu and dz (dzi) due to diffusion
                 atm = self.update_mu_dz(var, atm, make_atm)
@@ -677,7 +620,7 @@ class Integration(object):
             var = self.odesolver.step_size(var, para)
             
             if use_print_prog == True and para.count % vulcan_cfg.print_prog_num==0:
-                self.output.print_prog(var,para)
+                self.output.print_prog(var, para)
                 
             if vulcan_cfg.use_live_flux == True and vulcan_cfg.use_photo == True and para.count % vulcan_cfg.live_plot_frq ==0:
                 #plt.figure('flux')
@@ -721,7 +664,7 @@ class Integration(object):
         # Calculating the settling velocity
         if self.use_settling == True:
             # Using Gao 2018 (50)
-            r_p = 5.e-3
+            r_p = data_atm.r_p_h2o
             R_uni = kb*Navo # the universal gas const
         
             Ti = data_atm.Ti
@@ -733,12 +676,16 @@ class Integration(object):
             # mass density of the air
             rho_a = pi/Ti/(R_uni/mui)
             data_atm.rho_a = rho_a
+
             for sp in self.non_gas_sp:
                 if sp == 'H2O_l_s':
-                    rho_p = 0.9
+                    rho_p = 0.92
                     # negative for downward
-                    data_atm.vs[:,species.index(sp)] = -0.5*rho_p*g*r_p / rho_a *(np.pi*mui /(2*R_uni*Ti))**0.5
-                    
+                    #data_atm.vs[:,species.index(sp)] = - 0.5*rho_p*g*r_p / rho_a *(np.pi*mui /(2*R_uni*Ti))**0.5
+                    # TEST sedimentation vecloity min = 10 cm/s
+                    data_atm.vs[:,species.index(sp)] =  np.minimum(- 0.5*rho_p*g*r_p / rho_a *(np.pi*mui /(2*R_uni*Ti))**0.5 , -10.)
+        #TEST
+        #data_atm.vs[:,species.index('CO2')] = 10000.      
         return data_atm
     
 
@@ -780,19 +727,23 @@ class Integration(object):
         longdy = np.abs((y_time[count-1] - y_time[indx])/np.vstack(atm.n_0))
         longdy[ymix < mtol_conv] = 0
         longdy[y < atol] = 0
+        # TEST 
+        longdy[:, self.non_gas_sp_index] = 0 
         
-        # if vulcan_cfg.use_condense == True:
-        #     for sp in self.non_gas_sp:
-        #         longdy[:,species.index(sp)] = 0
+        if vulcan_cfg.use_condense == True:
+            for sp in self.non_gas_sp:
+                longdy[:,species.index(sp)] = 0
         
         with np.errstate(divide='ignore',invalid='ignore'): # ignoring nan when devided by zero
             where_varies_most = longdy/ymix
         para.where_varies_most = where_varies_most
-         
+        
         longdy = np.amax( longdy[ymix>0]/ymix[ymix>0] )
         longdydt = longdy/(t_time[-1]-t_time[indx])
         # store longdy and longdydt
         var.longdy, var.longdydt = longdy, longdydt
+        
+        #if para.count % print_freq==0: print ('from... ' + str(int(indx_max/ni)) + ' , ' + species[indx_max%ni])
         
         if (longdy < yconv_cri and longdydt < slope_cri or longdy < yconv_min and longdydt < slope_min) and var.aflux_change<vulcan_cfg.flux_cri: 
             return True
@@ -849,44 +800,36 @@ class Integration(object):
         '''
         for re in var.conden_re_list:
             if var.Rf[re] == 'H2O -> H2O_l_s':
-                m = 18./Navo
-                rho_p = 0.9
-                r_p = 5.e-3 # assuming 50 micron from the stratospheric aerosols in Table 2. [Toon & Farlow]
-                
-                rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2O')]-atm.sat_p['H2O']/kb/atm.Tco)/r_p
-                
-                # how many gas molecules are contained in one particle with the assumed size r_p
-                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
-                
-                var.k[re] = rate_c 
-                var.k[re+1] = rate_c /n_mol
-                
-                # positive: condensation
-                var.k[re] = np.maximum(var.k[re], 0)
-                # negative: evaporation
-                var.k[re+1] = np.minimum(var.k[re+1], 0)
-                var.k[re+1] = np.abs(var.k[re+1])
-                
-                # print ('conden:')
-#                 print (var.k[re])
-#                 #
-#                 print ('evapo:')
-#                 print (var.k[re+1])
-                
-                
-                # TEST capping
-                #rate_mix = np.amax(atm.Kzz/(atm.Hpi)**2) # the max rate (shortest tau_dyn)
-                
-                
-                #var.k[re] = np.minimum(var.k[re], rate_mix)
-                #var.k[re+1] = np.minimum(var.k[re+1], rate_mix)
-                
-                # var.k[re] *= 1e-6
-#                 var.k[re+1] *= 1e-20
-                
-                # /kb/data_atm.Tco is to convert p_sat into n_sat
-                #print ('water conden')
-                #print (var.k[re])
+                # using realxation for water condensation
+                if vulcan_cfg.use_relax_water == True:
+                    var.k[re] = 0
+                    var.k[re+1] = 0
+                else:
+                    m = 18./Navo
+                    rho_p = 0.9
+                    r_p = atm.r_p_h2o
+                    # relative humidity
+                    sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity
+
+                    # this is based on the kinetic regime
+                    rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2O')]-sat_humidity)/r_p
+
+                    # new approach: contiuum regime DM/rho c
+                    Dg = np.insert(atm.Dzz[:,species.index('H2O')], 0, atm.Dzz[0,species.index('H2O')])
+                    rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('H2O')]-sat_humidity)
+
+                    # how many gas molecules are contained in one particle with the assumed size r_p
+                    # n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+
+                    #var.k[re] = rate_c
+                    var.k[re] = rate
+
+                    #var.k[re+1] = rate_c /n_mol
+
+
+                    # positive: condensation
+                    var.k[re] = np.maximum(var.k[re], 0)
+
             
         
             elif var.Rf[re] == 'NH3 -> NH3_l':
@@ -895,7 +838,8 @@ class Integration(object):
                 r_p = 1.e-4 # assuming 1 micron
             
                 rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('NH3')]-atm.sat_p['NH3']/kb/atm.Tco)/r_p
-        
+                
+                
                 var.k[re] = rate_c
                 var.k[re+1] = rate_c
                 
@@ -911,19 +855,60 @@ class Integration(object):
                 
                 var.k[re] *= 1e-6
                 var.k[re+1] *= 1e-20
+            
+            elif var.Rf[re] == 'H2SO4 -> H2SO4_l':
+                m = 98.022/Navo
+                rho_p = 1.8302
+                r_p = atm.r_p_h2so4 
+                
+                # new approach: contiuum regime DM/rho c
+                Dg = np.insert(atm.Dzz[:,species.index('H2SO4')], 0, atm.Dzz[0,species.index('H2SO4')])
+                rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('H2SO4')] - atm.sat_p['H2SO4']/kb/atm.Tco)
+                
+                #rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2SO4')]-atm.sat_p['H2SO4']/kb/atm.Tco)/r_p
+                
+                # how many gas molecules are contained in one particle with the assumed size r_p
+                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                
+                var.k[re] = rate 
+                var.k[re+1] = rate /n_mol
 
-        # for sp in vulcan_cfg.condesne_sp:
-#             atm.sat_mix[sp] = atm.sat_p[sp]/atm.pco
-#             pre_conden = np.copy(var.y[:,species.index(sp)])
-#             var.y[:,species.index(sp)] = np.minimum(atm.n_0 * atm.sat_mix[sp], var.y[:,species.index(sp)])
-#             # storing the removed species
-#             var.y_conden[:,species.index(sp)] += np.abs(pre_conden - var.y[:,species.index(sp)])
-        
-        # re-scaling every species
-        #var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+                # positive: condensation
+                var.k[re] = np.maximum(var.k[re], 0)
+                # negative: evaporation
+                var.k[re+1] = np.minimum(var.k[re+1], 0)
+                var.k[re+1] = np.abs(var.k[re+1])
     
         return var
+    
+    
+    def h2o_conden_relax(self, var, atm):
+        m = 18./Navo
+        rho_p = 0.95 # mix of water and ice
+        r_p = atm.r_p_h2o 
+        # relative humidity
+        sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity  
+        # new approach: contiuum regime DM/rho c
+        Dg = np.insert(atm.Dzz[:,species.index('H2O')], 0, atm.Dzz[0,species.index('H2O')])
+        
+        tau = np.abs( 1./(Dg * m/rho_p /r_p**2 * (var.y[:,species.index('H2O')]-sat_humidity) ) )
+        sat_mix = sat_humidity/atm.n_0
+        # implicit-Euler to remove water
+        y_conden = (var.ymix[:,species.index('H2O')] + var.dt/tau*sat_mix) / (1. + var.dt/tau)
+        conden_indx = np.where( var.ymix[:,species.index('H2O')] > sat_mix )
+        
+        # how many gas molecules are contained in one particle with the assumed size r_p
+        n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+        # and converting the mixing ratio of molecules /cm3 to droplets/cm3
+        # "move" the condensed water to H2O_l_s
+        var.ymix[conden_indx,species.index('H2O_l_s')] += (var.ymix[conden_indx,species.index('H2O')] - y_conden[conden_indx]) /n_mol 
+        
+        var.ymix[conden_indx,species.index('H2O')] = y_conden[conden_indx]
+        # restore the unsaturated parts (only relax where ymix > ysat)
 
+        var.y = var.ymix * np.vstack( np.sum(var.y, axis=1) )
+        
+        return var
     
 class ODESolver(object):
     
@@ -932,8 +917,12 @@ class ODESolver(object):
         self.mtol = vulcan_cfg.mtol
         self.atol = vulcan_cfg.atol
         self.non_gas_sp = vulcan_cfg.non_gas_sp
+        # TEST
+        self.condesne_sp = vulcan_cfg.condesne_sp
         
-        if vulcan_cfg.use_condense == True:  self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
+        if vulcan_cfg.use_condense == True:  
+            self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
+            self.condensable_index = [species.index(sp) for sp in self.condesne_sp]
         self.fix_sp_bot_index = [species.index(sp) for sp in vulcan_cfg.use_fix_sp_bot.keys()]
         self.fix_sp_bot_mix = np.array([vulcan_cfg.use_fix_sp_bot[sp] for sp in vulcan_cfg.use_fix_sp_bot.keys()])
   
@@ -988,17 +977,21 @@ class ODESolver(object):
         diff = diff.reshape(nz,ni)
         
         if vulcan_cfg.use_topflux == True:
-            # Don't forget dz!!! -d phi/ dz
+            #####################################
+            ### Don't forget dz!!! -d phi/ dz ###
+            #####################################
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux
+            diff[-1] += atm.top_flux /dzi[-1]
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
-            diff[0] += atm.bot_flux - y[0]*atm.bot_vdep
+            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
+            
         return diff
     
     def diffdf(self, y, atm): 
         """
-        function of eddy diffusion including molecular diffusion, with zero-flux boundary conditions and non-uniform grids (dzi)
+        function outputs the gradient of transport flux (- d phi/dz with unit of molecular cm^-3 s^-1), including eddy diffusion and molecular diffusion
+        with default zero-flux boundary conditions and non-uniform grids (dzi)
         in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
         """
         
@@ -1089,13 +1082,15 @@ class ODESolver(object):
         diff = diff.reshape(nz,ni)
 
         if vulcan_cfg.use_topflux == True:
-            # Don't forget dz!!! -d phi/ dz
+            #####################################
+            ### Don't forget dz!!! -d phi/ dz ###
+            #####################################
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux
+            diff[-1] += atm.top_flux /dzi[-1]
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
-            diff[0] += atm.bot_flux - y[0]*atm.bot_vdep
-        
+            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
+                   
         return diff
     
     
@@ -1195,12 +1190,14 @@ class ODESolver(object):
         diff = diff.reshape(nz,ni)
 
         if vulcan_cfg.use_topflux == True:
-            # Don't forget dz!!! -d phi/ dz
+            #####################################
+            ### Don't forget dz!!! -d phi/ dz ###
+            #####################################
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux
+            diff[-1] += atm.top_flux /dzi[-1]
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
-            diff[0] += atm.bot_flux - y[0]*atm.bot_vdep
+            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
         
         return diff
         
@@ -1262,8 +1259,9 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] += -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[0]] += -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
+        
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep /dzi[0]
         
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
@@ -1333,8 +1331,9 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
+        
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep/dzi[0]
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
@@ -1389,7 +1388,7 @@ class ODESolver(object):
     
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
 
@@ -1449,8 +1448,6 @@ class ODESolver(object):
             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
             -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
     
-        # deposition velocity (off with fixed all BC)
-        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
         
         # Fix bottom BC
         #print (dfdy[:, j_indx[0]])
@@ -1505,10 +1502,7 @@ class ODESolver(object):
             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
-    
-        #dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
-        # deposition velocity (off with fixed all BC)
-        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep
+
         
         # Fix bottom BC
         dfdy[:, j_indx[0]] = 0.
@@ -1739,7 +1733,7 @@ class ODESolver(object):
         
         for j in range(nz-1,-1,-1):
             
-            for sp in set.union(var.photo_sp,var.ion_sp):
+            for sp in var.photo_sp:
             # summing over all photo species
                 var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross[sp] # only the j-th laye
             
@@ -1816,7 +1810,7 @@ class ODESolver(object):
         ll = np.minimum(ll, 1.e10)
         ll = np.maximum(ll, -1.e10)
         
-
+        # can be speed up by numexpr
         # 2D: nz * nbins
         chi = zeta_m**2*tran**2 - zeta_p**2
         xi = zeta_p*zeta_m*(1.-tran**2)
@@ -1896,7 +1890,118 @@ class ODESolver(object):
         
         #print ('aflux change: ' + '{:.4E}'.format(var.aflux_change) )
         
-        
+    
+    # set a switch of size (when size is large, using numexpr)
+    def compute_flux_nexpr(self, var, atm): # Vectorise this loop!  
+        # change it to stagerred grids
+        # top: stellar flux
+        # bottom BC: zero upcoming flux
+
+        # Note!!! Matej's mu is defined in the outgoing hemisphere so his mu<0
+        # My cos[sl_angle] is always 0<=mu<=1
+        # Converting my mu to Matej's mu (e.g. 45 deg -> 135 deg)
+
+        mu_ang = -1.*np.cos(vulcan_cfg.sl_angle)
+        edd = vulcan_cfg.edd
+        tau = var.tau
+
+        # delta_tau (length nz) is used in the transmission function
+        delta_tau = tau - np.roll(tau,-1,axis=0) # np.roll(tau,-1,axis=0) are the upper layers
+        delta_tau = delta_tau[:-1]
+
+
+        # single-scattering albedo
+        nbins = len(var.bins)
+        tot_abs, tot_scat = np.zeros((nz, nbins)), np.zeros((nz, nbins))
+        for sp in var.photo_sp: 
+            tot_abs += np.vstack(var.ymix[:,species.index(sp)])*var.cross[sp] # nz * nbins
+        for sp in vulcan_cfg.scat_sp: 
+            tot_scat += np.vstack(var.ymix[:,species.index(sp)])*var.cross_scat[sp]
+
+        total = tot_abs + tot_scat
+
+        w0 = tot_scat  / (tot_abs + tot_scat) # 2D: nz * nbins
+        # tot_abs + tot_scat can be zero when certain gas (e.g. H2) does not exist
+
+        # Replace nan with zero and inf with very large numbers
+        w0 = np.nan_to_num(w0)
+
+        # to avoit w0=1
+        w0 = np.minimum(w0,1.-1.E-8)
+
+        # sflux: the direct beam; dflux: diffusive flux
+        ''' Beer's law for the intensity'''
+        var.sflux = var.sflux_top *  np.exp(-1.*tau/np.cos(vulcan_cfg.sl_angle) ) 
+        # converting the intensity to flux for the raditive transfer calculation
+        dir_flux = var.sflux*np.cos(vulcan_cfg.sl_angle) # multiplied by the zenith angle for calculating the diffuse flux
+
+        # scattering
+        # the transmission function (length nz)
+        if ag0 == 0: # to save memory
+            one_w0 = 1.- w0
+            tran = np.exp( -1./edd *(one_w0)**0.5 * delta_tau ) # 2D: nz * nbins
+            zeta_p = ne.evaluate('0.5*( 1. + (one_w0)**0.5 )')
+            zeta_m = ne.evaluate('0.5*( 1. - (one_w0)**0.5 )')
+            ll = ne.evaluate('-1.*w0/( 1./mu_ang**2 -1./edd**2 *(one_w0) )')
+            g_p = 0.5*( ll*(1./edd+1./mu_ang) )
+            g_m = 0.5*( ll*(1./edd-1./mu_ang) ) 
+
+        else:
+            one_w0 = 1. - w0
+            one_w0ag0 = 1. - w0*ag0
+            tran = np.exp( ne.evaluate('-1./edd *( (one_w0ag0)*(one_w0) )**0.5 * delta_tau') )
+            zeta_p = ne.evaluate('0.5*( 1. + ((one_w0)/(one_w0ag0))**0.5 ) ')
+            zeta_m = ne.evaluate('0.5*( 1. - ((one_w0)/(one_w0ag0))**0.5 )' ) 
+            ll = ne.evaluate('( (one_w0)*(one_w0ag0) - 1.)/( 1./mu_ang**2 -1./edd**2 *(one_w0)*(one_w0ag0) )')
+            g_p = ne.evaluate('0.5*( ll*(1./edd+1/(mu_ang*(one_w0ag0))) + w0*ag0*mu_ang/(one_w0ag0)  )')
+            g_m = ne.evaluate('0.5*( ll*(1./edd-1/(mu_ang*(one_w0ag0))) - w0*ag0*mu_ang/(one_w0ag0)  )')
+           
+        # to avoit zero denominator
+        ll = np.minimum(ll, 1.e10)
+        ll = np.maximum(ll, -1.e10)
+
+        # can be speed up by numexpr
+        # 2D: nz * nbins
+        chi = ne.evaluate('zeta_m**2*tran**2 - zeta_p**2')
+        xi = ne.evaluate('zeta_p*zeta_m*(1.-tran**2)')
+        phi = ne.evaluate('(zeta_m**2-zeta_p**2)*tran')
+
+        # 2D: nz * nbins
+        i_u = ne.evaluate('phi*g_p')*dir_flux[:-1] - ne.evaluate('(xi*g_m+chi*g_p)')*dir_flux[1:]
+        i_d = ne.evaluate('phi*g_m')*dir_flux[1:] - ne.evaluate('(chi*g_m+xi*g_p)')*dir_flux[:-1]
+        # sflux[1:] are all the layers above and sflux[:-1] are all the layers abelow
+      
+        #starting recording time
+        #start_time = timeit.default_timer()
+
+        # propagating downward layer by layer and then upward
+        # var.dflux_d and var.dflux_p are defined at the interfaces (staggerred)
+        # the rest is defined in the center of the layer
+        for j in range(nz-1,-1,-1): # dflux_d goes from the second top interface (nz+1 interfaces) 
+            var.dflux_d[j] = 1./chi[j]*(phi[j]*var.dflux_d[j+1] - xi[j]*var.dflux_u[j] + i_d[j]/mu_ang )
+        for j in range(1,nz+1):        
+            var.dflux_u[j] = 1./chi[j-1]*(phi[j-1]*var.dflux_u[j-1] - xi[j-1]*var.dflux_d[j] + i_u[j-1]/mu_ang )
+
+        # the average flux from the direct beam
+        # !!! WITHOUT multiplied by the cos zenith angle (flux per unit area perpendicular to the direction of propagationat) !!! 
+        ave_dir_flux = 0.5*( var.sflux[:-1] + var.sflux[1:]) 
+        # devided by the Eddington coefficient to recover the intensity then multiplied by 4pi to get the integrated flux
+        tot_flux = ave_dir_flux + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1])/edd 
+
+        ### Debug
+        if np.any(tot_flux< -1.e-20):
+            print (tot_flux[tot_flux<-1.e-20])
+            raise IOError ('\nNegative diffusive flux! ')
+
+ 
+        # store the previous actinic flux into prev_aflux
+        var.prev_aflux = np.copy(var.aflux)
+        # converting to the actinic flux and storing the current flux
+        var.aflux = tot_flux / (hc/var.bins)
+        # the change of the actinic flux
+        var.aflux_change = np.nanmax( np.abs(var.aflux-var.prev_aflux)[var.aflux>vulcan_cfg.flux_atol]/var.aflux[var.aflux>vulcan_cfg.flux_atol] )
+
+  
     def compute_J(self, var, atm): # the vectorised version
         flux = var.aflux
         
@@ -1971,74 +2076,7 @@ class ODESolver(object):
                 if var.pho_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
                     var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
           
-    def compute_Jion(self, var, atm): 
-        '''
-        compute the photoionisation rate
-        '''
-        flux = var.aflux
-        cross = var.cross_Jion
-        
-        bins = var.bins
-        n_branch = var.ion_branch
-        wavelen = var.ion_wavelen
-        br_ratio = var.ion_br_ratio
 
-        # reset to zeros every time
-        var.Jion_sp = dict([( (sp,bn) , np.zeros(nz)) for sp in var.ion_sp for bn in range(n_branch[sp]+1) ])
-
-        for sp in var.ion_sp:
-            # shape: flux (nz,nbin) cross (nbin)
-            
-            # the number of wavelength regions
-            wl_num = len(wavelen[sp])
-
-            # convert to actinic flux *1/(hc/ld)
-            if wl_num == 0:
-                for nbr in range(1, n_branch[sp]+1):
-                    # axis=1 is to sum over all wavelength 
-                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * flux * cross[sp] * var.dbin, axis=1)
-                    var.Jion_sp[(sp, nbr)] -= 0.5* br_ratio[sp][0][nbr-1] * flux[:,0] * cross[sp][0] * var.dbin +\
-                    0.5* br_ratio[sp][0][nbr-1] * flux[:,-1] * cross[sp][-1] * var.dbin
-
-            elif wl_num == 1:
-                for nbr in range(1, n_branch[sp]+1):
-                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * (bins<wavelen[sp]) * flux * cross[sp] * var.dbin + br_ratio[sp][1][nbr-1] * (bins>=wavelen[sp]) * flux * cross[sp] * var.dbin, axis=1)
-                    var.Jion_sp[(sp, nbr)] -= 0.5* ( br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp]) * flux[:,0] * cross[sp][0] * var.dbin +\
-                        br_ratio[sp][1][nbr-1] * (bins[0]>=wavelen[sp]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][0][nbr-1] * (bins[-1]<wavelen[sp]) * flux[:,-1] * cross[sp][-1] * var.dbin +\
-                        br_ratio[sp][1][nbr-1] * (bins[-1]>=wavelen[sp]) * flux[:,-1] * cross[sp][-1] * var.dbin )
- 
-            elif wl_num >= 2:
-                for nbr in range(1, n_branch[sp]+1):
-                    # the first wavelength region
-                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * (bins<wavelen[sp][0]) * flux * cross[sp] * var.dbin ,axis=1)
-                    # the last wavelength region
-                    var.Jion_sp[(sp, nbr)] += np.sum( br_ratio[sp][-1][nbr-1] * (bins>=wavelen[sp][-1]) * flux * cross[sp] * var.dbin, axis=1)
-                    
-                    # trapezoid integral
-                    var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp][0]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp][0]) * flux[:,-1] * cross[sp][-1] * var.dbin)
-                    var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][-1][nbr-1] * (bins[-1]>=wavelen[sp][-1]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][-1][nbr-1] * (bins[-1]>=wavelen[sp][-1]) * flux[:,-1] * cross[sp][-1] * var.dbin)
-                    
-                    for region_num in range(1,wl_num):
-                        
-                        var.Jion_sp[(sp, nbr)] += np.sum(br_ratio[sp][region_num][nbr-1] * (np.array(bins>=wavelen[sp][region_num-1]) & np.array(bins<wavelen[sp][region_num])) * flux * cross[sp] * var.dbin, axis=1)
-                        # trapezoid integral
-                        var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][region_num][nbr-1] * (bins[0]>=wavelen[sp][region_num-1] and bins[0]<wavelen[sp][region_num]) * flux[:,0] * cross[sp][0] * var.dbin +\
-                        br_ratio[sp][region_num][nbr-1] * (bins[-1]>=wavelen[sp][region_num-1] and bins[-1]<wavelen[sp][region_num]) * flux[:,-1] * cross[sp][-1] * var.dbin)
-
-            else:
-                raise IOError ('\n Too many wavelength switches! Check the photo-network file.')
-
-            # end of the loop: for sp in var.photo_sp:
-
-            # 0 is the total dissociation rate
-            # summing all branches
-            for nbr in range(1, n_branch[sp]+1):
-                var.Jion_sp[(sp, 0)] += var.Jion_sp[(sp, nbr)]
-                # incoperating J into rate coefficients
-                if var.ion_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
-                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
-                    
-                    
 class Ros2(ODESolver):
     '''
     class inheritance from ODEsolver for 2nd order Rosenbrock solver 
@@ -2114,18 +2152,45 @@ class Ros2(ODESolver):
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
         
+        # TEST capping the concentration of droplets (2020 March)
+        # if vulcan_cfg.use_condense == True:
+        #     sol[:,self.non_gas_sp_index] = np.minimum(sol[:,self.non_gas_sp_index], np.transpose(np.tile(M,len(self.non_gas_sp_index)).reshape((len(self.non_gas_sp_index),nz))) * var.non_gas_cap_ratio)
+            
         # surface sink (and top BC for the particles?)
+        
         # should let the deposition velocity in BC handles 
+        
+        # if vulcan_cfg.use_condense == True:
+        #     sol[0,self.non_gas_sp_index] = 0
+            # TEST 2020 Feb
+            #sol[-1,self.non_gas_sp_index] = 0
+            
+            # TEST top sink for settling to work
+            # print (self.non_gas_sp_index)
+            # print (sol[:,self.non_gas_sp_index])
+            # print ('---')
+            #print (np.maximum(sol[:,self.non_gas_sp_index],atm.n_0*1e-12))
+            #print (sol[:,self.non_gas_sp_index])
+            
+            
+            # TEST
+            #sol[:,-1] = np.minimum(sol[:,-1],atm.n_0*1e-10) 
+            
+            
+            # for sp in self.non_gas_sp:
+            #     sol[0,species.index(sp)] = 0
+            #     # TEST top sink
+            #     # sol[-1,species.index(sp)] = 0
                 
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
-        # TEST
         if vulcan_cfg.use_fix_sp_bot: delta[0, :] = 0
         
         # TEST condensation
         if vulcan_cfg.use_condense == True: 
             delta[:,self.non_gas_sp_index] = 0
+            #delta[:,self.condensable_index] = 0
                 
         if para.count%100 == 0:
             max_indx = np.argmax(delta)
@@ -2135,7 +2200,7 @@ class Ros2(ODESolver):
         var.y = sol
         var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
         # TEST condensation excluding non-gaseous species
-        para.delta = delta
+        para.delta = delta    
         
         return var, para
         
@@ -2176,18 +2241,24 @@ class Ros2(ODESolver):
         k2 = k2.reshape(y.shape)
         
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2  
-        
-        # fixed the bottom layer to yini (in chemical EQ)
+        # for sp in :
+#             sol[0,species.index(sp)] = bottom*atm.n_0[0,species.index(sp)]
         sol[0] = bottom*atm.n_0[0] 
-                    
+        
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
-        
+
+        # TEST condensation
+        # if vulcan_cfg.use_condense == True:
+#             for sp in vulcan_cfg.non_gas_sp:
+#                 delta[:,species.index(sp)] = 0
+        # TEST condensation
         delta = np.amax( delta[sol>0]/sol[sol>0] )
 
         var.y = sol
         
+        # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
             #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
             var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
@@ -2199,7 +2270,7 @@ class Ros2(ODESolver):
         return var, para   
       
     
-    def naming_solver(self, para):
+    def naming_solver(self, var, para):
         
         # if vulcan_cfg.use_fix_all_bot == True:
         #     if vulcan_cfg.use_moldiff == True: print ('Use fixed bottom BC and molecular diffusion.')
@@ -2211,6 +2282,10 @@ class Ros2(ODESolver):
         else: print ('No molecular diffusion.')
         para.solver_str = 'solver'
         
+        # biggest 2D array
+        size = var.aflux.shape
+        if vulcan_cfg.use_numexpr == True and size[0] * size[1] > 128000: para.compute_flux_str = 'compute_flux_nexpr' # For NumExpr 2.6, you'll need arrays > 128k elements to see a speed-up
+        else: para.compute_flux_str = 'compute_flux'
         
     def one_step(self, var, atm, para):
 
@@ -2275,6 +2350,7 @@ class Output(object):
         print ('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(vulcan_cfg.count_max) ) 
         print ('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )      
         print ('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
+        #print ('H2O condensation rate: ' + str(var.k[839][var.k[839]>0]) )
         print ('------------------------------------------------------------------------' )
 
     def print_end_msg(self, var, para ): 
@@ -2364,6 +2440,7 @@ class Output(object):
         plt.figure('live mixing ratios')
         plt.ion()
         color_index = 0
+        
         for color_index, sp in enumerate(vulcan_cfg.plot_spec):
             if sp in tex_labels: sp_lab = tex_labels[sp]
             else: sp_lab = sp
@@ -2371,13 +2448,23 @@ class Output(object):
                 para.tableau20.append(tuple(np.random.rand(3)))
             if vulcan_cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab)
+                
+                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condesne_sp:
+                    plt.plot(atm.sat_mix[sp], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab + ' sat', ls='--')
+                
                 plt.gca().set_yscale('log')
                 plt.gca().invert_yaxis()
                 plt.ylabel("Pressure (bar)")
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
-            else: # plotting with height
+            else: # plotting with height (depending on the composition)
+                zmco = 0.5*(atm.zco + np.roll(atm.zco,-1))
+                
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab)
-                plt.ylim((atm.zco[0]/1e5,80))
+                
+                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condesne_sp:
+                    plt.plot(atm.sat_mix[sp], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab + ' sat', ls='--')
+                
+                plt.ylim((atm.zmco[0]/1e5,atm.zmco[-1]/1e5))
                 plt.ylabel("Height (km)")
                 
             images.append((line,))
@@ -2437,8 +2524,9 @@ class Output(object):
                 plt.ylabel("Pressure (bar)")
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
+                zmco = 0.5*(atm.zco + np.roll(atm.zco,-1))
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp)
-                plt.ylim((atm.zco[0]/1e5,80))
+                plt.ylim((atm.zmco[0]/1e5,atm.zmco[-1]/1e5))
                 plt.ylabel("Height (km)")
             color_index +=1
                   

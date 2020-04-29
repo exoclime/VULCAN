@@ -19,7 +19,7 @@ vul_ini = 'output/No-condense-Earth.vul'
 output_dir = 'output/'
 plot_dir = 'plot/'
 movie_dir = 'plot/movie/NH3-Earth/'
-out_name =  'Earth-S.vul'
+out_name =  'Earth-S-st85-noChem-onlyBC.vul'
 
 # ====== Setting up the elemental abundance ======
 use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
@@ -31,6 +31,15 @@ He_H = 0.09691
 ini_mix = 'const_mix' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
 const_mix = {'N2':0.8012, 'O2':0.2-(3.5E-4*2+5.e-3+2e-10*2)/2., 'CO2':3.5E-4, 'H2O':5.e-3, 'Ar':9.34e-3, 'SO2': 2e-10}
+
+# lifeless Earth (swapping O2 and CO2)
+#const_mix = {'N2':0.8012, 'O2':3.5E-4, 'CO2':0.2-(3.5E-4+0.01+5.e-6)/2.,  'H2O':0.01, 'Ar':9.34e-3}
+
+
+#const_mix = {'NH3':0.8012*2, 'O2':0.2-(3.5E-4+0.01+5.e-6)/2., 'CO2':3.5E-4,  'H2O':0.01, 'Ar':9.34e-3}
+
+#const_mix = {'N2':0.8012, 'CO':1.13E-7, 'H2':1e-6, 'NO':2.4e-11, 'O2':1.9793e-1, 'CO2':3.5E-4, 'H2O':0.01,\
+#'N2O':3.02e-7, 'NH3':2.4e-10, 'CH4':1.939e-6, 'He':5.2e-4} 
 
 # ====== Setting up photochemistry ======
 use_photo = True
@@ -87,20 +96,24 @@ use_fix_sp_bot = {'H2O':0.01}
 #check_atom_conser = False
 
 # ====== Reactions to be switched off  ======
-remove_list = [] # in pairs e.g. [1,2]
+#remove_list = [279,280, 283,284, 531,532] # in pairs e.g. [1,2]
+remove_list = range(1,917)
+remove_list = []
 
 # == Condensation (Ongoing testing!)  ======
 use_condense = True
 use_settling = True
-start_conden_time = 1e3
+use_relax_water = True # use relaxation method for water clouds
+start_conden_time = 0
 condesne_sp = ["H2O"]    # , 'NH3'
-non_gas_sp = ["H2O_l_s"]
+non_gas_sp = ["H2O_l_s", 'e']
 
 # ====== steady state check ======
-st_factor = 0.9
+st_factor = 0.5
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
+use_numexpr = True # use NumExpr evaluator to speed up large arrays (need to install NumExpr)
 use_print_prog = True
 print_prog_num = 20  # every x steps to print progress
 dttry = 1.E-10

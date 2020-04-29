@@ -25,12 +25,10 @@ out_name =  'HD209-test.vul'
 use_solar = True # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
 # customized elemental abundance (only reads when use_solar = False)
 O_H = 6.0618E-4 *(0.793)  
-C_H = 2.7761E-4  
-N_H = 8.1853E-5
-He_H = 0.09691
+C_H = 2.7759E-4  
+N_H = 8.1846E-5
+He_H = 0.09692
 ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
-
-#fc_logK = 'nasa9_logK_SNCHOTi_ion.dat'
 
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
 const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
@@ -97,6 +95,7 @@ remove_list = [] # in pairs e.g. [1,2]
 # == Condensation (Ongoing testing!)  ======
 use_condense = False
 use_settling = False
+use_relax_water = False # use relaxation method for water clouds
 start_conden_time = 1e10
 condesne_sp = ["H2O"]    # , 'NH3'
 non_gas_sp = ["H2O_l_s", 'e']
@@ -106,6 +105,7 @@ st_factor = 0.5
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
+use_numexpr = True # use NumExpr evaluator to speed up large arrays (need to install NumExpr)
 use_print_prog = True
 print_prog_num = 500  # every x steps to print progress
 dttry = 1.E-10

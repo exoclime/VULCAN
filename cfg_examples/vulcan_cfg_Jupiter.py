@@ -47,14 +47,6 @@ dbin = 0.2  # the uniform bin width
 ini_update_photo_frq = 100
 final_update_photo_frq = 10
 
-# ====== Setting up ionchemistry ======
-use_ion = False
-if use_photo == False and use_ion == True:
-    use_ion = False
-    print ('use_ion is turn off because use_photo = False')
-# photoionization needs to run together with photochemistry
-
-
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' # the bulk gas of the atmosphere: affects molecular diffsion
 nz = 180   # number of vertical layers
