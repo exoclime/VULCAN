@@ -150,6 +150,15 @@ The preceding ```plot_vulcan.py``` should be a good example of how to access to 
 The main variables are stored in three basic classes: data['variable'], data['atm'], and data['parameter'].
 You can also find all the names of variables and the class structure in ```store.py```.
 
+### Troubleshooting ###
+- `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun`
+Install the Xcode toolkit:
+```
+$ xcode-select --install
+```
+
+
+
 ## Remarks
 The project is financially support from the Center for Space and Habitability (CSH), the PlanetS NCCR framework and the Swiss-based MERAC Foundation.
 The Exoclime Simulation Platform ([ESP][1]) develops a set of open-source codes
