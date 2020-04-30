@@ -152,6 +152,7 @@ You can also find all the names of variables and the class structure in ```store
 
 ### Troubleshooting ###
 - `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun`
+
 Install the Xcode toolkit:
 ```
 $ xcode-select --install
