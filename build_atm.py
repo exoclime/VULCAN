@@ -138,7 +138,7 @@ class InitialAbun(object):
 
             for sp in species:
                 if sp in fc.dtype.names:
-                    y_ini[:,species.index(sp)] = fc[sp]*gas_tot
+                    y_ini[:,species.index(sp)] = fc[sp]*gas_tot # this also changes data_var.y because the address of y array has passed to y_ini
                 
                 else: print (sp + ' not included in fastchem.')
                 
@@ -147,18 +147,7 @@ class InitialAbun(object):
             
             # remove the fc output
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
-        
-        elif vulcan_cfg.ini_mix == 'fc_precal':
-            
-            pre_fc = 'fastchem_vulcan/output/vulcan_EQ_pre.dat'
-            print ('\n Using the precalculated fastchem output: '+ pre_fc)
-            
-            fc = np.genfromtxt(pre_fc, names=True, dtype=None, skip_header=0)   
-            for sp in species:
-                y_ini[:,species.index(sp)] = fc[sp]*gas_tot
-                if vulcan_cfg.use_ion == True:
-                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
-                     
+                             
         elif vulcan_cfg.ini_mix == 'vulcan_ini':
             with open(vulcan_cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle) 
@@ -170,7 +159,7 @@ class InitialAbun(object):
             
         elif vulcan_cfg.ini_mix == 'const_mix':
             for sp in vulcan_cfg.const_mix.keys():
-                y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp]
+                y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp] # this also changes data_var.y
             if vulcan_cfg.use_ion == True:
                 for sp in species: 
                     if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
