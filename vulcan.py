@@ -172,7 +172,7 @@ if vulcan_cfg.use_photo == True:
 
 integ = op.Integration(solver, output)
 # Assgining the specific solver corresponding to different B.C.s
-solver.naming_solver(data_para)
+solver.naming_solver(data_var, data_para)
  
 # Running the integration loop
 integ(data_var, data_atm, data_para, make_atm)
