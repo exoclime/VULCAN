@@ -2350,7 +2350,7 @@ class Output(object):
         print ('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(vulcan_cfg.count_max) ) 
         print ('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )      
         print ('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
-        print ('Actinic flux change = ' + "{:.2e}".format(aflux_change) )
+        print ('Actinic flux change = ' + "{:.2e}".format(var.aflux_change) )
         #print ('H2O condensation rate: ' + str(var.k[839][var.k[839]>0]) )
         print ('------------------------------------------------------------------------' )
 
