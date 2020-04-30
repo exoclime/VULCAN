@@ -55,7 +55,7 @@ class Variables(object):
         self.photo_sp = set()  
         self.pho_rate_index, self.n_branch, self.wavelen, self.br_ratio = {}, {}, {}, {}
         self.ion_rate_index, self.ion_branch, self.ion_wavelen, self.ion_br_ratio = {}, {}, {}, {}
-        self.ion_list, self.ion_sp = [], set() # ion_list: ions(with non-zero charge) ion_sp: species subjected to photoionisation
+        self.charge_list, self.ion_sp = [], set() # charge_list: list of species with non-zero charge; ion_sp: species subjected to photoionisation
         
         self.kinf_fun = {}
         self.k_fun_new = {}

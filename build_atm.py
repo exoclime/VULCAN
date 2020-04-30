@@ -129,7 +129,7 @@ class InitialAbun(object):
         ini = np.zeros(ni)
         y_ini = data_var.y
         gas_tot = data_atm.M
-        ion_list = [] # list of ion species
+        charge_list = [] # list of charged species excluding echarge_list
         
         if vulcan_cfg.ini_mix == 'EQ':
         
@@ -143,7 +143,7 @@ class InitialAbun(object):
                 else: print (sp + ' not included in fastchem.')
                 
                 if vulcan_cfg.use_ion == True:
-                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+                    if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
             
             # remove the fc output
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
@@ -155,14 +155,14 @@ class InitialAbun(object):
             y_ini = np.copy(vul_data['variable']['y'])
             data_var.y = np.copy(y_ini)
             
-            if vulcan_cfg.use_ion == True: ion_list = vul_data['variable']['ion_list']
+            if vulcan_cfg.use_ion == True: charge_list = vul_data['variable']['charge_list']
             
         elif vulcan_cfg.ini_mix == 'const_mix':
             for sp in vulcan_cfg.const_mix.keys():
                 y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp] # this also changes data_var.y
             if vulcan_cfg.use_ion == True:
                 for sp in species: 
-                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+                    if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
                 
         else:
             for i in range(nz):
@@ -211,8 +211,8 @@ class InitialAbun(object):
         
         if vulcan_cfg.use_ion == True: 
             try:
-                ion_list.remove('e') 
-                data_var.ion_list = ion_list
+                charge_list.remove('e') 
+                data_var.charge_list = charge_list
             except: 
                 print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
                 raise 
