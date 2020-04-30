@@ -2194,7 +2194,7 @@ class Ros2(ODESolver):
                 
         if vulcan_cfg.use_print_delta == True and para.count % vulcan_cfg.print_prog_num==0:
             max_indx = np.argmax(delta)
-            print ('Largest delta (truncation error) from ' + str(species[max_indx%ni] )  ) + " at nz = "   + str(int(max_indx/ni) ) 
+            print ('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) ) 
                   
         delta = np.amax( delta[sol>0]/sol[sol>0] )
         var.y = sol
@@ -2350,6 +2350,7 @@ class Output(object):
         print ('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(vulcan_cfg.count_max) ) 
         print ('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )      
         print ('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
+        print ('Actinic flux change = ' + "{:.2e}".format(aflux_change) )
         #print ('H2O condensation rate: ' + str(var.k[839][var.k[839]>0]) )
         print ('------------------------------------------------------------------------' )
 
