@@ -149,6 +149,7 @@ class InitialAbun(object):
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
                              
         elif vulcan_cfg.ini_mix == 'vulcan_ini':
+            print ("Initializing with compositions from the prvious run " + vulcan_cfg.vul_ini)
             with open(vulcan_cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle) 
             
@@ -158,6 +159,7 @@ class InitialAbun(object):
             if vulcan_cfg.use_ion == True: charge_list = vul_data['variable']['charge_list']
             
         elif vulcan_cfg.ini_mix == 'const_mix':
+            print ("Initializing with constant (well-mixed): " + str(vulcan_cfg.const_mix))
             for sp in vulcan_cfg.const_mix.keys():
                 y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp] # this also changes data_var.y
             if vulcan_cfg.use_ion == True:
