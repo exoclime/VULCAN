@@ -105,7 +105,7 @@ st_factor = 0.5
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
-use_numexpr = True # use NumExpr evaluator to speed up large arrays (need to install NumExpr)
+use_numexpr = False # use NumExpr evaluator to speed up large arrays (need to install NumExpr)
 use_print_prog = True
 use_print_delta = False
 print_prog_num = 500  # every x steps to print progress
