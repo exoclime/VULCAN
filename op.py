@@ -267,7 +267,7 @@ class ReadRate(object):
         Tco = atm.Tco.copy()
         
         # reversing rates and storing into data_var
-        print ('Rates greater than 1e-6:')
+        print ('Rate coefficients greater than 1e-6:')
         for i in rev_list: 
             var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
             var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
@@ -2192,9 +2192,9 @@ class Ros2(ODESolver):
             delta[:,self.non_gas_sp_index] = 0
             #delta[:,self.condensable_index] = 0
                 
-        if para.count%100 == 0:
+        if vulcan_cfg.use_print_delta == True and para.count % vulcan_cfg.print_prog_num==0:
             max_indx = np.argmax(delta)
-            print ( ("largest delta: nz = ") + str(int(max_indx/ni) ) + "  from " + str(species[max_indx%ni] )  )
+            print ('Largest delta (truncation error) from ' + str(species[max_indx%ni] )  ) + " at nz = "   + str(int(max_indx/ni) ) 
                   
         delta = np.amax( delta[sol>0]/sol[sol>0] )
         var.y = sol
