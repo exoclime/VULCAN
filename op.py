@@ -565,7 +565,7 @@ class Integration(object):
         # TEST
         if vulcan_cfg.use_photo == True: self.update_photo_frq = vulcan_cfg.ini_update_photo_frq
         #if vulcan_cfg.use_condense == True:  
-        self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
+        self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp if sp in species]
         
         
     def __call__(self, var, atm, para, make_atm):

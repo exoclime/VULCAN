@@ -19,7 +19,7 @@ vul_ini = 'output/'
 output_dir = 'output/'
 plot_dir = 'plot/'
 movie_dir = 'plot/movie/new-HD209/'
-out_name =  'HD209-test.vul'
+out_name =  'HD209.vul'
 
 # ====== Setting up the elemental abundance ======
 use_solar = True # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
@@ -98,7 +98,7 @@ use_settling = False
 use_relax_water = False # use relaxation method for water clouds
 start_conden_time = 1e10
 condesne_sp = ["H2O"]    # , 'NH3'
-non_gas_sp = ["H2O_l_s", 'e']
+non_gas_sp = ['e']
 
 # ====== steady state check ======
 st_factor = 0.5
@@ -147,8 +147,7 @@ use_PIL = True
 live_plot_frq = 10
 save_movie_rate = live_plot_frq
 y_time_freq = 1  #  storing data for every 'y_time_freq' step
-#plot_spec = ['H2', 'H', 'H_p','H_m', 'He_p','He_p', 'H3_p','C_p', 'C_m', 'OH_m',  'e']  
-plot_spec = ['H2', 'H', 'CH4', 'HCO']  
+plot_spec = ['H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2', 'NH3', 'HCN']  
 # output:
 output_humanread = False
 use_shark = False

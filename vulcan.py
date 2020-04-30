@@ -85,8 +85,16 @@ from chem_funs import ni, nr  # number of species and reactions in the network
 np.set_printoptions(threshold=np.inf)  # print all for debuging
 
 species = chem_funs.spec_list
-compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=None)
+### read in the basic chemistry data
+with open(vulcan_cfg.com_file, 'r') as f:
+    columns = f.readline() # reading in the first line
+    num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass") 
+type_list = ['int' for i in range(num_ele)]
+type_list.insert(0,'U20'); type_list.append('float')
+compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=type_list)
+# dtype=None in python 2.X but Sx -> Ux in python3
 compo_row = list(compo['species'])
+### read in the basic chemistry data
 
 ### creat the instances for storing the variables and parameters
 data_var = store.Variables()
@@ -161,7 +169,6 @@ if vulcan_cfg.use_photo == True:
     
     # removing rates
     data_var = rate.remove_rate(data_var)
-
 
 integ = op.Integration(solver, output)
 # Assgining the specific solver corresponding to different B.C.s
