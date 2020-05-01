@@ -11,7 +11,7 @@ This is currectly a release candidate version. Any questions or feedbacks is wel
 ![Running with realtime plotting](demo/demo.gif)
 ## Requirements
 VULCAN is developed with Python 3 but has been tested compatible with Python 2.7. It is advised to run it on Python 3 if possible.
-Two very useful tools to set up python environments:
+Two very useful tools to set up python environments:\
 [Pip](https://pip.pypa.io/en/stable/) - package installer for Python\
 [Anaconda](https://docs.continuum.io/) - virtual environment manager
 
