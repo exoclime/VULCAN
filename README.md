@@ -2,12 +2,13 @@
 #### Authors: Shang-Min (Shami) Tsai ####
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)\
 Photochemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python code.
-VULCAN is implemented with the equilibrium chemistry code [FastChem](https://github.com/exoclime/FastChem)  created by Daniel Kitzmann, Joachim Stock, to initialise a state in chemical equilibrium. 
+VULCAN is implemented with the equilibrium chemistry code [FastChem](https://github.com/exoclime/FastChem)  created by Daniel Kitzmann, Joachim Stock, to initialise a state in chemical equilibrium.
 
 The theory paper of the first version of VULCAN (without photochemistry) can be found here: https://arxiv.org/abs/1607.00409
 This is currectly a release candidate version. Any questions or feedbacks is welcome and can be sent to [Shami Tsai](mailto:shang-min.tsai@physics.ox.ac.uk)
 
-![Running with realtime plotting](demo/demo.gif)
+* Running with realtime plotting:
+![Running with realtime plotting](demo/demo.gif){:height="50%" width="50%"}
 ## Requirements
 VULCAN is developed with Python 3 but has been tested compatible with Python 2.7. It is advised to run it on Python 3 if possible.
 Two very useful tools to set up python environments:
@@ -25,7 +26,7 @@ and the embeded [FastChem](https://github.com/exoclime/FastChem) requires a stan
 If any of the python packages are missing, you can install the full SciPy Stack via Pip, e.g.
 ```bash
 pip3 install --upgrade pip
-``` 
+```
 ```bash
 pip3 install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
 ```
@@ -37,14 +38,14 @@ PIL or Pillow is a plotting library. If installed, the plots will be convenientl
 
 Let's dive in and see chemical kinetics in action!
 
-First, go to the ```/fastchem_vulcan``` folder to compile [FastChem](https://github.com/exoclime/FastChem)(equilibrium chemistry code) by running 
+First, go to the ```/fastchem_vulcan``` folder to compile [FastChem](https://github.com/exoclime/FastChem)(equilibrium chemistry code) by running
 ```
 make
 ```
 
-After compiling finished, go back to the main directory of VULCAN and run 
+After compiling finished, go back to the main directory of VULCAN and run
 ```
-python vulcan.py 
+python vulcan.py
 ```
 
 You should see the default model for HD 189733b starts running with real-time plotting, how cool is that! This will take about 10-15 minutes to complete depending on your comuputer. Don't resist yourself from just staring at this live plotting -- it is almost like mindfulness meditation.
@@ -53,17 +54,17 @@ After the run finished with a steady state, we can plot the results from the out
 ```
 python plot_vulcan.py ../output/HD189.vul H2O,CH4,CO,CO2,NH3,HCN hd189
 ```
-will plot the output file "HD189.vul" for the chosen species: H2O,CH4,CO,CO2,NH3,HCN and save the plot named "hd189" in the ```/plot``` folder. 
+will plot the output file "HD189.vul" for the chosen species: H2O,CH4,CO,CO2,NH3,HCN and save the plot named "hd189" in the ```/plot``` folder.
 
 
 Now you may want to try a different T-P input, changing the elemental abundances or vertical mixing. All these settings are prescreibed in ```vulcan_cfg.py```. For example, find and edit
 ```python
 const_Kzz = 1.E7
 ```
-and 
+and
 ```python
 C_H = 6.0618E-4
-``` 
+```
 for a weaker vertical mixing (K<sub>zz</sub>) and carbon rich (C/O=1) run. Set use_live_plot = False if you wish to switch off the real-time plotting (why whould you though?). More detailed instruction can be found in the following sections. Have fun!
 
 ## Full instruction
@@ -88,9 +89,9 @@ for a weaker vertical mixing (K<sub>zz</sub>) and carbon rich (C/O=1) run. Set u
 │   ├── store.py
 │   ├── vulcan.py
 │   ├── vulcan_cfg.py
-``` 
+```
 
-`/atm/`: storing input atmospheric files 
+`/atm/`: storing input atmospheric files
 `/fastchem_vulcan/`: Fastchem (equilibirum chemistry code) which is used to initialse the compositions
 `/output/`: storing the output files
 `/plot/`: storing the output plots
@@ -108,7 +109,7 @@ for a weaker vertical mixing (K<sub>zz</sub>) and carbon rich (C/O=1) run. Set u
 `vulcan.py`: the top-level main script of VULCAN  
 `vulcan_cfg.py`: the configuration file for VULCAN  
 
-```vulcan_cfg.py``` includes all the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc. Typically this is the only file you need to edit for each specific run. A summary of every setting is listed in ```vulcan_cfg_readme.txt```. 
+```vulcan_cfg.py``` includes all the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc. Typically this is the only file you need to edit for each specific run. A summary of every setting is listed in ```vulcan_cfg_readme.txt```.
 
 ### Input Files
 The key input files of VULCAN include the chemical network, atmospheric T-P profile, and stellar flux. ```NCHO_photo_network.txt``` is the deafult reaction network including nitrogen, carbon, hydrogen, and oxygen species. It is validated from ~ 500 to 3000 K with about 60 gaseous species and 700 reactions.
@@ -117,15 +118,15 @@ The input temperature-pressure(-Kzz) profile is required when Kzz_prof is set to
 See the included T-P files of HD 189733b and HD 209458b in `/atm` for example.  
 The stellar UV flux is stored in /atm/stellar_flux, with the first column being weavelength in nm and the second column	being flux in ergs/cm**2/s/nm.
 The thermodynamics data and cross sections are stored in /thermo/NASA9 and /thermo/photo_cross, respectively. Change at your own risk!
-If constant fluxes for certain species are used, the files are also placed in /atm, in the format of species, flux (cm-2 s-1), and deposite velocity (cm s-1). 
+If constant fluxes for certain species are used, the files are also placed in /atm, in the format of species, flux (cm-2 s-1), and deposite velocity (cm s-1).
 
 
-### Editing or Using a different chemical network 
-VULCAN is developed in a flexible way that the chemical network is _not_ hard coded. Instead, ```make_chem_funs.py``` generates all the required funtions from the input chemical network (e.g. ```NCHO_photo_netowrk.txt```) into ```chem_funs.py```. 
-You can edit the default netowrk, to remove or add reactions, to change rate constats, etc. You can also use a different chemical network, as long as it is in the same format as the defalut ones. That is, the reactions should be writen in the form of [ A + B -> C + D ], including the square brackets. 
+### Editing or Using a different chemical network
+VULCAN is developed in a flexible way that the chemical network is _not_ hard coded. Instead, ```make_chem_funs.py``` generates all the required funtions from the input chemical network (e.g. ```NCHO_photo_netowrk.txt```) into ```chem_funs.py```.
+You can edit the default netowrk, to remove or add reactions, to change rate constats, etc. You can also use a different chemical network, as long as it is in the same format as the defalut ones. That is, the reactions should be writen in the form of [ A + B -> C + D ], including the square brackets.
 By default, ```make_chem_funs.py``` is always called prior to the main code to produce ```chem_funs.py``` based on the new chemical network . This step (which takes a few seconds) can be skiped by adding the agument ```-n```while running vulcan in the command line:
 ```
-python vulcan.py -n 
+python vulcan.py -n
 ```
 However, it is important NOT to skipping this step after making a change of the chemical network.
 
@@ -144,10 +145,10 @@ After changing the network, you can examine all the readable information, like t
 All the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc, are prescribed in ```vulcan_cfg.py```. A useful summary describing what every parameter does can be found in ```vulcan_cfg_readme.txt```.
 
 ### Boundary Conditions ###
-If both use_topflux and use_botflux in vulcan_cfg.py are set to False, it will use the default boundary condition -- zero flux boundary i.e. nothing coming in or out. When use_topflux = True, it reads the file prescribed in top_BC_flux_file as the incoming/outgoing flux at the top boundary. Similarly, when use_botflux = True, the file prescribed in bot_BC_flux_file is read in for the surface pressure and sinks at the bottom boundary. In addition, you can also use the dictionary use_fix_sp_bot to set fixed mole fraction at the surface. e.g. use_fix_sp_bot = {'CO2': 0.01} sets the surface CO<sub>2</sub> mixing ratio to 0.01. 
+If both use_topflux and use_botflux in vulcan_cfg.py are set to False, it will use the default boundary condition -- zero flux boundary i.e. nothing coming in or out. When use_topflux = True, it reads the file prescribed in top_BC_flux_file as the incoming/outgoing flux at the top boundary. Similarly, when use_botflux = True, the file prescribed in bot_BC_flux_file is read in for the surface pressure and sinks at the bottom boundary. In addition, you can also use the dictionary use_fix_sp_bot to set fixed mole fraction at the surface. e.g. use_fix_sp_bot = {'CO2': 0.01} sets the surface CO<sub>2</sub> mixing ratio to 0.01.
 
 ### Reading Output Files###
-The preceding ```plot_vulcan.py``` should be a good example of how to access to output files. The first step is to use "pickle.load" to unpack the binary files. 
+The preceding ```plot_vulcan.py``` should be a good example of how to access to output files. The first step is to use "pickle.load" to unpack the binary files.
 The main variables are stored in three basic classes: data['variable'], data['atm'], and data['parameter'].
 You can also find all the names of variables and the class structure in ```store.py```.
 
@@ -170,7 +171,7 @@ for research on exoplanets. The three parts of the ESP are
   - [VULCAN][4] atmospheric chemistry,
   - [FastChem][5] equilibrium chemistry,
   - [HELA][6] random forest retrieval.
-   
+
 [1]: http://www.exoclime.net
 [2]: https://github.com/exoclime/HELIOS
 [3]: https://github.com/exoclime/THOR
