@@ -7,6 +7,7 @@ VULCAN is implemented with the equilibrium chemistry code [FastChem](https://git
 The theory paper of the first version of VULCAN (without photochemistry) can be found here: https://arxiv.org/abs/1607.00409
 This is currectly a release candidate version. Any questions or feedbacks is welcome and can be sent to [Shami Tsai](mailto:shang-min.tsai@physics.ox.ac.uk)
 
+![Running with realtime plotting](demo/demo.gif)
 ## Requirements
 VULCAN is developed with Python 3 but has been tested compatible with Python 2.7. It is advised to run it on Python 3 if possible.
 Two very useful tools to set up python environments:
