@@ -124,11 +124,14 @@ class AtmData(object):
         self.sat_p = {}
         self.sat_mix = {}
         
-        # condensation excluding non-gaseous species
+        # condensation excluding non-gaseous species when renormalizing the total number by hydrostatic balance
         if vulcan_cfg.use_condense == True:
             self.exc_conden = [_ for _ in range(ni) if spec_list[_] not in vulcan_cfg.non_gas_sp]
-        # TEST condensation excluding non-gaseous species
+        # condensation excluding non-gaseous species
         
+        # particle size
+        self.r_p_h2o = 0.001 # 10 micron
+        self.r_p_h2so4 = 1e-5 # 0.1 micron
 
 class Parameters(object):
     """
