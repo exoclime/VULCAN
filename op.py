@@ -586,7 +586,7 @@ class Integration(object):
             
             if vulcan_cfg.use_photo == True and para.count % self.update_photo_frq == 0:
                 self.odesolver.compute_tau(var, atm)
-                getattr(self.odesolver, para.compute_flux_str)(var, atm)
+                self.odesolver.compute_flux(var, atm)
                 self.odesolver.compute_J(var, atm)
             
             # Testing condensation
@@ -660,32 +660,7 @@ class Integration(object):
         dzi = dzi[1:]
         
         data_atm.dz, data_atm.dzi, data_atm.pico = dz, dzi, pico
-        
-        # Calculating the settling velocity
-        if self.use_settling == True:
-            # Using Gao 2018 (50)
-            r_p = data_atm.r_p_h2o
-            R_uni = kb*Navo # the universal gas const
-        
-            Ti = data_atm.Ti
-            mui = 0.5*(data_atm.mu + np.roll(data_atm.mu,-1))
-            mui = mui[:-1]
-            pi = data_atm.pico[1:-1]
-            
-            # TEST
-            # mass density of the air
-            rho_a = pi/Ti/(R_uni/mui)
-            data_atm.rho_a = rho_a
-
-            for sp in self.non_gas_sp:
-                if sp == 'H2O_l_s':
-                    rho_p = 0.92
-                    # negative for downward
-                    #data_atm.vs[:,species.index(sp)] = - 0.5*rho_p*g*r_p / rho_a *(np.pi*mui /(2*R_uni*Ti))**0.5
-                    # TEST sedimentation vecloity min = 10 cm/s
-                    data_atm.vs[:,species.index(sp)] =  np.minimum(- 0.5*rho_p*g*r_p / rho_a *(np.pi*mui /(2*R_uni*Ti))**0.5 , -10.)
-        #TEST
-        #data_atm.vs[:,species.index('CO2')] = 10000.      
+         
         return data_atm
     
 
@@ -2284,8 +2259,8 @@ class Ros2(ODESolver):
         
         # biggest 2D array
         size = var.aflux.shape
-        if vulcan_cfg.use_numexpr == True and size[0] * size[1] > 128000: para.compute_flux_str = 'compute_flux_nexpr' # For NumExpr 2.6, you'll need arrays > 128k elements to see a speed-up
-        else: para.compute_flux_str = 'compute_flux'
+        # if vulcan_cfg.use_numexpr == True and size[0] * size[1] > 128000: para.compute_flux_str = 'compute_flux_nexpr' # For NumExpr 2.6, you'll need arrays > 128k elements to see a speed-up
+        # else: para.compute_flux_str = 'compute_flux'
         
     def one_step(self, var, atm, para):
 

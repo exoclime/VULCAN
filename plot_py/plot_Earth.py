@@ -54,8 +54,13 @@ h2o_us = 1e-6/18*100*np.array([3700,2843,1268,554,216,43.2,11.3,3.3,3.3,3.3,4.5,
 with open(vul_data, 'rb') as handle:
   data = pickle.load(handle)
 
+with open('../output/Earth-S-rtol05-st085.vul', 'rb') as handle:
+  data2 = pickle.load(handle)
+
 color_index = 0
 vulcan_spec = data['variable']['species']
+vulcan_spec2 = data2['variable']['species']
+
 for sp in plot_spec:
     if color_index == len(colors): # when running out of colors
         colors.append(tuple(np.random.rand(3)))
@@ -63,10 +68,15 @@ for sp in plot_spec:
     if sp in tex_labels: sp_lab = tex_labels[sp]
     else: sp_lab = sp  
     
-    plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['zco'][:-1]/1.e5, color=colors[color_index], label=sp_lab, lw=1.5)
+    plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], 0.5*(data['atm']['zco'][:-1] + data['atm']['zco'][1:])/1.e5, color=colors[color_index], label=sp_lab)
     #plt.plot(data['variable']['y_ini'][:,vulcan_spec.index(sp)]/data['atm']['n_0'], data['atm']['pco']/1.e6, color=colors[color_index], ls=':', lw=1.5)
     
-    # np.vstack((n2o_MH*10,n2o_MH*10))
+    plt.plot(data2['variable']['ymix'][:,vulcan_spec2.index(sp)], 0.5*(data2['atm']['zco'][:-1] + data2['atm']['zco'][1:])/1.e5, color=colors[color_index], ls='--')
+    
+    if sp == 'H2O': plt.plot(data['atm']['sat_p']['H2O']/data['atm']['pco'], 0.5*(data['atm']['zco'][:-1] + data['atm']['zco'][1:])/1.e5, color=colors[color_index], ls='-.', label='H2O saturation')
+        
+        
+        
     if sp == 'O3':
         plt.scatter(o3_MH, z_MH, marker='o', color=colors[color_index], facecolor= 'None', alpha=0.7)
         plt.errorbar(o3_MH, z_MH, xerr=np.vstack((o3_MH*0.9,o3_MH*9)), color=colors[color_index], linestyle='None', alpha=0.7)
@@ -84,7 +94,7 @@ for sp in plot_spec:
     elif sp == 'H2O':
         plt.scatter(h2o_us, z_us, marker='o', color=colors[color_index], facecolor= 'None', alpha=0.7)
         plt.errorbar(h2o_us, z_us, xerr=np.vstack((h2o_us*0.9,h2o_us*9)), color=colors[color_index], linestyle='None', alpha=0.7)
-    
+        
     
     color_index +=1
 
@@ -92,7 +102,7 @@ for sp in plot_spec:
 plt.gca().set_xscale('log')       
 #plt.gca().set_yscale('log') 
 #plt.gca().invert_yaxis() 
-plt.xlim((1.E-12, 1.))
+plt.xlim((1.E-18, 1.e-2))
 plt.ylim((0, 80.))
 #plt.ylim((1.E3,data['atm']['pco'][-1]/1e6))
 plt.legend(frameon=0, prop={'size':13}, loc='best')
@@ -137,8 +147,18 @@ plt.savefig(plot_dir + plot_name + '-concentration.eps')
 # else: plt.show()
 
 plt.figure()
-plt.plot(data['atm']['Tco'], data['atm']['zco'][:-1]/1.e5, color='k')    
-plt.xlabel("T (K)", fontsize=16)
+#plt.plot(data['atm']['sat_p']['H2O']/data['atm']['pco'], data['atm']['zco'][:-1]/1.e5, color='b')
+    
+plt.plot(data['variable']['y'][:,vulcan_spec.index('HO2')], data['atm']['zco'][:-1]/1.e5, color='b')
+
+plt.xlabel("Saturation mixing ratio", fontsize=12)
 plt.ylim((0, 80.))
-plt.ylabel("Height (km)", fontsize=16)
-plt.savefig('Earth-TP.eps')
+#plt.xlim((1.E-14, 1.e-2))
+plt.ylabel("Height (km)", fontsize=12)
+
+plt.savefig(plot_dir + plot_name + '-saturation.png')
+plt.savefig(plot_dir + plot_name + '-saturation.eps')
+if vulcan_cfg.use_PIL == True:
+    plot = Image.open(plot_dir + plot_name + '-concentration.png')
+    plot.show()
+else: plt.show()

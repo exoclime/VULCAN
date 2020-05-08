@@ -212,12 +212,13 @@ class InitialAbun(object):
         data_var.ymix = y_ini/ysum
         
         if vulcan_cfg.use_ion == True: 
-            try:
-                charge_list.remove('e') 
-                data_var.charge_list = charge_list
-            except: 
-                print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
+            # if the charge_list is empty (no species with nonzero charges include)
+            if not charge_list: print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
                 raise 
+            else:
+                if 'e' in charge_list: charge_list.remove('e') 
+                data_var.charge_list = charge_list
+   
         return data_var
         
 
