@@ -213,7 +213,8 @@ class InitialAbun(object):
         
         if vulcan_cfg.use_ion == True: 
             # if the charge_list is empty (no species with nonzero charges include)
-            if not charge_list: print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
+            if not charge_list: 
+                print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
                 raise 
             else:
                 if 'e' in charge_list: charge_list.remove('e') 
