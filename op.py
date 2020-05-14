@@ -2192,35 +2192,17 @@ class Ros2(ODESolver):
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
         
-        # TEST capping the concentration of droplets (2020 March)
-        # if vulcan_cfg.use_condense == True:
-        #     sol[:,self.non_gas_sp_index] = np.minimum(sol[:,self.non_gas_sp_index], np.transpose(np.tile(M,len(self.non_gas_sp_index)).reshape((len(self.non_gas_sp_index),nz))) * var.non_gas_cap_ratio)
-            
-        # surface sink (and top BC for the particles?)
+        # setting particles on the surace = 0
+        if vulcan_cfg.use_condense == True:
+            sol[0,self.non_gas_sp_index] = 0
         
-        # should let the deposition velocity in BC handles 
-        
-        # if vulcan_cfg.use_condense == True:
-        #     sol[0,self.non_gas_sp_index] = 0
-            # TEST 2020 Feb
-            #sol[-1,self.non_gas_sp_index] = 0
-            
-            # TEST top sink for settling to work
-            # print (self.non_gas_sp_index)
-            # print (sol[:,self.non_gas_sp_index])
-            # print ('---')
-            #print (np.maximum(sol[:,self.non_gas_sp_index],atm.n_0*1e-12))
-            #print (sol[:,self.non_gas_sp_index])
-            
-            
-            # TEST
-            #sol[:,-1] = np.minimum(sol[:,-1],atm.n_0*1e-10) 
-            
-            
-            # for sp in self.non_gas_sp:
-            #     sol[0,species.index(sp)] = 0
-            #     # TEST top sink
-            #     # sol[-1,species.index(sp)] = 0
+        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
+        if vulcan_cfg.use_ion == True:
+            # clear e
+            sol[:,species.index('e')] = 0
+            # set e such that the net chare is zero
+            for sp in var.charge_list:
+                sol[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
                 
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
