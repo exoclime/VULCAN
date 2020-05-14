@@ -588,6 +588,8 @@ class Integration(object):
                 self.odesolver.compute_tau(var, atm)
                 self.odesolver.compute_flux(var, atm)
                 self.odesolver.compute_J(var, atm)
+                if vulcan_cfg.use_ion == True: 
+                    self.odesolver.compute_Jion(var, atm)
             
             # Testing condensation
             # updating the condensation rates
@@ -660,7 +662,7 @@ class Integration(object):
         dzi = dzi[1:]
         
         data_atm.dz, data_atm.dzi, data_atm.pico = dz, dzi, pico
-         
+    
         return data_atm
     
 
@@ -2050,7 +2052,70 @@ class ODESolver(object):
                 # incoperating J into rate coefficients
                 if var.pho_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
                     var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
-          
+    
+    def compute_Jion(self, var, atm): 
+        flux = var.aflux
+        cross = var.cross_Jion
+        
+        bins = var.bins
+        n_branch = var.ion_branch
+        wavelen = var.ion_wavelen
+        br_ratio = var.ion_br_ratio
+
+        # reset to zeros every time
+        var.Jion_sp = dict([( (sp,bn) , np.zeros(nz)) for sp in var.ion_sp for bn in range(n_branch[sp]+1) ])
+
+        for sp in var.ion_sp:
+            # shape: flux (nz,nbin) cross (nbin)
+            
+            # the number of wavelength regions
+            wl_num = len(wavelen[sp])
+
+            # convert to actinic flux *1/(hc/ld)
+            if wl_num == 0:
+                for nbr in range(1, n_branch[sp]+1):
+                    # axis=1 is to sum over all wavelength 
+                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * flux * cross[sp] * var.dbin, axis=1)
+                    var.Jion_sp[(sp, nbr)] -= 0.5* br_ratio[sp][0][nbr-1] * flux[:,0] * cross[sp][0] * var.dbin +\
+                    0.5* br_ratio[sp][0][nbr-1] * flux[:,-1] * cross[sp][-1] * var.dbin
+
+            elif wl_num == 1:
+                for nbr in range(1, n_branch[sp]+1):
+                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * (bins<wavelen[sp]) * flux * cross[sp] * var.dbin + br_ratio[sp][1][nbr-1] * (bins>=wavelen[sp]) * flux * cross[sp] * var.dbin, axis=1)
+                    var.Jion_sp[(sp, nbr)] -= 0.5* ( br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp]) * flux[:,0] * cross[sp][0] * var.dbin +\
+                        br_ratio[sp][1][nbr-1] * (bins[0]>=wavelen[sp]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][0][nbr-1] * (bins[-1]<wavelen[sp]) * flux[:,-1] * cross[sp][-1] * var.dbin +\
+                        br_ratio[sp][1][nbr-1] * (bins[-1]>=wavelen[sp]) * flux[:,-1] * cross[sp][-1] * var.dbin )
+ 
+            elif wl_num >= 2:
+                for nbr in range(1, n_branch[sp]+1):
+                    # the first wavelength region
+                    var.Jion_sp[(sp, nbr)] = np.sum( br_ratio[sp][0][nbr-1] * (bins<wavelen[sp][0]) * flux * cross[sp] * var.dbin ,axis=1)
+                    # the last wavelength region
+                    var.Jion_sp[(sp, nbr)] += np.sum( br_ratio[sp][-1][nbr-1] * (bins>=wavelen[sp][-1]) * flux * cross[sp] * var.dbin, axis=1)
+                    
+                    # trapezoid integral
+                    var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp][0]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][0][nbr-1] * (bins[0]<wavelen[sp][0]) * flux[:,-1] * cross[sp][-1] * var.dbin)
+                    var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][-1][nbr-1] * (bins[-1]>=wavelen[sp][-1]) * flux[:,0] * cross[sp][0] * var.dbin + br_ratio[sp][-1][nbr-1] * (bins[-1]>=wavelen[sp][-1]) * flux[:,-1] * cross[sp][-1] * var.dbin)
+                    
+                    for region_num in range(1,wl_num):
+                        
+                        var.Jion_sp[(sp, nbr)] += np.sum(br_ratio[sp][region_num][nbr-1] * (np.array(bins>=wavelen[sp][region_num-1]) & np.array(bins<wavelen[sp][region_num])) * flux * cross[sp] * var.dbin, axis=1)
+                        # trapezoid integral
+                        var.Jion_sp[(sp, nbr)] -= 0.5*(br_ratio[sp][region_num][nbr-1] * (bins[0]>=wavelen[sp][region_num-1] and bins[0]<wavelen[sp][region_num]) * flux[:,0] * cross[sp][0] * var.dbin +\
+                        br_ratio[sp][region_num][nbr-1] * (bins[-1]>=wavelen[sp][region_num-1] and bins[-1]<wavelen[sp][region_num]) * flux[:,-1] * cross[sp][-1] * var.dbin)
+
+            else:
+                raise IOError ('\n Too many wavelength switches! Check the photo-network file.')
+
+            # end of the loop: for sp in var.photo_sp:
+
+            # 0 is the total dissociation rate
+            # summing all branches
+            for nbr in range(1, n_branch[sp]+1):
+                var.Jion_sp[(sp, 0)] += var.Jion_sp[(sp, nbr)]
+                # incoperating J into rate coefficients
+                if var.ion_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
+                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)]
 
 class Ros2(ODESolver):
     '''
