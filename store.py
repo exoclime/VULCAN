@@ -77,8 +77,8 @@ class Variables(object):
         'atom_ini','atom_sum','atom_loss','atom_conden','aflux_change','Rf'] 
         if vulcan_cfg.use_photo == True: 
             self.var_save.extend(['nbin','bins','dbin','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','wavelen','n_branch','br_ratio'])
-            if vulcan_cfg.use_ion == True: self.var_save.extend(['ion_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
-        # 'ion_list' stores all the non-neutral species in build.atm whereas 'ion_sp' is for the species that actually have ionisation reactions in the network 
+            if vulcan_cfg.use_ion == True: self.var_save.extend(['charge_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
+        # 'charge_list' stores all the non-neutral species in build.atm whereas 'ion_sp' is for the species that actually have ionisation reactions in the network 
         self.var_evol_save = ['y_time','t_time']
         self.conden_re_list = []
         
