@@ -147,7 +147,7 @@ All the settings and parameters, e.g. the atmospheric parameters, the elemental 
 ### Boundary Conditions ###
 If both use_topflux and use_botflux in vulcan_cfg.py are set to False, it will use the default boundary condition -- zero flux boundary i.e. nothing coming in or out. When use_topflux = True, it reads the file prescribed in top_BC_flux_file as the incoming/outgoing flux at the top boundary. Similarly, when use_botflux = True, the file prescribed in bot_BC_flux_file is read in for the surface pressure and sinks at the bottom boundary. In addition, you can also use the dictionary use_fix_sp_bot to set fixed mole fraction at the surface. e.g. use_fix_sp_bot = {'CO2': 0.01} sets the surface CO<sub>2</sub> mixing ratio to 0.01.
 
-### Reading Output Files###
+### Reading Output Files 	###
 Run ```plot_vulcan.py``` within ```plot_py```
 ```python plot_vulcan.py [vulcan output] [species] [plot name] [-h (for plotting height)]``` will read vulcan output (.vul files) can plot the species profiles. Species should be sepreated by commas without space. Plot is in pressure by diffcult and can be changed to height by adding "-h".  
 
