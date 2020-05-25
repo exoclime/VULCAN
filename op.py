@@ -479,7 +479,7 @@ class ReadRate(object):
         # all variables that depend on nbins
         # the direct beam (staggered)
         var.sflux = np.zeros( (nz+1, var.nbin) )
-        # the diffusive flux (staggered)
+        # the diffusive flux (staggered; dflux_u[0] and dflux_d[-1] are ghost layers for compution; always zero)
         var.dflux_u, var.dflux_d = np.zeros( (nz+1, var.nbin) ), np.zeros( (nz+1, var.nbin) )
         # the total actinic flux (non-staggered)
         var.aflux = np.zeros( (nz, var.nbin) )
@@ -504,7 +504,7 @@ class ReadRate(object):
         var.cross_Jion = dict([(sp, np.zeros(var.nbin)) for sp in ion_sp])
         
         for sp in photo_sp:
-            # for values outside the boundary => fill_value = 0
+            # for values outside the boundary => fill_value = 0 (No extrpolation. Cross sections are zero outside of data range)
             inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
             inter_cross_J = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['disso'], bounds_error=False, fill_value=0)
              
