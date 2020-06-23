@@ -1,12 +1,27 @@
 #species flux [cm-2 s-1]   v_dep [cm s-1]
-CO            3.7e+11                0.03        
-NH3           7.7e+9                   1.
+CO            3.7e11                 0.01
+CH4           1.2e+11                  0
+NH3           5.0e+10                0.01
 N2O           1.0e+9                   0
-NO            7.0e+9                0.016
-NO2              0                    0.1
-NO3              0                    0.1
-HNO3             0                      4.
-CH4           1.4e+11                   0
+NO            1.0e+9                0.016
+NO2           1.0e+9                  0.1
+HCN           4.4e+8                 0.1  
+H2S           2.0e+8                 0.015
+SO2           9.0e+9                   1.
+COS           5.0e+7                 0.01
+H2SO4         7.0e+8                   1 
+H2            1.0e+6                   0
+   
+# Earth bottom boundary from Hauglustain 1994 
+# NH3 from https://www.sciencedirect.com/science/article/pii/S0074614208606361
+# (Chapter 9 Nitrogen Compounds in the Troposphere of Chemistry of the Natural Atmosphere)
+# Alos, Table 2.5(N2O -p.35) and 2.14(CO) in Seinfeld & Pandis  
+# HCN from Li 2003 (doi:10.1029/2002JD003975, 2003)
+# H2 from Hauglustain 1994 
 
-# N2O5             0                      4. 
-# Earth bottom boundary from Hauglustain 1994  
+# NO2              0                    0.1
+# NO3              0                    0.1
+# HNO3             0                     4.
+# N2O5             0                     4.
+# CO2              0                   6e-5
+# to balance carbon

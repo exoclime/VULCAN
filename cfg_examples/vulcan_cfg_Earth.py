@@ -98,22 +98,21 @@ use_fix_sp_bot = {'H2O':0.01}
 # ====== Reactions to be switched off  ======
 #remove_list = [279,280, 283,284, 531,532] # in pairs e.g. [1,2]
 remove_list = range(1,917)
-remove_list = []
+
+#remove_list = []
 
 # == Condensation (Ongoing testing!)  ======
-use_condense = True
-use_settling = True
-use_relax_water = True # use relaxation method for water clouds
-start_conden_time = 0
+use_condense = 0
+use_settling = 0
+start_conden_time = 1e-4
 condesne_sp = ["H2O"]    # , 'NH3'
-non_gas_sp = ["H2O_l_s", 'e']
+non_gas_sp = ["H2O_l_s"]
 
 # ====== steady state check ======
 st_factor = 0.5
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
-use_numexpr = True # use NumExpr evaluator to speed up large arrays (need to install NumExpr)
 use_print_prog = True
 print_prog_num = 20  # every x steps to print progress
 dttry = 1.E-10

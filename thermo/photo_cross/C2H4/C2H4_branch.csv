@@ -1,0 +1,4 @@
+# Branching ratios for C2H4 -> (1)C2H2 + H2  (2)C2H2 + H + H  (3)C2H3 + H from Lavvas et al (2008)
+# lambda , br_ratio_1, br_ratio_2, br_ratio_3
+1.749e+02,    0.460,    0.519,    0.021
+1.750e+02,    0.730,    0.270,    0.000

@@ -22,7 +22,7 @@
 #include "species_struct.h"
 
 #include <cmath>
-
+//#include <iostream>
 
 
 namespace fastchem {
@@ -37,8 +37,10 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
   double_type log_K;
   double_type log_C, log_H, log_N, log_O, log_Ti, log_V, log_Cl, log_S, log_P, log_Si, log_Km, log_Na, log_Mg, log_F;
   double_type log_Ca, log_Fe;
+  double_type log_He, log_e; 
   // Km: potassium since log_K has already been used
-
+  // He: for reactions with He+, HeH+ etc.
+  
   if (temperature <= 1000.0) {
 	log_K = mass_action_coeff[0]/2.* std::pow(temperature, -2.)
 	- mass_action_coeff[1]*( (1+std::log(temperature))/temperature )
@@ -180,7 +182,25 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
   	- 1./12*1.149825371E-08*std::pow(temperature, 3.)
   	+ 1./20*2.832773807E-12*std::pow(temperature, 4.)
   	- 5.466995940E+04/temperature -3.383946260E+01;
-		   
+	
+    log_He = 0* std::pow(temperature, -2.)
+  	- 0*( (1+std::log(temperature))/temperature )
+  	- 2.5*(1-std::log(temperature))
+  	+ 1./2*0*temperature
+  	+ 1./6*0*std::pow(temperature, 2.)
+  	+ 1./12*0*std::pow(temperature, 3.)
+  	+ 1./20*0*std::pow(temperature, 4.)
+  	+ 7.453750000E+02/temperature + 9.287239740E-01;
+			   
+	log_e = 0/2.* std::pow(temperature, -2.)
+	- 0*( (1+std::log(temperature))/temperature )
+	- 2.500000000E+00*(1-std::log(temperature))
+	+ 1./2*0*temperature
+	+ 1./6*0*std::pow(temperature, 2.)
+	+ 1./12*0*std::pow(temperature, 3.)
+	+ 1./20*0*std::pow(temperature, 4.)
+	+ 7.453750000E+02/temperature -1.172081224E+01;		   
+				   
 	} else {
 		
    log_K =  mass_action_coeff[10]/2.* std::pow(temperature, -2.)
@@ -335,6 +355,26 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 	+ 1./12*1.544348856E-10*std::pow(temperature, 3.)
 	- 1./20*8.023578182E-15*std::pow(temperature, 4.)
 	- 7.137370060E+03/temperature + 6.504979860E+01;
+  
+  log_He = 0* std::pow(temperature, -2.)
+	- 0*( (1+std::log(temperature))/temperature )
+	- 2.500000000E+00*(1-std::log(temperature))
+	+ 0.000000000E+00*temperature
+	+ 0.000000000E+00*std::pow(temperature, 2.)
+	+ 1./12*0*std::pow(temperature, 3.)
+	+ 1./20*0*std::pow(temperature, 4.)
+	+ 7.453750000E+02/temperature + 9.287239740E-01;  
+  
+  log_e = 0/2.* std::pow(temperature, -2.)
+	- 0*( (1+std::log(temperature))/temperature )
+	- 2.500000000E+00*(1-std::log(temperature))
+	+ 1./2*0*temperature
+	+ 1./6*0*std::pow(temperature, 2.)
+	+ 1./12*0*std::pow(temperature, 3.)
+	+ 1./20*0*std::pow(temperature, 4.)
+	+ 7.453750000E+02/temperature -1.172081224E+01;	 
+ 
+   		 
 }
    
 	// in the order of the element_abundances.dat file
@@ -355,9 +395,14 @@ void Molecule<double_type>::calcMassActionConstant(const double temperature)
 	unsigned int index_F = 14;
 	unsigned int index_Ca = 15;
 	unsigned int index_Fe = 16;
-
+	
+	unsigned int index_He = 2;
+	unsigned int index_e = 17;
+		
   log_K -= stoichometric_vector[index_C]*log_C + stoichometric_vector[index_H]*log_H + stoichometric_vector[index_N]*log_N + stoichometric_vector[index_O]*log_O + stoichometric_vector[index_Ti]*log_Ti+ stoichometric_vector[index_V]*log_V;
   log_K -= stoichometric_vector[index_P]*log_P + stoichometric_vector[index_S]*log_S + stoichometric_vector[index_Si]*log_Si + stoichometric_vector[index_Cl]*log_Cl + stoichometric_vector[index_Km]*log_Km + stoichometric_vector[index_Na]*log_Na + stoichometric_vector[index_Mg]*log_Mg + stoichometric_vector[index_F]*log_F + stoichometric_vector[index_Ca]*log_Ca + stoichometric_vector[index_Fe]*log_Fe;
+  log_K -= stoichometric_vector[index_He]*log_He;
+  log_K -= stoichometric_vector[index_e]*log_e;
   mass_action_constant = log_K - sigma * std::log(thermal_energy);
   
 }

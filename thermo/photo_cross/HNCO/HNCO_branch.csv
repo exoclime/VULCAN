@@ -1,0 +1,7 @@
+# Branching ratios for HNCO -> (1)NH + CO     (2)H + NCO     from PhiDrates
+# lambda , br_ratio_1, br_ratio_2
+6.000e-02,    0.500,    0.500
+1.200e-01,    0.500,    0.500
+2.500e+02,    0.500,    0.500
+2.550e+02,    1.000,    0.000
+3.540e+02,    1.000,    0.000

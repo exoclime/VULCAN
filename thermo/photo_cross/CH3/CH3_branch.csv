@@ -1,0 +1,4 @@
+# Branching ratios for CH3 -> (1)CH + H2 (2)CH2_1 + H  where the thresold of forming CH from Kassner & Stuhl (1994)
+# lambda , br_ratio_1, br_ratio_2
+1.650e+02,    1.000,    0.000
+1.651e+02,    0.000,    1.000

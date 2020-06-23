@@ -1,0 +1,5 @@
+# Branching ratios for NO -> (1)NO3 + NO2    (2)NO3 + NO + O       from Harwood(1998)
+# lambda , br_ratio_1 , br_ratio_2
+2.4800E+02,    0.64,      0.36 
+3.0800E+02,    0.96,      0.04 
+3.5200E+02,    1.,        0.

@@ -1,4 +1,4 @@
-# WL(nm)    Flux(ergs/cm**2/s/nm)
+# WL(nm)    Flux(ergs/cm**2/s/nm) # coadded Eps Eridani in 0.1 res
 0.500       1.05E+02
 1.500       5.64E+03
 2.500       7.00E+02

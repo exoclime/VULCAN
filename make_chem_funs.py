@@ -736,7 +736,8 @@ def check_conserv():
         raise IOError ('\nElements are not conserved in the reaction. Check the network!\n')
             
 def check_duplicate(nr, photo_re_indx):
-    from chem_funs import re_dict
+    from chem_funs import re_wM_dict
+
     if photo_re_indx >0: re_end = photo_re_indx-1
     else: re_end = nr
 
@@ -744,7 +745,8 @@ def check_duplicate(nr, photo_re_indx):
     for re in range(1,re_end,2):
         for re_oth in range(1,re_end,2):
             if re != re_oth:
-                if set(re_dict[re][0]) == set(re_dict[re_oth][0]) and set(re_dict[re][1]) == set(re_dict[re_oth][1]) or set(re_dict[re][0]) == set(re_dict[re_oth][1]) and set(re_dict[re][1]) == set(re_dict[re_oth][0]):
+                if set(re_wM_dict[re][0]) == set(re_wM_dict[re_oth][0]) and set(re_wM_dict[re][1]) == set(re_wM_dict[re_oth][1]) or set(re_wM_dict[re][0]) == set(re_wM_dict[re_oth][1]) and set(re_wM_dict[re][1]) == set(re_wM_dict[re_oth][0]):
+                    # if prod of R_re == prod of R_re' and reac of R_re == react of R_re' or reac of R_re == prod of R_re' and prod of R_re == react
                     dup_check = True
                     if {re,re_oth} not in dup_list: 
                         dup_list.append({re,re_oth})

@@ -10,25 +10,27 @@ network = 'thermo/NCHO_photo_network.txt'
 gibbs_text = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder = 'thermo/photo_cross/'
 com_file = 'thermo/all_compose.txt'
-atm_file = 'atm/atm_HD209_Kzz.txt'
-sflux_file = 'atm/stellar_flux/Gueymard_solar.txt' # This is the flux density at the stellar surface
+atm_file = 'atm/atm_HD189_Kzz.txt'
+sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' # This is the flux density at the stellar surface
 top_BC_flux_file = 'atm/BC_top.txt'
 bot_BC_flux_file = 'atm/BC_bot.txt'
 vul_ini = 'output/'
 # output:
 output_dir = 'output/'
 plot_dir = 'plot/'
-movie_dir = 'plot/movie/new-HD209/'
-out_name =  'HD209.vul'
+movie_dir = 'plot/movie/HD189/'
+out_name =  'HD189.vul'
 
 # ====== Setting up the elemental abundance ======
-use_solar = True # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
+use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
 # customized elemental abundance (only reads when use_solar = False)
 O_H = 6.0618E-4 *(0.793)  
-C_H = 2.7759E-4  
-N_H = 8.1846E-5
+C_H = 2.7761E-4  
+N_H = 8.1853E-5
 He_H = 0.09692
 ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini' (for 'vulcan_ini, the T-P grids have to be exactly the same)
+
+#fc_logK = 'nasa9_logK_SNCHOTi_ion.dat'
 
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
 const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
@@ -43,7 +45,11 @@ f_diurnal = 1. # to account for the diurnal average of solar flux (i.e. 0.5 for 
 # radiation parameters 
 scat_sp = ['H2', 'He'] # the bulk compositions that contribute to Rayleigh scattering
 edd = 0.5 # the Eddington coefficient 
-dbin = 0.1  # the uniform bin width
+
+dbin1 = 0.1  # the uniform bin width
+dbin2 = 2
+dbin_12trans = 230. # the wavelength switching from dbin1 to dbin2
+
 # frequency to update the flux and optical depth
 ini_update_photo_frq = 100
 final_update_photo_frq = 5
@@ -84,6 +90,8 @@ update_frq = 100
 # ====== Setting up the boundary conditions ======
 # Boundary Conditions:
 use_topflux = False
+# TEST
+diff_esc = [] # species for diffusion-limit escape at TOA
 use_botflux = False
 #use_fix_all_bot = True
 use_fix_sp_bot = {}
@@ -95,19 +103,16 @@ remove_list = [] # in pairs e.g. [1,2]
 # == Condensation (Ongoing testing!)  ======
 use_condense = False
 use_settling = False
-use_relax_water = False # use relaxation method for water clouds
 start_conden_time = 1e10
 condesne_sp = ["H2O"]    # , 'NH3'
-non_gas_sp = ['e']
+non_gas_sp = ["H2O_l_s", 'e']
 
 # ====== steady state check ======
 st_factor = 0.5
 
 # ====== Setting up numerical parameters for the ODE solver ====== 
 ode_solver = 'Ros2' # case sensitive
-use_numexpr = False # use NumExpr evaluator to speed up large arrays (need to install NumExpr)
 use_print_prog = True
-use_print_delta = False
 print_prog_num = 500  # every x steps to print progress
 dttry = 1.E-10
 trun_min = 1e2
@@ -117,9 +122,9 @@ dt_max = runtime*1e-5
 dt_var_max = 2.
 dt_var_min = 0.5
 count_min = 120
-count_max = int(2E5)
+count_max = int(1E5)
 atol = 1.E-2 # Try decreasing this if the solutions are not stable
-mtol = 1.E-24
+mtol = 1.E-26
 mtol_conv = 1.E-20
 pos_cut = 0
 nega_cut = -1.
@@ -130,7 +135,7 @@ yconv_min = 0.1
 flux_cri = 0.1
 flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
-rtol = 0.25
+rtol = 0.15
 # ====== Setting up numerical parameters for SemiEu/SparSemiEU ODE solver (Not used) ====== 
 PItol = 0.1
 
@@ -148,7 +153,7 @@ use_PIL = True
 live_plot_frq = 10
 save_movie_rate = live_plot_frq
 y_time_freq = 1  #  storing data for every 'y_time_freq' step
-plot_spec = ['H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2', 'NH3', 'HCN']  
+plot_spec = ['H2', 'H', 'CH4', 'CO', 'CO2', 'HCN', 'NH3','C2H2']  
 # output:
 output_humanread = False
 use_shark = False

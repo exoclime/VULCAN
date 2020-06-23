@@ -68,12 +68,12 @@ for sp in plot_spec:
     if sp in tex_labels: sp_lab = tex_labels[sp]
     else: sp_lab = sp  
     
-    plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], 0.5*(data['atm']['zco'][:-1] + data['atm']['zco'][1:])/1.e5, color=colors[color_index], label=sp_lab)
+    plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['zco'][:-1]/1.e5, color=colors[color_index], label=sp_lab)
     #plt.plot(data['variable']['y_ini'][:,vulcan_spec.index(sp)]/data['atm']['n_0'], data['atm']['pco']/1.e6, color=colors[color_index], ls=':', lw=1.5)
     
-    plt.plot(data2['variable']['ymix'][:,vulcan_spec2.index(sp)], 0.5*(data2['atm']['zco'][:-1] + data2['atm']['zco'][1:])/1.e5, color=colors[color_index], ls='--')
+    plt.plot(data2['variable']['ymix'][:,vulcan_spec2.index(sp)], data2['atm']['zco'][:-1]/1.e5, color=colors[color_index], ls='--')
     
-    if sp == 'H2O': plt.plot(data['atm']['sat_p']['H2O']/data['atm']['pco'], 0.5*(data['atm']['zco'][:-1] + data['atm']['zco'][1:])/1.e5, color=colors[color_index], ls='-.', label='H2O saturation')
+    if sp == 'H2O': plt.plot(data['atm']['sat_p']['H2O']/data['atm']['pco'], data['atm']['zco'][:-1]/1.e5, color=colors[color_index], ls='-.', label='H2O saturation')
         
         
         

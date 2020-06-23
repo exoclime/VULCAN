@@ -1,0 +1,5 @@
+# Branching ratios for C2H6 -> (1)C2H4 + H2  (2)C2H4 + H + H  (3)C2H2 + H2 + H2  (4)CH4 + CH2_1 (5)CH3 + CH3  #104-105 nm from Lavvas 2008, rest from PhiDRates
+# lambda , br_ratio_1, br_ratio_2, br_ratio_3, br_ratio_4, br_ratio_5
+1.210e+02,    0.000,    0.410,    0.260,    0.160,    0.170
+1.216e+02,    0.150,    0.310,    0.250,    0.260,    0.030
+1.216e+02,    0.150,    0.310,    0.250,    0.260,    0.030

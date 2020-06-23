@@ -43,13 +43,8 @@ sp = 'He'
 
 ost = '#lambda (nm)  cross(cm^2)\n'
 
-lmd_end = 200.
-
 for lm in lmd_array:
-    if lm >= lmd_end:
-        ost += "{0:<14s}".format(str(lm)) + "{:.3E}".format(cross(lm, n_ref[sp], n_indx[sp](lm) , King[sp](lm))) +'\n'
-    else:
-        ost += "{0:<14s}".format(str(lm)) + "{:.3E}".format( cross(lmd_end, n_ref[sp], n_indx[sp](lmd_end) , King[sp](lmd_end)) *(lmd_end/lm)**4  ) +'\n'
+    ost += "{0:<14s}".format(str(lm)) + "{:.3E}".format(cross(lm, n_ref[sp], n_indx[sp](lm) , King[sp](lm))) +'\n'
 
 ost = ost[:-1]
 with open(sp + '_rayleigh.txt', 'w') as f: f.write(ost)

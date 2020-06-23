@@ -55,7 +55,7 @@ class Variables(object):
         self.photo_sp = set()  
         self.pho_rate_index, self.n_branch, self.wavelen, self.br_ratio = {}, {}, {}, {}
         self.ion_rate_index, self.ion_branch, self.ion_wavelen, self.ion_br_ratio = {}, {}, {}, {}
-        self.charge_list, self.ion_sp = [], set() # charge_list: list of species with non-zero charge; ion_sp: species subjected to photoionisation
+        self.ion_list, self.ion_sp = [], set() # ion_list: ions(with non-zero charge) ion_sp: species subjected to photoionisation
         
         self.kinf_fun = {}
         self.k_fun_new = {}
@@ -76,11 +76,14 @@ class Variables(object):
         self.var_save = ['k','y','ymix','y_ini','t','dt','longdy','longdydt',\
         'atom_ini','atom_sum','atom_loss','atom_conden','aflux_change','Rf'] 
         if vulcan_cfg.use_photo == True: 
-            self.var_save.extend(['nbin','bins','dbin','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','wavelen','n_branch','br_ratio'])
-            if vulcan_cfg.use_ion == True: self.var_save.extend(['charge_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
-        # 'charge_list' stores all the non-neutral species in build.atm whereas 'ion_sp' is for the species that actually have ionisation reactions in the network 
+            self.var_save.extend(['nbin','bins','dbin1','dbin2','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','n_branch'])
+            if vulcan_cfg.use_ion == True: self.var_save.extend(['ion_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
+        # 'ion_list' stores all the non-neutral species in build.atm whereas 'ion_sp' is for the species that actually have ionisation reactions in the network 
         self.var_evol_save = ['y_time','t_time']
         self.conden_re_list = []
+        
+        # new for rading ratios
+        self.threshold = {}
         
         
         ### ### ### ### ### ### ### ### ### ### ###
@@ -124,14 +127,14 @@ class AtmData(object):
         self.sat_p = {}
         self.sat_mix = {}
         
-        # condensation excluding non-gaseous species when renormalizing the total number by hydrostatic balance
+        # condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
             self.exc_conden = [_ for _ in range(ni) if spec_list[_] not in vulcan_cfg.non_gas_sp]
-        # condensation excluding non-gaseous species
+        # TEST condensation excluding non-gaseous species
         
-        # particle size
-        self.r_p_h2o = 0.001 # 10 micron
-        self.r_p_h2so4 = 1e-5 # 0.1 micron
+        self.r_p_h2o = 0.01 # 100 micron
+        self.r_p_h2so4 = 1e-4 # 1 micron
+        self.r_p_s8 = 1e-4 # 1 micron
 
 class Parameters(object):
     """

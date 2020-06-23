@@ -1,5 +1,10 @@
 All the absorption and photodissociation cross sections are from Leiden Observatory database (http://home.strw.leidenuniv.nl/~ewine/photo), except: 
 
-CO, NO3, HNO3, HNO2, N2O and NO2 are from PhiDrates.txt
+NO3, HNO3, HNO2, N2O, N2O5, He, HNCO are from PhiDrates
+NO2: < 397.5 nm from PhiDrates; > 397.5 nm from Voigt(2002)_293K_359-800nm(100mbar) on MPI MPI-Mainz
 (where NO2 combines NO/O1D and NO/O to obtain the total absorption cross section.)
-N2H4 is from MPI-Mainz UV/VIS Spectral Atlas (http://satellite.mpic.de/spectral_atlas/index.html)
+N2H4 is from MPI-Mainz
+SH at 300 K is from ExoMol
+
+MPI-Mainz:  UV/VIS Spectral Atlas (http://satellite.mpic.de/spectral_atlas/index.html)
+(checked to NO3)
