@@ -17,6 +17,9 @@ except ImportError:
 import os, sys
 import pickle
 
+# swtich for plot
+if '-h' in sys.argv: use_height = True
+else: use_height = False 
 
 # Setting the 2nd input argument as the filename of vulcan output   
 vul_data = sys.argv[1]
@@ -67,17 +70,26 @@ for color_index,sp in enumerate(plot_spec):
     else: sp_lab = sp  
     
     #plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['zco'][:-1]/1.e5, color=tableau20[color_index], label=sp_lab, lw=1.5)
-    plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['pco']/1.e6, color=tableau20[color_index], label=sp_lab, lw=1.5)
+    if use_height == False:
+        plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['pco']/1.e6, color=tableau20[color_index], label=sp_lab, lw=1.5)
+    else: 
+        plt.plot(data['variable']['ymix'][:,vulcan_spec.index(sp)], data['atm']['zco'][1:]/1.e5, color=tableau20[color_index], label=sp_lab, lw=1.5)
     #plt.plot(data['variable']['y_ini'][:,vulcan_spec.index(sp)]/data['atm']['n_0'], data['atm']['pco']/1.e6, color=tableau20[color_index], ls=':', lw=1.5) # plotting the initial (equilibrium) abundances
 
-      
+
+if use_height == False:
+    plt.gca().set_yscale('log') 
+    plt.gca().invert_yaxis() 
+    plt.ylim((data['atm']['pco'][0]/1e6,data['atm']['pco'][-1]/1e6))
+    plt.ylabel("Pressure (bar)")
+else:
+    plt.ylim((data['atm']['zmco'][0]/1e5,data['atm']['zmco'][-1]/1e5)) 
+    plt.xlabel("Mixing Ratio")  
+    
+#plt.title('T1400')
+   
 plt.gca().set_xscale('log')       
-plt.gca().set_yscale('log') 
-plt.gca().invert_yaxis() 
-plt.xlim((1.E-10, 1.e-2))
-#plt.ylim((60, 113))
-plt.ylim((data['atm']['pco'][0]/1e6,1e-6))
-#plt.ylim( (1,data['atm']['pco'][-1]/1e6))
+plt.xlim((1.E-12, 1.e-2))
 plt.legend(frameon=0, prop={'size':12}, loc='best')
 # handles, labels = plt.gca().get_legend_handles_labels()
 # display = range(len(sp_list))
@@ -87,10 +99,6 @@ plt.legend(frameon=0, prop={'size':12}, loc='best')
 # Artist2 = plt.Line2D((0,1),(0,0), color='black', ls='--',lw=1.5)
 # plt.legend([Artist1,Artist2],['Equilibrium','Kinetics'], frameon=False, prop={'size':12}, loc='best')
 
-plt.xlabel("Mixing Ratio")
-plt.ylabel("Pressure (bar)")
-#plt.ylabel("Height (km)")
-#plt.title('T1400')
 plt.savefig(plot_dir + plot_name + '.png')
 plt.savefig(plot_dir + plot_name + '.eps')
 if vulcan_cfg.use_PIL == True:
