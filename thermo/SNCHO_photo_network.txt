@@ -447,46 +447,46 @@
 # reverse stops
 # photo disscoiation (no reversals!) 		            # use sp to link br_index to RXXX
 # id	# Reactions                                     sp		br_index #(starting from 1)			
-627	[ H2O -> H + OH                      ]       		H2O		1			 
-629	[ H2O -> H2 + O_1                    ]              H2O		2	
-631	[ H2O -> H + H + O                   ]              H2O		3      
-633	[ CH4 -> CH3 + H                     ]       		CH4		1     
-635	[ CH4 -> CH2_1 + H2                  ]              CH4		2	
-637	[ CH4 -> CH2_1 + H + H               ]              CH4		3  
-639	[ CH4 -> CH + H2 + H                 ] 				CH4		4
-641	[ CH3 -> CH + H2                     ] 				CH3		1
-643	[ CH3 -> CH2_1 + H                   ]              CH3		2
-645	[ CO -> C + O                        ]				CO		1
-647	[ H2 -> H + H                        ] 				H2		1
-649	[ C2H2 -> C2H + H                    ]				C2H2	1
-651	[ CO2 -> CO + O                      ]				CO2		1
-653	[ CO2 -> CO + O_1                    ]              CO2     2
-655	[ C2H4 -> C2H2 + H2	                 ]				C2H4	1
-657	[ C2H4 -> C2H2 + H + H	             ]				C2H4	2
-659	[ C2H4 -> C2H3 + H		             ]				C2H4	3
-661	[ C2H6 -> C2H4 + H2                  ]				C2H6	1
-663	[ C2H6 -> C2H4 + H + H               ]				C2H6	2
-665	[ C2H6 -> C2H2 + H2 + H2             ]				C2H6	3
-667	[ C2H6 -> CH4 + CH2_1                ]				C2H6	4
-669	[ C2H6 -> CH3 + CH3                  ]              C2H6	5
-671	[ OH -> H + O                        ]              OH      1
-673	[ HCO -> H + CO                      ]              HCO     1
-675	[ H2CO -> H2 + CO                    ]              H2CO    1
-677	[ H2CO -> H + HCO                    ]              H2CO    2
-679	[ CH3OH -> CH3 + OH                  ]              CH3OH   1 
-681	[ CH3OH -> H2CO + H2                 ]              CH3OH   2
-683	[ CH3OH -> CH3O + H                  ]              CH3OH   3
-685	[ CH3CHO -> CH4 + CO                 ]              CH3CHO  1
-687	[ CH3CHO -> CH3 + HCO                ]              CH3CHO  2
-689	[ N2 -> N + N			             ]				N2		1
-691	[ NH3 -> NH2 + H		             ]				NH3		1
-693	[ NH3 -> NH + H + H	                 ]			    NH3		2
-695	[ HCN -> H + CN		                 ]              HCN		1
-697	[ NO  -> N + O                       ]              NO      1
-699	[ NO2 -> NO + O                      ]              NO2     1
-701	[ N2H4 -> N2H3 + H                   ]              N2H4    1
-703	[ HNCO -> NH + CO                    ]              HNCO    1
-705	[ HNCO -> H + NCO                    ]              HNCO    2
+807	[ H2O -> H + OH                      ]       		H2O		1			 
+809	[ H2O -> H2 + O_1                    ]              H2O		2	
+811	[ H2O -> H + H + O                   ]              H2O		3      
+813	[ CH4 -> CH3 + H                     ]       		CH4		1     
+815	[ CH4 -> CH2_1 + H2                  ]              CH4		2	
+817	[ CH4 -> CH2_1 + H + H               ]              CH4		3  
+819	[ CH4 -> CH + H2 + H                 ] 				CH4		4
+821	[ CH3 -> CH + H2                     ] 				CH3		1
+823	[ CH3 -> CH2_1 + H                   ]              CH3		2
+825	[ CO -> C + O                        ]				CO		1
+827	[ H2 -> H + H                        ] 				H2		1
+829	[ C2H2 -> C2H + H                    ]				C2H2	1
+831	[ CO2 -> CO + O                      ]				CO2		1
+833	[ CO2 -> CO + O_1                    ]              CO2     2
+835	[ C2H4 -> C2H2 + H2	                 ]				C2H4	1
+837	[ C2H4 -> C2H2 + H + H	             ]				C2H4	2
+839	[ C2H4 -> C2H3 + H		             ]				C2H4	3
+841	[ C2H6 -> C2H4 + H2                  ]				C2H6	1
+843	[ C2H6 -> C2H4 + H + H               ]				C2H6	2
+845	[ C2H6 -> C2H2 + H2 + H2             ]				C2H6	3
+847	[ C2H6 -> CH4 + CH2_1                ]				C2H6	4
+849	[ C2H6 -> CH3 + CH3                  ]              C2H6	5
+851	[ OH -> H + O                        ]              OH      1
+853	[ HCO -> H + CO                      ]              HCO     1
+855	[ H2CO -> H2 + CO                    ]              H2CO    1
+857	[ H2CO -> H + HCO                    ]              H2CO    2
+859	[ CH3OH -> CH3 + OH                  ]              CH3OH   1 
+861	[ CH3OH -> H2CO + H2                 ]              CH3OH   2
+863	[ CH3OH -> CH3O + H                  ]              CH3OH   3
+865	[ CH3CHO -> CH4 + CO                 ]              CH3CHO  1
+867	[ CH3CHO -> CH3 + HCO                ]              CH3CHO  2
+869	[ N2 -> N + N			             ]				N2		1
+871	[ NH3 -> NH2 + H		             ]				NH3		1
+873	[ NH3 -> NH + H + H	                 ]			    NH3		2
+875	[ HCN -> H + CN		                 ]              HCN		1
+877	[ NO  -> N + O                       ]              NO      1
+879	[ NO2 -> NO + O                      ]              NO2     1
+881	[ N2H4 -> N2H3 + H                   ]              N2H4    1
+883	[ HNCO -> NH + CO                    ]              HNCO    1
+885	[ HNCO -> H + NCO                    ]              HNCO    2
 887	[ SO -> S + O                        ]              SO      1
 889	[ SO2 -> SO + O                      ]              SO2     1
 891	[ SO2 -> S + O2                      ]              SO2     2
