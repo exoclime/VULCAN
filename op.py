@@ -2083,11 +2083,17 @@ class Ros2(ODESolver):
         
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2
 
+        # setting particles on the surace = 0
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
         
-        # surface sink (and top BC for the particles?)
-        # should let the deposition velocity in BC handles 
+        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
+        if vulcan_cfg.use_ion == True: #pass
+            # clear e
+            sol[:,species.index('e')] = 0
+            # set e such that the net chare is zero
+            for sp in var.charge_list:
+                sol[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
                 
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0

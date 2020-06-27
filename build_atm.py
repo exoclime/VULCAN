@@ -129,7 +129,7 @@ class InitialAbun(object):
         ini = np.zeros(ni)
         y_ini = data_var.y
         gas_tot = data_atm.M
-        ion_list = [] # list of ion species
+        charge_list = [] # list of charged species excluding echarge_list
         
         if vulcan_cfg.ini_mix == 'EQ':
         
@@ -138,42 +138,33 @@ class InitialAbun(object):
 
             for sp in species:
                 if sp in fc.dtype.names:
-                    y_ini[:,species.index(sp)] = fc[sp]*gas_tot
+                    y_ini[:,species.index(sp)] = fc[sp]*gas_tot # this also changes data_var.y because the address of y array has passed to y_ini
                 
                 else: print (sp + ' not included in fastchem.')
                 
                 if vulcan_cfg.use_ion == True:
-                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+                    if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
             
             # remove the fc output
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
-        
-        elif vulcan_cfg.ini_mix == 'fc_precal':
-            
-            pre_fc = 'fastchem_vulcan/output/vulcan_EQ_pre.dat'
-            print ('\n Using the precalculated fastchem output: '+ pre_fc)
-            
-            fc = np.genfromtxt(pre_fc, names=True, dtype=None, skip_header=0)   
-            for sp in species:
-                y_ini[:,species.index(sp)] = fc[sp]*gas_tot
-                if vulcan_cfg.use_ion == True:
-                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
-                     
+                             
         elif vulcan_cfg.ini_mix == 'vulcan_ini':
+            print ("Initializing with compositions from the prvious run " + vulcan_cfg.vul_ini)
             with open(vulcan_cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle) 
             
             y_ini = np.copy(vul_data['variable']['y'])
             data_var.y = np.copy(y_ini)
             
-            if vulcan_cfg.use_ion == True: ion_list = vul_data['variable']['ion_list']
+            if vulcan_cfg.use_ion == True: charge_list = vul_data['variable']['charge_list']
             
         elif vulcan_cfg.ini_mix == 'const_mix':
+            print ("Initializing with constant (well-mixed): " + str(vulcan_cfg.const_mix))
             for sp in vulcan_cfg.const_mix.keys():
-                y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp]
+                y_ini[:,species.index(sp)] = gas_tot* vulcan_cfg.const_mix[sp] # this also changes data_var.y
             if vulcan_cfg.use_ion == True:
                 for sp in species: 
-                    if compo[compo_row.index(sp)]['e'] != 0: ion_list.append(sp)
+                    if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
                 
         else:
             for i in range(nz):
@@ -221,9 +212,14 @@ class InitialAbun(object):
         data_var.ymix = y_ini/ysum
         
         if vulcan_cfg.use_ion == True: 
-            ion_list.remove('e') 
-            data_var.ion_list = ion_list
-        
+            # if the charge_list is empty (no species with nonzero charges include)
+            if not charge_list: 
+                print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
+                raise IOError("vulcan_cfg.use_ion = True but the network with ions is not supplied.\n")
+            else:
+                if 'e' in charge_list: charge_list.remove('e') 
+                data_var.charge_list = charge_list
+   
         return data_var
         
 
@@ -470,36 +466,73 @@ class Atm(object):
         
         # for values outside the boundary => fill_value = 0
         bins = var.bins
-        
-        dbin1 = vulcan_cfg.dbin1
-        dbin2 = vulcan_cfg.dbin2
-        
+        dbin = vulcan_cfg.dbin
         inter_sflux = interpolate.interp1d(atm.sflux_raw['lambda'], atm.sflux_raw['flux']* (vulcan_cfg.r_star*r_sun/(au*vulcan_cfg.orbit_radius) )**2, bounds_error=False, fill_value=0)
         for n, ld in enumerate(var.bins):
             var.sflux_top[n] = inter_sflux(ld) 
-            if ld == vulcan_cfg.dbin_12trans: var.sflux_din12_indx = n
             # not converting to actinic flux yet *1/(hc/ld)
+            
+        # Stellar flux at TOA; not converting to actinic flux yet *1/(hc/ld)
+        # for values outside the boundary => fill_value = 0
+        # inter_sflux = interpolate.interp1d(atm.sflux_raw['lambda'], atm.sflux_raw['flux'], bounds_error=False, fill_value=0)
+#         dbin = vulcan_cfg.dbin
+#         bins = var.bins
+#         last_bin = bins[-1]
+#
+#         for n, ld in enumerate(var.bins):
+#             # define the next bin in the new uniform grid
+#             if ld != bins[-1]: next_ld = bins[n+1]
+#
+#             if ld in atm.sflux_raw['lambda'] or ld == last_bin or atm.sflux_raw['lambda'][np.searchsorted(atm.sflux_raw['lambda'],ld,side='right')] - atm.sflux_raw['lambda'][np.searchsorted(atm.sflux_raw['lambda'],ld,side='right')-1] > dbin: # when bin coincide with raw_bin or dbin is smaller than the width of raw_bin
+#                 var.sflux_top[n] = inter_sflux(ld)
+#
+#             else:
+#                 # finding the index for the left & right pts in the raw data
+#                 raw_left_indx = np.searchsorted(atm.sflux_raw['lambda'],ld,side='right')
+#                 raw_right_indx = np.searchsorted(atm.sflux_raw['lambda'],next_ld,side='right') - 1
+#                 flux_left = inter_sflux(ld)
+#                 flux_right = inter_sflux(next_ld)
+#
+#                 # trapezoid integral
+#                 bin_flux = (flux_left + atm.sflux_raw['flux'][raw_left_indx])*0.5*(atm.sflux_raw['lambda'][raw_left_indx]-ld)
+#                 bin_flux += (flux_right + atm.sflux_raw['flux'][raw_right_indx])*0.5*(next_ld-atm.sflux_raw['lambda'][raw_right_indx])
+#
+#                 if raw_right_indx - raw_left_indx > 0:
+#                     for raw_i in range(raw_left_indx,raw_right_indx):
+#                         bin_flux += (atm.sflux_raw['flux'][raw_i] + atm.sflux_raw['flux'][raw_i+1])*0.5*(atm.sflux_raw['lambda'][raw_i+1] - atm.sflux_raw['lambda'][raw_i])
+#
+#                 bin_flux = bin_flux/dbin
+#                 var.sflux_top[n] = bin_flux
+#
+#         var.sflux_top *= (vulcan_cfg.r_star*r_sun/(au*vulcan_cfg.orbit_radius) )**2
+#
+#         # the old direct interpolation
+#         sflux_inter = np.zeros(len(bins))
+#         for n, ld in enumerate(bins):
+#             sflux_inter[n] = inter_sflux(ld)
+#         sflux_inter *= (vulcan_cfg.r_star*r_sun/(au*vulcan_cfg.orbit_radius) )**2
         
         # Check for energy conservation
         # finding the index for the left & right pts that match var.bins in the raw data
         raw_flux = atm.sflux_raw['flux']* (vulcan_cfg.r_star*r_sun/(au*vulcan_cfg.orbit_radius) )**2
-        raw_left_indx = np.searchsorted(atm.sflux_raw['lambda'],bins[0],side='right')        
+        raw_left_indx = np.searchsorted(atm.sflux_raw['lambda'],bins[0],side='right')
         raw_right_indx = np.searchsorted(atm.sflux_raw['lambda'],bins[-1],side='right')-1
-
-        sum_orgin = 0        
-        # for checking the trapezoidal error in energy conservation
+        #sum_orgin, sum_bin = 0, 0
+        sum_orgin = 0
         for n in range(raw_left_indx,raw_right_indx):
             sum_orgin += 0.5*(raw_flux[n] + raw_flux[n+1]) * (atm.sflux_raw['lambda'][n+1]- atm.sflux_raw['lambda'][n])
         sum_orgin += 0.5 *(inter_sflux(bins[0])+raw_flux[raw_left_indx])* (atm.sflux_raw['lambda'][raw_left_indx]-bins[0])
         sum_orgin += 0.5 *(inter_sflux(bins[-1])+raw_flux[raw_right_indx])* (bins[-1]-atm.sflux_raw['lambda'][raw_right_indx])
+
         
-        sum_bin = dbin1 * np.sum(var.sflux_top[:var.sflux_din12_indx])
-        sum_bin -= dbin1 *0.5*(var.sflux_top[0]+var.sflux_top[var.sflux_din12_indx-1])
-        sum_bin += dbin2 * np.sum(var.sflux_top[var.sflux_din12_indx:])
-        sum_bin -= dbin2 *0.5*(var.sflux_top[var.sflux_din12_indx]+var.sflux_top[-1])
-         
-        print ("The stellar flux is interpolated onto uniform grid of " +str(vulcan_cfg.dbin1) + " (<" +str(vulcan_cfg.dbin_12trans)+" nm) and "+str(vulcan_cfg.dbin2)\
-        + " (>="+str(vulcan_cfg.dbin_12trans)+" nm)" + " and conserving " + "{:.2f}".format(100* sum_bin/sum_orgin)+" %" + " energy." )
+        sum_bin = dbin * np.sum(var.sflux_top)
+        sum_bin -= dbin*0.5*(var.sflux_top[0]+var.sflux_top[-1])
+        
+        
+        #sum_old = dbin * np.sum(sflux_inter)
+        #sum_old -= dbin*0.5*(sflux_inter[0]+sflux_inter[-1])
+        
+        print ("The stellar flux is interpolated onto uniform grid of " +str(vulcan_cfg.dbin)+ " nm and conserving " + "{:.2f}".format(100* sum_bin/sum_orgin)+" %" + " energy." )
         #print (str(100* sum_old/sum_orgin)+" %" )
         
     
@@ -643,13 +676,13 @@ class Atm(object):
                 c0 = 10.53; c1 = -2161.0;  c2 = -86596.0
                 saturate_p = np.exp(c0 + c1/T + c2/T**2)
                 atm.sat_p[sp] = saturate_p * 1.e6
-                
+            
             elif sp == "H2SO4":
                 # change to Kulmala later
                 p_ayers = np.e**(-10156./T + 16.259) # in atm
                 atm.sat_p[sp] = p_ayers * 1.01325*1e6 # arm to cgs
-        
-
+           
+            
 if __name__ == "__main__":
     print("This module stores classes for constructing atmospheric structure \
     and initializing its chemical composition from the desinated elemental abudance.")
