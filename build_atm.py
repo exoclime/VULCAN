@@ -498,6 +498,8 @@ class Atm(object):
         + " (>="+str(vulcan_cfg.dbin_12trans)+" nm)" + " and conserving " + "{:.2f}".format(100* sum_bin/sum_orgin)+" %" + " energy." )
         #print (str(100* sum_old/sum_orgin)+" %" )
 
+        
+    
     def mol_diff(self, atm):
         '''
         choosing the formulea of molecular diffusion for each species
@@ -605,33 +607,20 @@ class Atm(object):
                 a_water = (6.107799961, 4.436518521E-1, 1.428945805E-2, 2.650648471E-4, 3.031240396E-6, 2.034080948E-8, 6.136820929E-11)
                 a_ice = (6.109177956, 5.034698970E-1, 1.886013408E-2, 4.176223716E-4, 5.824720280E-6, 4.838803174E-8, 1.838826904E-10)
 
-                
                 # saturate_p_1 = (T<0)*( a_ice[0] + a_ice[1]*T + a_ice[2]*T**2 + a_ice[3]*T**3 + a_ice[4]*T**4 + a_ice[5]*T**5 + a_ice[6]*T**6 ) +\
                 #  (T>0)*(a_water[0] + a_water[1]*T + a_water[2]*T**2 + a_water[3]*T**3 + a_water[4]*T**4 + a_water[5]*T**5 + a_water[6]*T**6)
-                
-                
-                # ice from Ackerman&Marley (2001) in cgs unit
-                #c0 = 6111.5; c1 = 23.036; c2 = -333.7; c3 = 279.82
-                
-                # water from Yaws (1999)
-                #c0 = 2.98605e1  c1 = -3.1522e3  c2 = -7.30370e0  c3 = 2.4247e-9  c4 = 1.8090e-6
-                
-                # ice in Moses 2005
-                moses_ice = 10**( 12.537 - 2663.5/(T+273.) ) *10
-                
-                #saturate_p = (T<0)*( c0 * np.exp( (c1*T + T**2/c2)/(T + c3) ) ) +\
-                #(T>0)*(a_water[0] + a_water[1]*T + a_water[2]*T**2 + a_water[3]*T**3 + a_water[4]*T**4 + a_water[5]*T**5 + a_water[6]*T**6)*1.e3
                 
                 # ice from Ackerman&Marley (2001)
                 c0 = 6111.5; c1 = 23.036; c2 = -333.7; c3 = 279.82
                 # water from Ackerman&Marley (2001)
-                w0 = 6112.1; c1 = 18.729; c2 = -227.3; c3 = 257.87
+                w0 = 6112.1; w1 = 18.729; w2 = -227.3; w3 = 257.87
     
-                saturate_p = (T<0)*( c0 * np.exp( (c1*T + T**2/c2)/(T + c3) ) ) + (T>0)*(c0 * np.exp( (c1*T + T**2/c2)/(T + c3) ) )
+                saturate_p = (T<0)*( c0 * np.exp( (c1*T + T**2/c2)/(T + c3) ) ) + (T>0)*(w0 * np.exp( (w1*T + T**2/w2)/(T + w3) ) )
                 
                 atm.sat_p[sp] = saturate_p
                 #atm.sat_p[sp] = c0 * np.exp( (c1*T + T**2/c2)/(T + c3) )
                 #atm.sat_p[sp] = moses_ice
+            
             
             elif sp == "NH3":
                 # from Weast (1971) in bar
