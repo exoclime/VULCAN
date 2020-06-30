@@ -104,7 +104,7 @@ remove_list = [] # in pairs e.g. [1,2]
 use_condense = False
 use_settling = False
 start_conden_time = 1e10
-condesne_sp = ["H2O"]    # , 'NH3'
+condense_sp = ["H2O"]    # , 'NH3'
 non_gas_sp = ["H2O_l_s", 'e']
 
 # ====== steady state check ======

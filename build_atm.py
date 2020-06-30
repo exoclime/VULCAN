@@ -180,7 +180,7 @@ class InitialAbun(object):
                     raise IOError ('\nInitial mixing ratios unknown. Check the setting in vulcan_cfg.py.')
         
         if vulcan_cfg.use_condense == True:
-            for sp in vulcan_cfg.condesne_sp:
+            for sp in vulcan_cfg.condense_sp:
                 data_atm.sat_mix[sp] = data_atm.sat_p[sp]/data_atm.pco
                 
                 # the level where condensation starts    
@@ -589,13 +589,13 @@ class Atm(object):
     # TEST condensation
     def sp_sat(self, atm):
         '''
-        For all the species in vulcan_cfg.condesne_sp, pre-calculating the  
+        For all the species in vulcan_cfg.condense_sp, pre-calculating the  
         saturation varpor pressure (in dyne/cm2) and storing in atm.sat_p. 
         '''
         # the list that the data has been coded 
         sat_sp_list = ["H2O",'NH3','H2SO4']
         
-        for sp in vulcan_cfg.condesne_sp:
+        for sp in vulcan_cfg.condense_sp:
             if sp not in sat_sp_list: raise IOError ( "No saturation vapor data for " +sp + ". Check the sp_sat function in build_atm.py" )
             
             T = np.copy(atm.Tco)
