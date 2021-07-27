@@ -129,6 +129,10 @@ rate = op.ReadRate()
 
 # read-in network and calculating forward rates
 data_var = rate.read_rate(data_var, data_atm)
+
+# for low-T rates e.g. Jupiter       
+if vulcan_cfg.use_lowT_limit_rates == True: data_var = rate.lim_lowT_rates(data_var, data_atm)
+    
 # reversing rates
 data_var = rate.rev_rate(data_var, data_atm)
 # removing rates
@@ -147,6 +151,7 @@ data_atm = make_atm.f_mu_dz(data_var, data_atm, output)
 # specify the BC
 make_atm.BC_flux(data_atm)
 
+
 # ============== Execute VULCAN  ==============
 # time-steping in the while loop until conv() returns True or count > count_max 
 
@@ -154,10 +159,9 @@ make_atm.BC_flux(data_atm)
 solver_str = vulcan_cfg.ode_solver
 solver = getattr(op, solver_str)()
 
-
 # Setting up for photo chemistry
 if vulcan_cfg.use_photo == True:
-    rate.make_bins_read_cross(data_var)
+    rate.make_bins_read_cross(data_var, data_atm)
     #rate.read_cross(data_var)
     make_atm.read_sflux(data_var, data_atm)
     

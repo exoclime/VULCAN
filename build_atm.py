@@ -135,7 +135,6 @@ class InitialAbun(object):
         
             self.ini_fc(data_var, data_atm)
             fc = np.genfromtxt('fastchem_vulcan/output/vulcan_EQ.dat', names=True, dtype=None, skip_header=0)
-
             for sp in species:
                 if sp in fc.dtype.names:
                     y_ini[:,species.index(sp)] = fc[sp]*gas_tot # this also changes data_var.y because the address of y array has passed to y_ini
@@ -153,11 +152,27 @@ class InitialAbun(object):
             with open(vulcan_cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle) 
             
-            y_ini = np.copy(vul_data['variable']['y'])
-            data_var.y = np.copy(y_ini)
+            #y_ini = np.copy(vul_data['variable']['y'])
+            #data_var.y = np.copy(y_ini)
+            for sp in species:
+                if sp in vul_data['variable']['species']:
+                    y_ini[:,species.index(sp)] = vul_data['variable']['y'][:,vul_data['variable']['species'].index(sp)]
+                else: print (sp + " not included in the prvious run.") 
             
-            if vulcan_cfg.use_ion == True: charge_list = vul_data['variable']['charge_list']
-            
+            #if vulcan_cfg.use_ion == True: charge_list = vul_data['variable']['charge_list']
+            if vulcan_cfg.use_ion == True:
+                for sp in species: 
+                    if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
+        
+        elif vulcan_cfg.ini_mix  == 'table':
+            table = np.genfromtxt(vulcan_cfg.vul_ini, names=True, dtype=None, skip_header=1) 
+            if not len(data_atm.pco) == len(table['Pressure']): 
+                print ("Warning! The initial profile has different layers than the current setting...")
+                raise
+            for sp in species:  
+                data_var.y[:,species.index(sp)] = data_atm.n_0 * table[sp]
+
+    
         elif vulcan_cfg.ini_mix == 'const_mix':
             print ("Initializing with constant (well-mixed): " + str(vulcan_cfg.const_mix))
             for sp in vulcan_cfg.const_mix.keys():
@@ -183,21 +198,23 @@ class InitialAbun(object):
             for sp in vulcan_cfg.condense_sp:
                 data_atm.sat_mix[sp] = data_atm.sat_p[sp]/data_atm.pco
                 
-                # the level where condensation starts    
-                conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
-                # conden_status: ture if the partial p >= the saturation p
-                sat_rho = data_atm.n_0 * data_atm.sat_mix[sp]
-                conden_status = data_var.y[:,species.index(sp)] >= sat_rho
+                if  vulcan_cfg.ini_mix != 'table' and vulcan_cfg.ini_mix != 'vul_ini':
+                    # the level where condensation starts    
+                    conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                    # conden_status: ture if the partial p >= the saturation p
+                    sat_rho = data_atm.n_0 * data_atm.sat_mix[sp]
+                    conden_status = data_var.y[:,species.index(sp)] >= sat_rho
 
-                # take the min between the mixing ratio and the saturation mixing ratio
-                data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
+                    # take the min between the mixing ratio and the saturation mixing ratio
+                    data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
 
-                if list(data_var.y[conden_status,species.index(sp)]): # if it condenses
-                    min_sat = np.amin(data_atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
-                    conden_min_lev = np.where(data_atm.sat_mix[sp] == min_sat)[0][0]
+                    if list(data_var.y[conden_status,species.index(sp)]): # if it condenses
+                        min_sat = np.amin(data_atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
+                        conden_min_lev = np.where(data_atm.sat_mix[sp] == min_sat)[0][0]
                     
-                    print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
-                    data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
+                        print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
+                        #data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
+                        data_var.y[conden_min_lev:,species.index(sp)] = data_atm.sat_mix[sp][conden_min_lev] * data_atm.n_0[conden_min_lev:]  
                            
         # re-normalisation 
         # TEST
@@ -237,7 +254,7 @@ class InitialAbun(object):
 class Atm(object):
     
     def __init__(self):
-        self.g = vulcan_cfg.g # gravity
+        self.gs = vulcan_cfg.gs # gravity
         self.P_b = vulcan_cfg.P_b
         self.P_t = vulcan_cfg.P_t
         self.type = vulcan_cfg.atm_type
@@ -272,10 +289,11 @@ class Atm(object):
         
         PTK_fun = {}
         
+        # IF switches for TP types
         if self.type == 'isothermal': 
             data_atm.Tco = np.repeat(vulcan_cfg.Tiso,nz)
-            data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
-            data_atm.vz = np.repeat(self.const_vz,nz-1)
+            #data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
+            #data_atm.vz = np.repeat(self.const_vz,nz-1)
             
         elif self.type == 'analytical': 
             
@@ -285,26 +303,22 @@ class Atm(object):
             # return the P-T function
             PTK_fun['pT'] = lambda pressure: self.TP_H14(pressure, *para_atm)        
             data_atm.Tco = PTK_fun['pT'](data_atm.pco)
-            data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
-            data_atm.vz = np.repeat(self.const_vz,nz-1)
-            
+            #data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
+            #data_atm.vz = np.repeat(self.const_vz,nz-1)
+        
+        # for atm_type = 'file' and also Kzz_prof = 'file
         elif self.type == 'file':
             
-            if self.Kzz_prof == 'const':     
-                atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
-                p_file, T_file = atm_table['Pressure'], atm_table['Temp']
-            
-            elif self.Kzz_prof == 'file':
+            if self.Kzz_prof == 'file':
                 atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
                 p_file, T_file, Kzz_file = atm_table['Pressure'], atm_table['Temp'], atm_table['Kzz']
-            else: raise IOError ('\n"Kzz_prof" (the type of Kzz profile) cannot be recongized.\nPlease assign it as "file" or "const" in vulcan_cfg.')
-
-            if self.vz_prof == 'const': data_atm.vz = np.repeat(self.const_vz,nz-1)
-            elif self.vz_prof == 'file': vz_file =  atm_table['vz']
-
+            
+            else:     
+                atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
+                p_file, T_file = atm_table['Pressure'], atm_table['Temp']
 
             if max(p_file) < data_atm.pco[0] or min(p_file) > data_atm.pco[-1]:
-                print ('Warning! P_b and P_t assgined in vulcan.cfg are out of range of the file.\nConstant extension will be used.')
+                print ('Warning: P_b and P_t assgined in vulcan.cfg are out of range of the input.\nConstant extension is used.')
             
             PTK_fun['pT'] = interpolate.interp1d(p_file, T_file, assume_sorted = False, bounds_error=False,\
              fill_value=(T_file[np.argmin(p_file)], T_file[np.argmax(p_file)] )  )
@@ -331,7 +345,45 @@ class Atm(object):
             
             elif self.Kzz_prof == 'const': data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
         
+        elif self.type == 'vulcan_ini':
+            print ("Initializing PT from the prvious run " + vulcan_cfg.vul_ini)
+            with open(vulcan_cfg.vul_ini, 'rb') as handle:
+              vul_data = pickle.load(handle) 
+            
+            data_atm.Tco = vul_data['atm']['Tco']
+            
+        elif self.type == 'table':
+            print ("Initializing PT from the prvious run " + vulcan_cfg.vul_ini)
+            table = np.genfromtxt(vulcan_cfg.vul_ini, names=True, dtype=None, skip_header=1) 
+            if not len(data_atm.pco) == len(table['Pressure']): 
+                print ("Warning! The initial profile has different layers than the current setting...")
+                raise    
+            data_atm.pco = table['Pressure']     
+            data_atm.Tco = table['Temp']
+              
         else: raise IOError ('\n"atm_type" cannot be recongized.\nPlease trassign it in vulcan_cfg.')
+        
+        # IF switches for Kzz types
+        if self.Kzz_prof == 'const': data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
+        elif self.Kzz_prof == 'JM16': # Kzz profiles assumed in Moses et al.2016
+            data_atm.Kzz = 1e5 * (300./(data_atm.pico[1:-1]*1e-3))**0.5
+            data_atm.Kzz = np.maximum(vulcan_cfg.K_deep, data_atm.Kzz)
+        elif self.Kzz_prof == 'Pfunc': # Kzz profiles assumed in Tsai 2020
+            data_atm.Kzz = vulcan_cfg.K_max * (vulcan_cfg.K_p_lev*1e6 /(data_atm.pico[1:-1]))**0.4
+            data_atm.Kzz = np.maximum(vulcan_cfg.K_max, data_atm.Kzz)
+        
+        elif self.Kzz_prof == 'file': pass # already defined within atm_type = 'file     
+        else: raise IOError ('\n"Kzz_prof" (the type of Kzz profile) cannot be recongized.\nPlease assign it as "file" or "const" or "JM16" in vulcan_cfg.')
+        
+        # IF switches for Vz types
+        if self.vz_prof == 'const': data_atm.vz = np.repeat(self.const_vz,nz-1)
+        elif self.vz_prof == 'file': 
+            inter_vz = interpolate.interp1d( atm_table['Pressure'], atm_table['vz'], assume_sorted = False, bounds_error=False, fill_value=0 )
+            data_atm.vz =  inter_vz(data_atm.pico[1:-1])
+        else: raise IOError ('\n"vz_prof" cannot be recongized.\nPlease assign it as "file" or "const" in vulcan_cfg.')
+        
+        
+        
                         
         if self.use_Kzz == False:
             # store Kzz in data_atm
@@ -339,34 +391,45 @@ class Atm(object):
         if self.use_vz == False: 
             data_atm.vz = np.zeros(nz-1)   
         
-        if self.use_settling == True:
-        # TESTing settling velocity
-        # based on L. D. Cloutman: A Database of Selected Transport Coefficients for Combustion Studies (Table 1.)
-            if vulcan_cfg.atm_base == 'N2':
-                na = 1.52; a = 1.186e-5; b = 86.54
-            elif vulcan_cfg.atm_base == 'H2':
-                na = 1.67; a = 1.936e-6; b = 2.187
-            elif vulcan_cfg.atm_base == 'CO2':
-                print ("NO CO2 viscosity yet!")
-            elif vulcan_cfg.atm_base == 'H2O':
-                na = 1.5; a = 1.6e-5; b = 0
-            elif vulcan_cfg.atm_base == 'O2':
-                na = 1.46; a = 2.294e-5; b = 164.4
-                
-            dmu = a * data_atm.Tco**na /(b + data_atm.Tco) # g cm-1 s-1 dynamic viscosity
-            
-            for sp in vulcan_cfg.non_gas_sp:
-                print (sp)
-                if sp == 'H2O_l_s': 
-                    rho_p = 0.9
-                    r_p = data_atm.r_p_h2o
-                elif sp == 'H2SO4_l': 
-                    rho_p = 1.8302
-                    r_p = data_atm.r_p_h2so4
-                else: print (sp + " has not been prescribed size and density!")
-                 
-                # Calculating the setteling (terminal) velocity         
-                data_atm.vs[:,species.index(sp)] = -1. *(2./9*rho_p * r_p**2 * vulcan_cfg.g / dmu[1:])        
+        # TEST 
+        # moved to calculating g
+        
+        # if self.use_settling == True:
+        # # TESTing settling velocity
+        # # based on L. D. Cloutman: A Database of Selected Transport Coefficients for Combustion Studies (Table 1.)
+        #     if vulcan_cfg.atm_base == 'N2':
+        #         na = 1.52; a = 1.186e-5; b = 86.54
+        #     elif vulcan_cfg.atm_base == 'H2':
+        #         na = 1.67; a = 1.936e-6; b = 2.187
+        #     elif vulcan_cfg.atm_base == 'CO2':
+        #         print ("NO CO2 viscosity yet! (using N2 instead)")
+        #         na = 1.52; a = 1.186e-5; b = 86.54
+        #     elif vulcan_cfg.atm_base == 'H2O':
+        #         na = 1.5; a = 1.6e-5; b = 0
+        #     elif vulcan_cfg.atm_base == 'O2':
+        #         na = 1.46; a = 2.294e-5; b = 164.4
+        #
+        #     dmu = a * data_atm.Tco**na /(b + data_atm.Tco) # g cm-1 s-1 dynamic viscosity
+        #
+        #     for sp in vulcan_cfg.non_gas_sp:
+        #         try:
+        #             rho_p = data_atm.rho_p[sp]
+        #             r_p = data_atm.r_p[sp]
+        #
+        #        # if sp == 'H2O_l_s':
+        #        #      rho_p = data_atm.rho_p_h2o
+        #        #      r_p = data_atm.r_p_h2o
+        #        #  elif sp == 'H2SO4_l':
+        #        #      rho_p = 1.8302
+        #        #      r_p = data_atm.r_p_h2so4
+        #        #  elif sp == 'H2SO4_l':
+        #        #      rho_p = 1.8302
+        #        #      r_p = data_atm.r_p_h2so4
+        #
+        #         except: print (sp + " has not been prescribed size and density!");raise
+        #
+        #         # Calculating the setteling (terminal) velocity
+        #         data_atm.vs[:,species.index(sp)] = -1. *(2./9*rho_p * r_p**2 * data_atm.g / dmu[1:])
         
         # calculating and storing M(the third body)
         data_atm.M = data_atm.pco/(kb*data_atm.Tco)
@@ -388,7 +451,7 @@ class Atm(object):
         # convert args_analytical tuple to a list so we can modify it
         T_int, T_irr, ka_0, ka_s, beta_s, beta_l = list(args_analytical) 
         
-        g = vulcan_cfg.g
+        g = vulcan_cfg.gs
         P_b = vulcan_cfg.P_b 
      
         # albedo(beta_s) also affects T_irr
@@ -406,7 +469,7 @@ class Atm(object):
     
         
     def mol_mass(self, sp):
-        ''' calculating the molar mass of each species?'''
+        ''' calculating the molar mass of each species'''
         return compo['mass'][compo_row.index(sp)]
 
     def mean_mass(self, var, atm, ni):
@@ -418,40 +481,91 @@ class Atm(object):
         
     def f_mu_dz(self, data_var, data_atm, output): # Initilising mean molecular weight and dz 
             
-        dz, zco = np.empty(nz), np.zeros(nz+1) # pressure defined at interfaces
+        dz, zco = data_atm.dz, data_atm.zco # pressure defined at interfaces
         Tco, pico = data_atm.Tco.copy(), data_atm.pico.copy()
-        g = self.g
+        Hp = data_atm.Hp
+        
+        if vulcan_cfg.rocky == False and self.P_b >= 1e6: # if the lower BC greater than 1bar for gas giants
+            # Find the index of pico closest to 1bar
+            pref_indx = min( range(nz+1), key=lambda i: abs(np.log10(pico[i])-6.))
+        else: pref_indx = 0
+        # print ("g_s starts from " + str(pico[pref_indx]/1e6) + " bar")
         
         # updating and storing mu
         data_atm = self.mean_mass(data_var, data_atm, ni)
-        # updating and storing Hp
-        data_atm.Hp = kb*Tco/(data_atm.mu/Navo*g) 
+        mu = data_atm.mu
+        gs = self.gs
+        gz = data_atm.g
+        # updating and storing mu
+        data_atm = self.mean_mass(data_var, data_atm, ni)
+        
+        for i in range(pref_indx,nz):
+            if i == pref_indx:
+                gz[i] = gs
+                Hp[i] = kb*Tco[i]/(mu[i]/Navo*gs)    
+            else:
+                gz[i] = gs * (vulcan_cfg.Rp/(vulcan_cfg.Rp+ zco[i]))**2
+                Hp[i] = kb*Tco[i]/(mu[i]/Navo*gz[i])
+            dz[i] = Hp[i] * np.log(pico[i]/pico[i+1]) # pico[i+1] has a lower P than pico[i] (higer height)
+            zco[i+1] = zco[i] + dz[i] # zco is set zero at 1bar for gas giants
 
-        for i in range(nz):
-            dz[i] = data_atm.Hp[i] * np.log(pico[i]/pico[i+1])
-            zco[i+1] = zco[i] + dz[i]
-
+        # for pref_indx != zero 
+        if not pref_indx == 0:
+            for i in range(pref_indx-1,-1,-1):
+                gz[i] = gs * (vulcan_cfg.Rp/(vulcan_cfg.Rp + zco[i+1]))**2
+                Hp[i] = kb*Tco[i]/(mu[i]/Navo*gz[i])
+                dz[i] = Hp[i] * np.log(pico[i]/pico[i+1]) 
+                zco[i] = zco[i+1] - dz[i] # from i+1 propogating down to i
+            
         zmco = 0.5*(zco + np.roll(zco,-1))
         zmco = zmco[:-1]
         dzi = 0.5*(dz + np.roll(dz,1))
         dzi = dzi[1:]
         # for the j grid, dzi[j] from the grid above and dz[j-1] from the grid below
         
-        # updating and storing dz and dzi
-        data_atm.dz = dz
-        data_atm.dzi = dzi
-        data_atm.zmco = zmco
-        
-        if self.use_settling == True:
-            # Using Gao 2018 (50)
-            r_p = 1.e-4
-            R_uni = kb*Navo # the universal gas const
-        
+        # for the molecular diffsuion
+        if vulcan_cfg.use_moldiff == True:
             Ti = 0.5*(Tco + np.roll(Tco,-1))
-            Ti = Ti[:-1]
-            mui = 0.5*(data_atm.mu + np.roll(data_atm.mu,-1))
-            mui = mui[:-1]
-            pi = pico[1:-1]
+            data_atm.Ti = Ti[:-1]
+            Hpi = 0.5*(Hp + np.roll(Hp,-1))
+            data_atm.Hpi = Hpi[:-1]
+            
+        # updating and storing dz and dzi
+        #data_atm.dz = dz
+        data_atm.dzi = dzi
+        #data_atm.zco = zco
+        data_atm.zmco = zmco
+        data_atm.g, data_atm.gs = gz, gs 
+        data_atm.pref_indx = pref_indx
+                    
+        if self.use_settling == True:
+        # TESTing settling velocity
+        # based on L. D. Cloutman: A Database of Selected Transport Coefficients for Combustion Studies (Table 1.)
+            if vulcan_cfg.atm_base == 'N2':
+                na = 1.52; a = 1.186e-5; b = 86.54
+            elif vulcan_cfg.atm_base == 'H2':
+                na = 1.67; a = 1.936e-6; b = 2.187
+            elif vulcan_cfg.atm_base == 'CO2':
+                print ("NO CO2 viscosity yet! (using N2 instead)")
+                na = 1.52; a = 1.186e-5; b = 86.54
+            elif vulcan_cfg.atm_base == 'H2O':
+                na = 1.5; a = 1.6e-5; b = 0
+            elif vulcan_cfg.atm_base == 'O2':
+                na = 1.46; a = 2.294e-5; b = 164.4
+                
+            dmu = a * data_atm.Tco**na /(b + data_atm.Tco) # g cm-1 s-1 dynamic viscosity
+            
+            for sp in vulcan_cfg.non_gas_sp:
+                try:
+                    rho_p = data_atm.rho_p[sp]
+                    r_p = data_atm.r_p[sp]
+                 
+                except: print (sp + " has not been prescribed size and density!");raise
+                 
+                # Calculating the setteling (terminal) velocity
+                gi = 0.5*(data_atm.g + np.roll(data_atm.g,-1))
+                gi = gi[:-1]        
+                data_atm.vs[:,species.index(sp)] = -1. *(2./9*rho_p * r_p**2 * gi / dmu[1:])
         
         # plot T-P profile
         if vulcan_cfg.plot_TP == True: output.plot_TP(data_atm)
@@ -489,6 +603,9 @@ class Atm(object):
         sum_orgin += 0.5 *(inter_sflux(bins[0])+raw_flux[raw_left_indx])* (atm.sflux_raw['lambda'][raw_left_indx]-bins[0])
         sum_orgin += 0.5 *(inter_sflux(bins[-1])+raw_flux[raw_right_indx])* (bins[-1]-atm.sflux_raw['lambda'][raw_right_indx])
         
+        # dbin_12trans outside the bins
+        if not 'sflux_din12_indx' in vars(var).keys(): var.sflux_din12_indx = -1
+        
         sum_bin = dbin1 * np.sum(var.sflux_top[:var.sflux_din12_indx])
         sum_bin -= dbin1 *0.5*(var.sflux_top[0]+var.sflux_top[var.sflux_din12_indx-1])
         sum_bin += dbin2 * np.sum(var.sflux_top[var.sflux_din12_indx:])
@@ -519,17 +636,44 @@ class Atm(object):
             return
         
         if vulcan_cfg.atm_base == 'H2':
-            Dzz_gen = lambda T, n_tot, mi: 2.2965E17*T**0.765/n_tot *( 16.04/mi*(mi+2.016)/18.059 )**0.5
+            Dzz_gen = lambda T, n_tot, mi: 2.2965E17*T**0.765/n_tot *( 16.04/mi*(mi+2.016)/18.059 )**0.5 # from Moses 2000a
             
             # scaling with (15.27) in [Aeronomy part B by Banks & Kockarts(1973)]
             # *( m_ref/mi*(mi+ m_base)/m_tot )**0.5 (m_ref is the molecular mass of the ref-base e.g. CH4 in CH4-H2 in Moses 2000a)
             
+            # # thermal diffusion factor (>0 means (heavier) components diffuse toward colder rigions)
+            if 'H' in species: atm.alpha[species.index('H')] = -0.1 # simplified from Moses 2000a
+            if 'He' in species:  atm.alpha[species.index('He')] = 0.145
+            for sp in species:
+                if self.mol_mass(sp) > 4.: atm.alpha[species.index(sp)] = 0.25
+            
         elif vulcan_cfg.atm_base == 'N2': # use CH4-N2 in Aeronomy [Banks ] as a reference to scale by the molecular mass
             Dzz_gen = lambda T, n_tot, mi: 7.34E16*T**0.75/n_tot *( 16.04/mi*(mi+28.014)/44.054 )**0.5
+            
+            # # thermal diffusion factor (>0 means (heavier) components diffuse toward colder rigions)
+            if 'H' in species: atm.alpha[species.index('H')] = -0.25
+            if 'H2' in species:  atm.alpha[species.index('H2')] = -0.25
+            if 'He' in species:  atm.alpha[species.index('He')] = -0.25
+            if 'Ar' in species:  atm.alpha[species.index('Ar')] = 0.17
+            
         elif vulcan_cfg.atm_base == 'O2': # use CH4-O2 in Aeronomy [Banks ] as a reference to scale by the molecular mass
             Dzz_gen = lambda T, n_tot, mi: 7.51E16*T**0.759/n_tot *( 16.04/mi*(mi+32)/48.04 )**0.5
+            
+            # # thermal diffusion factor (>0 means (heavier) components diffuse toward colder rigions)
+            if 'H' in species: atm.alpha[species.index('H')] = -0.25
+            if 'H2' in species:  atm.alpha[species.index('H2')] = -0.25
+            if 'He' in species:  atm.alpha[species.index('He')] = -0.25
+            if 'Ar' in species:  atm.alpha[species.index('Ar')] = 0.17
+            
         elif vulcan_cfg.atm_base == 'CO2': # use H2-CO2 in Hu seager as a reference to scale by the molecular mass
             Dzz_gen = lambda T, n_tot, mi: 2.15E17*T**0.750/n_tot *( 2.016/mi*(mi+44.001)/46.017 )**0.5
+            
+            # # thermal diffusion factor (>0 means (heavier) components diffuse toward colder rigions)
+            if 'H' in species: atm.alpha[species.index('H')] = -0.25
+            if 'H2' in species:  atm.alpha[species.index('H2')] = -0.25
+            if 'He' in species:  atm.alpha[species.index('He')] = -0.25
+            if 'Ar' in species:  atm.alpha[species.index('Ar')] = 0.17
+            
         else: raise IOError ('\n Unknow atm_base!')
         
         for i in range(len(species)):
@@ -542,17 +686,7 @@ class Atm(object):
         
         # setting the molecuar diffusion of the non-gaseous species to zero
         for sp in [_ for _ in vulcan_cfg.non_gas_sp if _ in species]: atm.Dzz[:,species.index(sp)] = 0
-        
-        # no exception needed!?    
-        # exceptions
-        # if vulcan_cfg.atm_base == 'H2':
-#             atm.Dzz[:,species.index('H2')] = np.zeros(nz-1)
-#         else: raise IOError ('\n Unknow atm_base!')
-        
-        
-        # # thermal diffusion for H and H2
-        # atm.alpha[species.index('H')] = -0.25
-        # atm.alpha[species.index('H2')] = -0.25
+                
     
     def BC_flux(self, atm):
         '''
@@ -593,7 +727,7 @@ class Atm(object):
         saturation varpor pressure (in dyne/cm2) and storing in atm.sat_p. 
         '''
         # the list that the data has been coded 
-        sat_sp_list = ["H2O",'NH3','H2SO4']
+        sat_sp_list = ['H2O','NH3','H2SO4','S2','S8' ,'C','H2S' ]
         
         for sp in vulcan_cfg.condense_sp:
             if sp not in sat_sp_list: raise IOError ( "No saturation vapor data for " +sp + ". Check the sp_sat function in build_atm.py" )
@@ -621,7 +755,6 @@ class Atm(object):
                 #atm.sat_p[sp] = c0 * np.exp( (c1*T + T**2/c2)/(T + c3) )
                 #atm.sat_p[sp] = moses_ice
             
-            
             elif sp == "NH3":
                 # from Weast (1971) in bar
                 c0 = 10.53; c1 = -2161.0;  c2 = -86596.0
@@ -632,7 +765,35 @@ class Atm(object):
                 # change to Kulmala later
                 p_ayers = np.e**(-10156./T + 16.259) # in atm
                 atm.sat_p[sp] = p_ayers * 1.01325*1e6 # arm to cgs
-           
+                
+            elif sp == "S2":
+                atm.sat_p[sp] = np.zeros(nz)
+                # from Zahnle 2014 (refitted from Lyons 2008)
+                atm.sat_p[sp][T<413] = np.exp(27. - 1850./T[T<413]) *1e6 # in bar => cgs
+                atm.sat_p[sp][T>=413] = np.exp(16.1 - 14000./T[T>=413]) *1e6
+            
+            elif sp == "S8":
+                atm.sat_p[sp] = np.zeros(nz)
+                # from Zahnle 2014 (refitted from Lyons 2008)
+                atm.sat_p[sp][T<413] = np.exp(20. - 11800./T[T<413]) *1e6 # in bar => cgs
+                atm.sat_p[sp][T>=413] = np.exp(9.6 - 7510./T[T>=413]) *1e6
+            
+            elif sp == "C":
+                atm.sat_p[sp] = np.zeros(nz)
+                # from NIST (dyna cm^-2)
+                a = 3.27860E+01
+                b = -8.65139E+04
+                c = 4.80395E-01 
+                atm.sat_p[sp] = np.exp(a+b/(atm.Tco +c) )
+                
+            elif sp == "H2S":
+                # from Giauque and Blue(1936) in cmHg (adoped in Atreya's book)
+                h2s_ice_log10 = -1329./T + 9.28588 - 0.0051263*T # 164.9 <= T <= 187.6
+                h2s_l_log10 = -1145./T + 7.94746 - 0.00322*T     # 187.6 < T <= 213.2
+                
+                saturate_p = 10**( (T <= 187.6)*h2s_ice_log10 + (T > 187.6)*h2s_l_log10 )
+                atm.sat_p[sp] = saturate_p * 0.001333 * 1.e6
+
             
 if __name__ == "__main__":
     print("This module stores classes for constructing atmospheric structure \

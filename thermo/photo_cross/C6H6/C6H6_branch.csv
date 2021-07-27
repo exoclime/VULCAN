@@ -1,0 +1,6 @@
+# Branching ratios for C6H6 -> (1)C6H5 + H (2)C3H3 + C3H3 # branching ratios (Est. from Kislov 2004 taken into account for two photons) 
+# lambda , br_ratio_1 , br_ratio_2
+1.5500E+02, 0.99      , 0.15      
+1.5700E+02, 0.99      , 0.15 
+1.9300E+02, 0.995     , 0.005 
+2.0630E+02, 1.        , 0

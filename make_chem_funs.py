@@ -27,6 +27,7 @@ def read_network():
     else: ofstr = '# Chemical Network without Photochemistry \n\n'
     
     photo_str = '# photochemistry \n\n'
+    ion_str = '# ionchemistry \n\n'
     re_label = '#R'
     new_network = ''
     photo_re_indx = 0 # The index of first photodissoication reaction 
@@ -44,18 +45,20 @@ def read_network():
             elif line.startswith("# condensation"): 
                 print ('Including condensation reactions.')
                 special_re = False # switch to reactions with special forms (hard coded)
-                conden_re = True                   
+                #conden_re = True                   
                 re_label = '#C'
+            
+            elif line.startswith("# radiative"): re_label = '#R'
                 
             elif line.startswith("# photo"): 
                 special_re = False # switch to photo-disscoiation reactions
-                conden_re = False
+                #conden_re = False
                 photo_re = True
                 photo_re_indx = i                 
                 re_label = '#P'
+            
+            elif line.startswith("# ionisation"): re_label = '#I'
                 
-            elif line.startswith("# re_end"):
-                re_end = True
 
             # skip common lines and blank lines
             # ========================================================================================
@@ -66,19 +69,27 @@ def read_network():
                 columns = li.split()
 
                 # updating the numerical index in the network (1, 3, ...)
-                line = '{:3d}\t{:s}'.format(i, "".join(line.partition('[')[1:]))
+                line = '{:<4d} {:s}'.format(i, "".join(line.partition('[')[1:]))
                 
                 if not (vulcan_cfg.use_photo == False and photo_re == True):
                     ofstr += re_label + str(i) + '\n'
                     ofstr +=  Rf[i] + '\n'
-                
+                    
                 # storing only the photochemical reactions
-                if re_label == '#P':
+                elif re_label == '#P':
                     photo_str += re_label + str(i) + '\n'
                     photo_str += Rf[i] + '\n'
                     
                 # storing only the condensation reactions
-                if re_label == '#C':
+                elif re_label == '#C':
+                    ofstr += re_label + str(i) + '\n'
+                    ofstr += Rf[i] + '\n'
+                    
+                elif re_label == '#R':
+                    photo_str += re_label + str(i) + '\n'
+                    photo_str += Rf[i] + '\n'
+                    
+                elif re_label == '#I':
                     photo_str += re_label + str(i) + '\n'
                     photo_str += Rf[i] + '\n'
                 
@@ -88,7 +99,7 @@ def read_network():
 
                 #Rindx[i] = int(line.partition('[')[0].strip())
                 Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
-                line = '{:3d}\t{:s}'.format(i, "".join(line.partition('[')[1:]))
+                line = '{:<4d} {:s}'.format(i, "".join(line.partition('[')[1:]))
                 ofstr += re_label + str(i) + '\n'
                 ofstr +=  Rf[i] + '\n'
         

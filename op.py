@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib.legend as lg
 import time, os, pickle
 import csv, ast
+# TEST numba
+# from numba import njit, jit
 
 #from builtins import input
 #from collections import defaultdict
@@ -60,9 +62,10 @@ class ReadRate(object):
         
     def read_rate(self, var, atm):
         
-        Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k, k_fun, k_inf, kinf_fun, k_fun_new, pho_rate_index, ion_rate_index = \
+        Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k, k_fun, k_inf, kinf_fun, k_fun_new, pho_rate_index = \
         var.Rf, var.Rindx, var.a, var.n, var.E, var.a_inf, var.n_inf, var.E_inf, var.k, var.k_fun, var.k_inf, var.kinf_fun, var.k_fun_new,\
-         var.pho_rate_index, var.ion_rate_index
+         var.pho_rate_index
+        ion_rate_index = var.ion_rate_index
         
         i = self.i
         re_tri, re_tri_k0 = self.re_tri, self.re_tri_k0
@@ -135,21 +138,6 @@ class ReadRate(object):
                 
                 elif line.startswith("# reverse stops"):
                     var.stop_rev_indx = i
-                    
-                # elif line.startswith("# re_end"):
-              #       end_re = True
-              #
-              #   elif line.startswith("# braching info start"):
-              #       br_read = True
-              #
-              #   elif line.startswith("# braching info end"):
-              #       br_read = False
-              #
-              #   elif line.startswith("# ion braching info start"):
-              #       ion_br_read = True
-              #
-              #   elif line.startswith("# ion braching info end"):
-              #       ion_read = False
                       
                 # skip common lines and blank lines
                 # ========================================================================================
@@ -159,7 +147,6 @@ class ReadRate(object):
                     li = line.partition(']')[-1].strip()
                     columns = li.split()
                     Rindx[i] = int(line.partition('[')[0].strip())
-        
                     a[i] = float(columns[0])
                     n[i] = float(columns[1])
                     E[i] = float(columns[2])
@@ -197,10 +184,7 @@ class ReadRate(object):
                     else: # for 3-body reactions without high-pressure rates
                         k[i] = k_fun[i](Tco, M)
                            
-                    ### TEST CAPPING
-                    # k[i] = np.minimum(k[i],1.E-11)
-                    ###
-    
+
                     i += 2
                     # end if not 
                  # ========================================================================================    
@@ -214,14 +198,24 @@ class ReadRate(object):
                     
                         k[i] = 1.932E3*Tco**-9.88 *np.exp(-7544./Tco) + 5.109E-11*Tco**-6.25 *np.exp(-1433./Tco)
                         k_inf = 1.031E-10 * Tco**-0.018 *np.exp(16.74/Tco)
-                        k[i] = k[i]/(1 + k[i]*M/k_inf )
+                        # the pressure dependence from Jasper 2017
+                        Fc = 0.1855*np.exp(-Tco/155.8)+0.8145*np.exp(-Tco/1675.)+np.exp(-4531./Tco) 
+                        n = 0.75 - 1.27*np.log(Fc)
+                        ff = np.exp( np.log(Fc)/(1.+ (np.log(k[i]*M/k_inf)/n**2)**2 ) )
+                        
+                        k[i] = k[i]/(1 + k[i]*M/k_inf ) *ff
                     
                         k_fun[i] = lambda temp, mm, i=i: 1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp)
                         kinf_fun[i] = lambda temp, mm, i=i: 1.031E-10 * temp**-0.018 *np.exp(16.74/temp)
                         k_fun_new[i] = lambda temp, mm, i=i: (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp))/\
                         (1 + (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp)) * mm / (1.031E-10 * temp**-0.018 *np.exp(16.74/temp)) )
                     
+                    # elif Rf[i] == 'C2H2 + M -> soot':
+                    #     print ('Using fake C2H2 -> soot: ' + Rf[i])
+                    #     k[i] = np.ones(nz) * 1e-10
+                        
                     i += 2
+
                 
                 # Testing condensation
                 elif conden_re == True and line.strip() and not line.startswith("#"):
@@ -274,27 +268,6 @@ class ReadRate(object):
                     var.ion_branch[columns[0]] = int(columns[1])
                     
                     i += 2
-                    
-                # # end_re == True
-                # elif br_read == True and not line.startswith("#"):
-                #     # read in the quantum yields of photolysis reactions
-                #     sp_list = line.partition(':')
-                #     sp = sp_list[0]
-                #     lists = sp_list[-1]
-                #     wavelen_yield = lists.partition(';')
-                #     # wavelen_yield is tuple of string in wavelength seitch, ;, Q yield e.g. ('[165.]', ';', '[(1.,0),(0,1.)]')
-                #     var.wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
-                #     var.br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
-                #
-                # elif ion_br_read == True and not line.startswith("#"):
-                #     # read in the quantum yields of photolysis reactions
-                #     sp_list = line.partition(':')
-                #     sp = sp_list[0]
-                #     lists = sp_list[-1]
-                #     wavelen_yield = lists.partition(';')
-                #     # wavelen_yield is tuple of string in wavelength seitch, ;, Q yield e.g. ('[165.]', ';', '[(1.,0),(0,1.)]')
-                #     var.ion_wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
-                #     var.ion_br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
                 
         k_fun.update(k_fun_new)
     
@@ -329,8 +302,8 @@ class ReadRate(object):
                 var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
                 var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
             
-            if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + ':  ' + str(np.amax(var.k[i])) )
-            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + ':  ' + str(np.amax(var.k[i-1])) )        
+            if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + " " + var.Rf[i-1] +' :  ' + str(np.amax(var.k[i])) )
+            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + " " + var.Rf[i-1] + ' :  ' + str(np.amax(var.k[i-1])) )        
         
         return var
         
@@ -342,7 +315,31 @@ class ReadRate(object):
             var.k_fun[i] = lambda temp, mm, i=i: np.repeat(0.,nz)
             
         return var
-        
+    
+    def lim_lowT_rates(self, var, atm): # for setting up the lower limit of rate coefficients for low T
+        for i in range(1,nr,2):
+            if var.Rf[i] == 'H + CH3 + M -> CH4 + M':
+                T_mask = atm.Tco <= 277.5
+                k0 = 6e-29; kinf = 2.06E-10 *atm.Tco**-0.4 # from Moses+2005
+                lowT_lim = k0 / (1. + k0*atm.M/kinf)
+                print ("using the low temperature limit for CH3 + H + M -> CH4 + M")
+                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (lowT_lim[T_mask])
+                var.k[i][T_mask] =  lowT_lim[T_mask]
+                
+            elif var.Rf[i] == 'H + C2H4 + M -> C2H5 + M':
+                T_mask = atm.Tco <= 300
+                print ("using the low temperature limit for H + C2H4 + M -> C2H5 + M")
+                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (3.7E-30)
+                var.k[i][T_mask] = 3.7E-30 # from Moses+2005
+                
+            elif var.Rf[i] == 'H + C2H5 + M -> C2H6 + M':
+                T_mask = atm.Tco <= 200  
+                print ("using the low temperature limit for H + C2H5 + M -> C2H6 + M")
+                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (2.49E-27)
+                var.k[i][T_mask] = 2.49E-27 # from Moses+2005
+
+        return var
+            
     # def read_rateFun(self, var):
     #     '''
     #     Reading in the reaction network and returning only the functions (k_fun)
@@ -494,7 +491,7 @@ class ReadRate(object):
     #
     #     return var
     
-    def make_bins_read_cross(self,var):
+    def make_bins_read_cross(self,var,atm):
         '''
         determining the bin range and only use the min and max wavelength that the molecules absorb
         to avoid photons with w0=1 (pure scatteing) in certain wavelengths
@@ -507,27 +504,53 @@ class ReadRate(object):
         sp0 = photo_sp[0]
         
         cross_raw, scat_raw = {}, {}
-        ratio_raw = {}
+        ratio_raw, ion_ratio_raw = {}, {}
+        cross_T_raw = {}
         
         # In the end, we do not need photons beyond the longest-wavelength threshold from all species (different from absorption)
         sp_label = np.genfromtxt(vulcan_cfg.cross_folder+'thresholds.txt',dtype=str, usecols=0) # taking the first column as labels
         lmd_data = np.genfromtxt(vulcan_cfg.cross_folder+'thresholds.txt', skip_header = 1)[:,1] # discarding the fist column
-
+        
+        # for setting up the wavelength coverage
         threshold = {label: row for label, row in zip(sp_label, lmd_data) if label in species} # only include the species in the current network
         var.threshold = threshold 
         
-        # reading in cross sections into dictionary
-        for n, sp in enumerate(absp_sp):
-            try: 
-                if vulcan_cfg.use_ion == True:
-                    cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
-                else: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+        # reading in cross sections into dictionaries
+        for n, sp in enumerate(absp_sp):   
+            
+            if vulcan_cfg.use_ion == True:
+                try: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                except: print ('\nMissing the cross section from ' + sp); raise
+                if sp in ion_sp:
+                    try: ion_ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                    except: print ('\nMissing the ion branching ratio from ' + sp); raise
+            else: 
+                try: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                except: print ('\nMissing the cross section from ' + sp); raise
+            
+            # reading in the branching ratios
+            # for i in range(1,var.n_branch[sp]+1): # branch index should start from 1
+            if sp in photo_sp: # excluding ion_sp 
+                try: ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                except: print ('\nMissing the branching ratio from ' + sp); raise
                 
-                # reading in the branching ratios
-                # for i in range(1,var.n_branch[sp]+1): # branch index should start from 1
-                ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
-                
-            except: print ('\nMissing the cross section/branching ratio from ' + sp)
+            # reading in temperature dependent cross sections
+            if sp in vulcan_cfg.T_cross_sp: 
+                T_list = []
+                for temp_file in os.listdir("thermo/photo_cross/" + sp + "/"):
+                    if temp_file.startswith(sp) and temp_file.endswith("K.csv"):
+                        temp = temp_file
+                        temp = temp.replace(sp,''); temp = temp.replace('_cross_',''); temp = temp.replace('K.csv','')
+                        T_list.append(int(temp) )
+                        var.cross_T_sp_list[sp] = T_list
+                for tt in T_list:
+                    if vulcan_cfg.use_ion == True: # usually the T-dependent cross sections are only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
+                        cross_T_raw[(sp, tt)] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                    else: cross_T_raw[(sp, tt)] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                # room-T cross section
+                cross_T_raw[(sp, 300)] = cross_raw[sp]
+                var.cross_T_sp_list[sp].append(300)
+                                       
             if cross_raw[sp]['cross'][0] == 0 or cross_raw[sp]['cross'][-1] ==0:
                 raise IOError ('\n Please remove the zeros in the cross file of ' + sp)
             
@@ -535,13 +558,17 @@ class ReadRate(object):
                 bin_min = cross_raw[sp]['lambda'][0]
                 bin_max = cross_raw[sp]['lambda'][-1]
                 # photolysis threshold
-                diss_max = threshold[sp]
+                try: diss_max = threshold[sp]
+                except: print (sp + " not in threshol.txt"); raise
                 
             else:
                 sp_min, sp_max = cross_raw[sp]['lambda'][0], cross_raw[sp]['lambda'][-1]
                 if sp_min < bin_min: bin_min = sp_min
                 if sp_max > bin_max: bin_max = sp_max
-                if threshold[sp] > diss_max: diss_max = threshold[sp]
+                try:
+                    if threshold[sp] > diss_max: 
+                        diss_max = threshold[sp]
+                except: print (sp + " not in threshol.txt"); raise
                 
         # constraining the bin_min and bin_max by the default values defined in store.py
         bin_min = max(bin_min, var.def_bin_min)
@@ -552,8 +579,9 @@ class ReadRate(object):
         
         var.dbin1 = vulcan_cfg.dbin1
         var.dbin2 = vulcan_cfg.dbin2
-        bins = np.concatenate(( np.arange(bin_min,vulcan_cfg.dbin_12trans, var.dbin1), np.arange(vulcan_cfg.dbin_12trans,bin_max, var.dbin2) ))
-        # bins[-1] -= 1.E-10  # for solaving the floating pb in binary when doing read_cross
+        if vulcan_cfg.dbin_12trans >= bin_min and vulcan_cfg.dbin_12trans <= bin_max:
+            bins = np.concatenate(( np.arange(bin_min,vulcan_cfg.dbin_12trans, var.dbin1), np.arange(vulcan_cfg.dbin_12trans,bin_max, var.dbin2) ))
+        else: bins = np.arange(bin_min,bin_max, var.dbin1)
         var.bins = bins
         var.nbin = len(bins)
         
@@ -577,54 +605,168 @@ class ReadRate(object):
         # creat a dict of cross section with key=sp and values=bins in data_var
         var.cross = dict([(sp, np.zeros(var.nbin)) for sp in absp_sp ]) # including photo_sp and ion_sp 
         
-        #read cross of disscoiation
-        #var.cross_J = dict([(sp, np.zeros(var.nbin)) for sp in photo_sp])
+        # read cross of disscoiation
         var.cross_J = dict([((sp,i), np.zeros(var.nbin)) for sp in photo_sp for i in range(1,var.n_branch[sp]+1)])
         var.cross_scat = dict([(sp, np.zeros(var.nbin)) for sp in vulcan_cfg.scat_sp])
         
-        #read cross of ionisation
-        var.cross_Jion = dict([(sp, np.zeros(var.nbin)) for sp in ion_sp])
+        # for temperature-dependent cross sections
+        var.cross_T = dict([(sp, np.zeros((nz, var.nbin) )) for sp in vulcan_cfg.T_cross_sp ])
+        var.cross_J_T = dict([((sp,i), np.zeros((nz, var.nbin) )) for sp in vulcan_cfg.T_cross_sp for i in range(1,var.n_branch[sp]+1) ])
         
-        for sp in photo_sp:
+        #read cross of ionisation
+        if vulcan_cfg.use_ion == True: var.cross_Jion = dict([((sp,i), np.zeros(var.nbin)) for sp in ion_sp for i in range(1,var.ion_branch[sp]+1)])
+        
+        for sp in photo_sp: # photodissociation only; photoionization takes a separate branch ratio file
             # for values outside the boundary => fill_value = 0
             inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
             inter_cross_J = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['disso'], bounds_error=False, fill_value=0)
-            inter_ratio = {}
-                        
+            inter_ratio = {} # excluding ionization branches
+                                    
             for i in range(1,var.n_branch[sp]+1): # fill_value extends the first and last elements for branching ratios
                 br_key = 'br_ratio_' + str(i)
-                try:
+                try:                  
                     inter_ratio[i] = interpolate.interp1d(ratio_raw[sp]['lambda'], ratio_raw[sp][br_key], bounds_error=False, fill_value=(ratio_raw[sp][br_key][0],ratio_raw[sp][br_key][-1]))
                 except: print("The branches in the network file does not match the branchong ratio file for " + str(sp))
-                
+            
+            # using a loop instead of an array because it's easier to handle the branching ratios              
             for n, ld in enumerate(bins):
                 var.cross[sp][n] = inter_cross(ld)
                 
                 # using the branching ratio (from the files) to construct the individual cross section of each branch
                 for i in range(1,var.n_branch[sp]+1):
-                    # var.inter_ratio[i] = inter_ratio[i]
                     var.cross_J[(sp,i)][n] = inter_cross_J(ld) * inter_ratio[i](ld)
- 
+            
+            # make var.cross_T[(sp,i)] and var.cross_J_T[(sp,i)] here in 2D array: nz * bins (same shape as tau)
+            # T-dependent cross sections are usually only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
+            if sp in vulcan_cfg.T_cross_sp:
+                
+                # T list of species sp that have T-depedent cross sections (inclduing 300 K for inter_cross)
+                T_list = np.array(var.cross_T_sp_list[sp])
+                max_T_sp = np.amax(T_list)
+                min_T_sp = np.amin(T_list)
+                
+                for lev, Tz in enumerate(atm.Tco): # looping z 
+                    
+                    Tz_between = False # flag for Tz in between any two elements in T_list
+                    # define the interpolating T range
+                    if list(T_list[T_list <= Tz]) and list(T_list[T_list > Tz]):
+                        Tlow = T_list[T_list <= Tz].max() # closest T in T_list smaller than Tz
+                        Thigh = T_list[T_list > Tz].min() # closest T in T_list larger than Tz
+                        Tz_between = True
+
+                        # find the wavelength range that are included in both cross_T_raw[(sp,Tlow)] and cross_T_raw[(sp,Thigh)] 
+                        ld_min = max( cross_T_raw[(sp,Tlow)]['lambda'][0], cross_T_raw[(sp,Thigh)]['lambda'][0] )
+                        ld_max = min( cross_T_raw[(sp,Tlow)]['lambda'][-1], cross_T_raw[(sp,Thigh)]['lambda'][-1] )
+                        inter_cross_lowT = interpolate.interp1d(cross_T_raw[(sp,Tlow)]['lambda'], cross_T_raw[(sp,Tlow)]['cross'], bounds_error=False, fill_value=0)
+                        inter_cross_highT = interpolate.interp1d(cross_T_raw[(sp,Thigh)]['lambda'], cross_T_raw[(sp,Thigh)]['cross'], bounds_error=False, fill_value=0)
+                        inter_cross_J_lowT = interpolate.interp1d(cross_T_raw[(sp,Tlow)]['lambda'], cross_T_raw[(sp,Tlow)]['disso'], bounds_error=False, fill_value=0)
+                        inter_cross_J_highT = interpolate.interp1d(cross_T_raw[(sp,Thigh)]['lambda'], cross_T_raw[(sp,Thigh)]['disso'], bounds_error=False, fill_value=0)
+            
+                        for n, ld in enumerate(bins): # looping bins
+
+                            # not within the T-cross wavelength range
+                            if ld < ld_min or ld > ld_max: 
+                                var.cross_T[sp][lev, n] = var.cross[sp][n]
+                                # don't forget the cross_J_T branches
+                                for i in range(1,var.n_branch[sp]+1):
+                                    var.cross_J_T[(sp,i)][lev, n] = var.cross_J[(sp,i)][n]
+                            
+                            else:                          
+                                # update: inerpolation in log10 for cross sections and linearly between Tlow and Thigh 
+                                log_lowT = np.log10(inter_cross_lowT(ld))
+                                log_highT = np.log10(inter_cross_highT(ld))
+                                if np.isinf(log_lowT ): log_lowT = -100. # replacing -inf with -100 
+                                if np.isinf(log_highT ): log_highT = -100.
+                                
+                                inter_T = interpolate.interp1d([Tlow,Thigh], [log_lowT,log_highT], axis=0) # at wavelength ld, interpolating between Tlow and Thigh in log10
+                                if inter_T(Tz) == -100: var.cross_T[sp][lev, n] == 0.
+                                else: var.cross_T[sp][lev, n] = 10**(inter_T(Tz))
+                                
+                                # update: inerpolation in log10 for cross sections and linearly between Tlow and Thigh 
+                                # using the branching ratio (from the files) to construct the individual cross section of each branch
+                                for i in range(1,var.n_branch[sp]+1):
+                                    J_log_lowT = np.log10(inter_cross_J_lowT(ld))
+                                    J_log_highT = np.log10(inter_cross_J_highT(ld))
+                                    if np.isinf(J_log_lowT): J_log_lowT = -100. # replacing -inf with -100 
+                                    if np.isinf(J_log_highT): J_log_highT = -100.
+
+                                    inter_cross_J_T = interpolate.interp1d([Tlow,Thigh], [J_log_lowT,J_log_highT], axis=0)
+                                    
+                                    if inter_cross_J_T(Tz) == -100: var.cross_J_T[(sp,i)][lev, n] = 0.
+                                    else: var.cross_J_T[(sp,i)][lev, n] = 10**(inter_cross_J_T(Tz)) * inter_ratio[i](ld) # same inter_ratio[i](ld) as the standard one above
+
+                                    
+                    elif not list(T_list[T_list < Tz]): # Tz equal or smaller than all T in T_list including 300K (empty list)  
+
+                        if min_T_sp == 300:
+                            var.cross_T[sp][lev] = var.cross[sp] # using the cross section at room T
+                            for i in range(1,var.n_branch[sp]+1):
+                                var.cross_J_T[(sp,i)][lev] = var.cross_J[(sp,i)]
+                        else: # min_T_sp != 300; T-cross lower than room temperature
+                            # the wavelength range of cross_T_raw at T = min_T_sp
+                            ld_min, ld_max = cross_T_raw[(sp,min_T_sp)]['lambda'][0], cross_T_raw[(sp,min_T_sp)]['lambda'][-1]
+                            inter_cross_lowT = interpolate.interp1d(cross_T_raw[(sp,min_T_sp)]['lambda'], cross_T_raw[(sp,min_T_sp)]['cross'], bounds_error=False, fill_value=0)
+                            inter_cross_J_lowT = interpolate.interp1d(cross_T_raw[(sp,min_T_sp)]['lambda'], cross_T_raw[(sp,min_T_sp)]['disso'], bounds_error=False, fill_value=0)
+                            for n, ld in enumerate(bins): # looping bins
+                                # not within the T-cross wavelength range
+                                if ld < ld_min or ld > ld_max: 
+                                    var.cross_T[sp][lev, n] = var.cross[sp][n] 
+                                    # don't forget the cross_J_T branches
+                                    for i in range(1,var.n_branch[sp]+1):
+                                        var.cross_J_T[(sp,i)][lev, n] = var.cross_J[(sp,i)][n]
+                                else:                          
+                                    var.cross_T[sp][lev, n] = inter_cross_lowT(ld)                         
+                                    # using the branching ratio (from the files) to construct the individual cross section of each branch
+                                    for i in range(1,var.n_branch[sp]+1):
+                                        var.cross_J_T[(sp,i)][lev, n] = inter_cross_J_lowT(ld) * inter_ratio[i](ld) # same inter_ratio[i](ld) as the standard one above
+
+                    else: # Tz equal or larger than all T in T_list (empty list)
+                        # the wavelength range of cross_T_raw[(sp,Thigh)]
+
+                        if max_T_sp == 300:
+                            var.cross_T[sp][lev] = var.cross[sp] # using the cross section at room T
+                            for i in range(1,var.n_branch[sp]+1):
+                                var.cross_J_T[(sp,i)][lev] = var.cross_J[(sp,i)]
+                        else:  # the wavelength range of cross_T_raw at T = max_T_sp
+                            ld_min, ld_max = cross_T_raw[(sp,max_T_sp)]['lambda'][0], cross_T_raw[(sp,max_T_sp)]['lambda'][-1]
+                            inter_cross_highT = interpolate.interp1d(cross_T_raw[(sp,max_T_sp)]['lambda'], cross_T_raw[(sp,max_T_sp)]['cross'], bounds_error=False, fill_value=0)
+                            inter_cross_J_highT = interpolate.interp1d(cross_T_raw[(sp,max_T_sp)]['lambda'], cross_T_raw[(sp,max_T_sp)]['disso'], bounds_error=False, fill_value=0)
+                            for n, ld in enumerate(bins): # looping bins
+                                # not within the T-cross wavelength range
+                                if ld < ld_min or ld > ld_max: 
+                                    var.cross_T[sp][lev, n] = var.cross[sp][n] 
+                                    # don't forget the cross_J_T branches
+                                    for i in range(1,var.n_branch[sp]+1):
+                                        var.cross_J_T[(sp,i)][lev, n] = var.cross_J[(sp,i)][n]                               
+                                else:                          
+                                    var.cross_T[sp][lev, n] = inter_cross_highT(ld)
+                            
+                                    # using the branching ratio (from the files) to construct the individual cross section of each branch
+                                    for i in range(1,var.n_branch[sp]+1):
+                                        var.cross_J_T[(sp,i)][lev, n] = inter_cross_J_highT(ld) * inter_ratio[i](ld) # same inter_ratio[i](ld) as the standard one above
+                    
+                                            
         if vulcan_cfg.use_ion == True: 
             for sp in ion_sp:
-                
-                inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
+                if sp not in photo_sp: 
+                    inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
+                              
                 inter_cross_Jion = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['ion'], bounds_error=False, fill_value=0)
-  
+                ion_inter_ratio = {} # For ionization branches
+                                    
+                for i in range(1,var.ion_branch[sp]+1): # fill_value extends the first and last elements for branching ratios
+                    br_key = 'br_ratio_' + str(i)                
+                    try:
+                        ion_inter_ratio[i] = interpolate.interp1d(ion_ratio_raw[sp]['lambda'], ion_ratio_raw[sp][br_key], bounds_error=False, fill_value=(ion_ratio_raw[sp][br_key][0],ion_ratio_raw[sp][br_key][-1]))
+                    except: print("The ionic branches in the network file does not match the branchong ratio file for " + str(sp))
+                
                 for n, ld in enumerate(bins):
-                    var.cross_Jion[sp][n] = inter_cross_Jion(ld)
-                    # the photoionisation cross section also contribute to the total absorption
-                    var.cross[sp][n] = inter_cross(ld) 
-                    
-                    # using the branching ratio (from the files) to construct the individual cross section of each branch
-                    for i in range(1,var.n_branch[sp]+1):
-                        br_key = 'br_ratio_' + str(i)
-                        try:
-                            inter_ratio[i] = interpolate.interp1d(ratio_raw[sp]['lambda'], ratio_raw[sp][br_key], bounds_error=False, fill_value=(ratio_raw[sp][br_key][0],ratio_raw[sp][br_key][-1]))
-                        except: print("The ionic branches in the network file does not match the branchong ratio file for " + str(sp))
-                        #var.inter_ratio = inter_ratio
-                        var.cross_Jion[(sp,i)][n] = inter_cross_Jion(ld) * inter_ratio[i](ld)
-                         
+                    # for species noe appeared in photodissociation but only in photoionization, like H
+                    if sp not in photo_sp: var.cross[sp][n] = inter_cross(ld)                
+                    for i in range(1,var.ion_branch[sp]+1): 
+                        var.cross_Jion[(sp,i)][n] = inter_cross_Jion(ld) * ion_inter_ratio[i](ld)
+        # end of if vulcan_cfg.use_ion == True: 
+                
         # reading in cross sections of Rayleigh Scattering
         for sp in vulcan_cfg.scat_sp:
             scat_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder + 'rayleigh/' + sp+'_scat.txt',dtype=float,\
@@ -635,7 +777,7 @@ class ReadRate(object):
             
             for n, ld in enumerate(bins):
                 var.cross_scat[sp][n] = inter_scat(ld)
-                
+                 
 
 class Integration(object):
     """
@@ -653,10 +795,13 @@ class Integration(object):
         self.odesolver = odesolver
         self.non_gas_sp = vulcan_cfg.non_gas_sp
         self.use_settling = vulcan_cfg.use_settling 
-        self.g = vulcan_cfg.g
         
         # including photoionisation
         if vulcan_cfg.use_photo == True: self.update_photo_frq = vulcan_cfg.ini_update_photo_frq
+        
+        if vulcan_cfg.use_condense == True:  
+            self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
+            self.condense_sp_index = [species.index(sp) for sp in vulcan_cfg.condense_sp]
         
         
     def __call__(self, var, atm, para, make_atm):
@@ -668,7 +813,7 @@ class Integration(object):
             var = self.backup(var)
             
             # updating tau, flux, and the photolosys rate
-            # TEST
+            # swtiching to final_update_photo_frq
             if vulcan_cfg.use_photo == True and var.longdy < vulcan_cfg.yconv_min*10. and var.longdydt < 1.e-6:  
                 self.update_photo_frq = vulcan_cfg.final_update_photo_frq
                 if para.switch_final_photo_frq == False:
@@ -681,19 +826,37 @@ class Integration(object):
                 self.odesolver.compute_J(var, atm)
                 if vulcan_cfg.use_ion == True: # photoionisation rate
                     self.odesolver.compute_Jion(var, atm)
-                    
-            # Testing condensation
-            # updating the condensation rates
-            if vulcan_cfg.use_condense == True and var.t > vulcan_cfg.start_conden_time:
-                var = self.conden(var,atm)
-            
-                
+                                    
             # integrating one step
             var, para = self.odesolver.one_step(var, atm, para)
             
-            if vulcan_cfg.use_condense == True and vulcan_cfg.use_relax_water == True and var.t > vulcan_cfg.start_conden_time:
-                var = self.h2o_conden_relax(var,atm)
+            
+            # Condensation (needs to be after solver.one_step)
+            if vulcan_cfg.use_condense == True and var.t > vulcan_cfg.start_conden_time:
+                # updating the condensation rates 
+                var = self.conden(var,atm)
                 
+                if vulcan_cfg.fix_species and var.t > vulcan_cfg.fix_species_time:
+                    
+                    # TEST 2021
+                    vulcan_cfg.rtol = vulcan_cfg.post_conden_rtol
+                    
+                    if para.fix_species_start == False: # switch
+                        var.fix_y = {}
+                        for sp in vulcan_cfg.fix_species:
+                            var.fix_y[sp] = np.copy(var.y[:,species.index(sp)])
+                        para.fix_species_start = True
+                            
+                    else: pass # do nothing after fix_species has started
+                        
+                if 'H2O' in vulcan_cfg.condense_sp:
+                    if 'H2O' in vulcan_cfg.fix_species and para.fix_species_start == True: pass
+                    elif vulcan_cfg.use_relax and var.t > vulcan_cfg.start_conden_time:
+                        if 'H2O' in vulcan_cfg.use_relax: 
+                            var = self.h2o_conden_evap_relax(var,atm)
+                        if 'NH3' in vulcan_cfg.use_relax:
+                            var = self.nh3_conden_evap_relax(var,atm)
+                                          
             if para.count % vulcan_cfg.update_frq == 0: # updating mu and dz (dzi) due to diffusion
                 atm = self.update_mu_dz(var, atm, make_atm)
                 atm = self.update_phi_esc(var, atm) # updating the diffusion-limited flux
@@ -701,8 +864,10 @@ class Integration(object):
             # Test?
             # MAINTAINING HYDROSTATIC BALANCE
             if vulcan_cfg.use_condense == True:
-                var.y[:,atm.exc_conden] = np.vstack(atm.n_0)*var.ymix[:,atm.exc_conden]
+                #var.v_ratio = np.sum(var.y[:,atm.gas_indx], axis=1) / atm.n_0
+                var.y[:,atm.gas_indx] = np.vstack(atm.n_0)*var.ymix[:,atm.gas_indx]
             else:
+                #var.v_ratio = np.sum(var.y, axis=1) / atm.n_0 # how the volumn has changed while the P and number density are fixed
                 var.y = np.vstack(atm.n_0)*var.ymix
             
             # calculating the changing of y
@@ -733,40 +898,63 @@ class Integration(object):
         var.atom_loss_prev = var.atom_loss.copy()
         return var
         
-    def update_mu_dz(self, var, data_atm, make_atm): #y, ni, spec, Tco, pco
+    def update_mu_dz(self, var, atm, make_atm): #y, ni, spec, Tco, pco
         
         # gravity
-        g = make_atm.g
-        
+        gz = atm.g
+        pref_indx = atm.pref_indx
+        Tco, pico = atm.Tco.copy(), atm.pico.copy()
         # calculating mu (mean molecular weight)
-        data_atm = make_atm.mean_mass(var, data_atm, ni)
-        data_atm.Hp = kb*data_atm.Tco/(data_atm.mu/Navo*g)
+        atm = make_atm.mean_mass(var, atm, ni)
+        Hp = atm.Hp
         
-        # calculating the pressure at interface
-        data_atm = make_atm.f_pico(data_atm)
+        for i in range(pref_indx,nz):
+            if i == pref_indx:
+                atm.g[i] = atm.gs
+                Hp[i] = kb*Tco[i]/(atm.mu[i]/Navo*atm.gs)    
+            else:
+                atm.g[i] = atm.gs * (vulcan_cfg.Rp/(vulcan_cfg.Rp+ atm.zco[i]))**2
+                Hp[i] = kb*Tco[i]/(atm.mu[i]/Navo*atm.g[i])
+            atm.dz[i] = Hp[i] * np.log(pico[i]/pico[i+1]) # pico[i+1] has a lower P than pico[i] (higer height)
+            atm.zco[i+1] = atm.zco[i] + atm.dz[i] # zco is set zero at 1bar for gas giants
+
+        # for pref_indx != zero 
+        if not pref_indx == 0:
+            for i in range(pref_indx-1,-1,-1):
+                atm.g[i] = atm.gs * (vulcan_cfg.Rp/(vulcan_cfg.Rp + atm.zco[i+1]))**2
+                Hp[i] = kb*Tco[i]/(atm.mu[i]/Navo*atm.g[i])
+                atm.dz[i] = Hp[i] * np.log(pico[i]/pico[i+1]) 
+                atm.zco[i] = atm.zco[i+1] - atm.dz[i] # from i+1 propogating down to i
+            
+        zmco = 0.5*(atm.zco + np.roll(atm.zco,-1))
+        atm.zmco = zmco[:-1]
+        dzi = 0.5*(atm.dz + np.roll(atm.dz,1))
+        atm.dzi = dzi[1:]
         
-        # updating dz, zco, and dzi
-        dz, dzi, pico = data_atm.dz, data_atm.dzi, data_atm.pico
-        dz = data_atm.Hp* np.log(pico[:-1]/np.roll(pico,-1)[:-1])
-        data_atm.zco = np.insert(np.cumsum(dz),0, 0.) # cumulative sum of dz
+        # for the molecular diffsuion
+        if vulcan_cfg.use_moldiff == True:
+            Ti = 0.5*(Tco + np.roll(Tco,-1))
+            atm.Ti = Ti[:-1]
+            Hpi = 0.5*(Hp + np.roll(Hp,-1))
+            atm.Hpi = Hpi[:-1]
         
-        # for the j grid, dzi[j] counts the distance from the grid above and dz[j-1] from the grid below
-        dzi = 0.5*(dz + np.roll(dz,1))
-        dzi = dzi[1:]
-        
-        data_atm.dz, data_atm.dzi, data_atm.pico = dz, dzi, pico
-                            
-        return data_atm
+        return atm
     
     def update_phi_esc(self, var, atm): # updating diffusion-mimited escape
     
-        # TEST
-        # Diffusion limited escape (H2)
+        # Diffusion limited escape 
         for sp in vulcan_cfg.diff_esc:
-            atm.top_flux[species.index(sp)] = - atm.Dzz[-1,species.index(sp)] *var.y[-1,species.index(sp)] /atm.Hp[-1]
-            print ("Escape flux of " + sp + "{:>10.2e}".format(atm.top_flux[species.index(sp)]))
-        
+
+            #atm.top_flux[species.index(sp)] = - atm.Dzz[-1,species.index(sp)] *var.y[-1,species.index(sp)] /atm.Hp[-1]
+            atm.top_flux[species.index(sp)] = - atm.Dzz[-1,species.index(sp)]*var.y[-1,species.index(sp)]*( 1./atm.Hp[-1] -atm.ms[species.index(sp)]* atm.g[-1]/(Navo*kb*atm.Tco[-1])     )            
+            atm.top_flux[species.index(sp)] = max(atm.top_flux[species.index(sp)], vulcan_cfg.max_flux*(-1))
+            
+            # print ("Escape flux of " + sp + "{:>10.2e}".format(atm.top_flux[species.index(sp)]))
+            # print ("diffusion-limite value: " + "{:>10.2e}".format(- atm.Dzz[-1,species.index(sp)]*var.y[-1,species.index(sp)]*( 1./atm.Hp[-1] -atm.ms[species.index(sp)]* atm.g[-1]/(Navo*kb*atm.Tco[-1])     )) )
+            #print ("Test  " + sp + "{:>10.2e}".format(atm.Dzz[-1,species.index(sp)] *var.y[-1,species.index(sp)] /atm.Hp[-1]) )
+            
         return atm
+    
     
     # function calculating the change of y
     def f_dy(self, var, para): # y, y_prev, ymix, yconv, count, dt
@@ -796,20 +984,22 @@ class Integration(object):
         #slope_min = min( np.amin(atm.Kzz)/np.amax(0.1*atm.Hp)**2 , 1.e-8)
         slope_min = min( np.amin(atm.Kzz/(0.1*atm.Hp[:-1])**2) , 1.e-8)
         slope_min = max(slope_min, 1.e-10)
-        #print ('slope_min= ' + "{:.2e}".format(slope_min))
-        
-        # if t < trun_min: indx = -100
-        indx = np.abs(t_time-var.t*st_factor).argmin()   
-     
+
+        indx = np.abs(t_time-var.t*st_factor).argmin()    
         if indx == para.count-1: indx-=1  #Important!! For dt larger than half of the runtime (count-1 is the last one) 
+        
+        # Don't check more than vulcan_cfg.conv_step (1000) steps back 
+        indx = max(para.count-vulcan_cfg.conv_step, indx)
+        
+        # TEST
+        if para.count %100==0: print ("conv_indx: "  + str(indx))
         
         longdy = np.abs((y_time[count-1] - y_time[indx])/np.vstack(atm.n_0))
         longdy[ymix < mtol_conv] = 0
         longdy[y < atol] = 0
         
-        # if vulcan_cfg.use_condense == True:
-        #     for sp in self.non_gas_sp:
-        #         longdy[:,species.index(sp)] = 0
+        if vulcan_cfg.use_condense == True:
+            longdy[:,self.non_gas_sp_index] = 0
         
         with np.errstate(divide='ignore',invalid='ignore'): # ignoring nan when devided by zero
             where_varies_most = longdy/ymix
@@ -822,6 +1012,7 @@ class Integration(object):
         
         if (longdy < yconv_cri and longdydt < slope_cri or longdy < yconv_min and longdydt < slope_min) and var.aflux_change<vulcan_cfg.flux_cri: 
             return True
+            
         return False
     
     def stop(self, var, para, atm):
@@ -860,8 +1051,8 @@ class Integration(object):
         var.t_time.append(var.t)
     
         # only used in PI_control
-        var.dy_time.append(var.y)
-        var.dydt_time.append(var.dydt)
+        # var.dy_time.append(var.y)
+        # var.dydt_time.append(var.dydt)
         var.atom_loss_time.append(list(var.atom_loss.values()) )
         
         return var, para
@@ -871,18 +1062,22 @@ class Integration(object):
     def conden(self, var, atm):
         '''
         Updating the condensation reactions according to the new number density
-        using the timescale given in (15) Hu 2012
+        using the condensation growth timescale in the contiuum regime (not in the kinetic regime)
+        
+        Note that when n_g -> n_s, n_s is still the number density of "molecules", not "particles."
+        So I scaled down the evaporation rate by n_mol. 
+        n_s / n_mol should also be used for plotting.
         '''
         for re in var.conden_re_list:
-            if var.Rf[re] == 'H2O -> H2O_l_s':
+            if var.Rf[re] == 'H2O -> H2O_l_s' and 'H2O' in vulcan_cfg.condense_sp:
                 # using realxation for water condensation
-                if vulcan_cfg.use_relax_water == True:
+                if vulcan_cfg.use_relax:
                     var.k[re] = np.repeat(0.,nz)
                     var.k[re+1] = np.repeat(0.,nz)
                 else:
                     m = 18./Navo
-                    rho_p = 0.9
-                    r_p = atm.r_p_h2o
+                    rho_p = atm.rho_p['H2O_l_s']
+                    r_p = atm.r_p['H2O_l_s']
                     # relative humidity
                     sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity
 
@@ -894,53 +1089,146 @@ class Integration(object):
                     rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('H2O')]-sat_humidity)
 
                     # how many gas molecules are contained in one particle with the assumed size r_p
-                    # n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                    n_mol = 4./3*np.pi*r_p**3 *rho_p /m
 
                     var.k[re] = rate
-                    #var.k[re+1] = rate_c /n_mol
+                    var.k[re+1] = rate #/n_mol
 
                     # positive: condensation
-                    var.k[re] = np.maximum(var.k[re], 0)            
+                    var.k[re] = np.maximum(var.k[re], 0)
+                    # negative: evaporation
+                    var.k[re+1] = np.minimum(var.k[re+1], 0)
+                    var.k[re+1] = np.abs(var.k[re+1])
+          
         
-            elif var.Rf[re] == 'NH3 -> NH3_l':
-                m = 17./Navo
-                rho_p = 0.7
-                r_p = 1.e-4 # assuming 1 micron
+            elif var.Rf[re] == 'NH3 -> NH3_l' and 'NH3' in vulcan_cfg.condense_sp:
+                # using realxation for water condensation
+                if vulcan_cfg.use_relax:
+                    var.k[re] = np.repeat(0.,nz)
+                    var.k[re+1] = np.repeat(0.,nz)
+                else:
+                    m = 17./Navo
+                    rho_p = atm.rho_p['NH3_l_s']
+                    r_p = atm.r_p['NH3_l_s'] # assuming 1 micron
             
-                rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('NH3')]-atm.sat_p['NH3']/kb/atm.Tco)/r_p
-        
-                var.k[re] = rate_c
-                var.k[re+1] = rate_c
+                    #rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('NH3')]-atm.sat_p['NH3']/kb/atm.Tco)/r_p
                 
+                    # new approach: contiuum regime DM/rho c
+                    Dg = np.insert(atm.Dzz[:,species.index('NH3')], 0, atm.Dzz[0,species.index('NH3')])
+                    rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('NH3')] - atm.sat_p['NH3']/kb/atm.Tco)
+                
+                    # how many gas molecules are contained in one particle with the assumed size r_p
+                    n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                
+                    var.k[re] = rate 
+                    var.k[re+1] = rate #/n_mol
+
+                    # positive: condensation
+                    var.k[re] = np.maximum(var.k[re], 0)
+                    # negative: evaporation
+                    var.k[re+1] = np.minimum(var.k[re+1], 0)
+                    var.k[re+1] = np.abs(var.k[re+1])
+            
+            elif var.Rf[re] == 'H2SO4 -> H2SO4_l' and 'H2SO4' in vulcan_cfg.condense_sp:
+                m = 98.022/Navo
+                rho_p = atm.rho_p['H2SO4_l']
+                r_p = atm.r_p['H2SO4_l']
+                
+                # new approach: contiuum regime DM/rho c
+                Dg = np.insert(atm.Dzz[:,species.index('H2SO4')], 0, atm.Dzz[0,species.index('H2SO4')])
+                rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('H2SO4')] - atm.sat_p['H2SO4']/kb/atm.Tco)
+                
+                #rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2SO4')]-atm.sat_p['H2SO4']/kb/atm.Tco)/r_p
+                
+                # how many gas molecules are contained in one particle with the assumed size r_p
+                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                
+                var.k[re] = rate 
+                var.k[re+1] = rate #/n_mol
+
                 # positive: condensation
                 var.k[re] = np.maximum(var.k[re], 0)
                 # negative: evaporation
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
                 
-                # TEST capping
-                #var.k[re] = np.minimum(var.k[re], 1.e-8)
-                #var.k[re+1] = np.minimum(var.k[re+1], 1.e-30)
+            elif var.Rf[re] == 'S2 -> S2_l_s' and 'S2' in vulcan_cfg.condense_sp:
+                m = 45.019/Navo 
+                rho_p = atm.rho_p['S2_l_s']
+                r_p = atm.r_p['S2_l_s']
                 
-                var.k[re] *= 1e-6
-                var.k[re+1] *= 1e-20
+                # new approach: contiuum regime DM/rho c
+                Dg = np.insert(atm.Dzz[:,species.index('S2')], 0, atm.Dzz[0,species.index('S2')])
+                rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('S2')] - atm.sat_p['S2']/kb/atm.Tco)
+                
+                # how many gas molecules are contained in one particle with the assumed size r_p
+                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                
+                var.k[re] = rate 
+                var.k[re+1] = rate #/n_mol
 
-        # for sp in vulcan_cfg.condesne_sp:
+                # positive: condensation
+                var.k[re] = np.maximum(var.k[re], 0)
+                # negative: evaporation
+                var.k[re+1] = np.minimum(var.k[re+1], 0)
+                var.k[re+1] = np.abs(var.k[re+1])
+                
+            elif var.Rf[re] == 'S8 -> S8_l_s' and 'S8' in vulcan_cfg.condense_sp:
+                m = 360.152/Navo
+                rho_p = atm.rho_p['S8_l_s']
+                r_p = atm.r_p['S8_l_s']
+                
+                # new approach: contiuum regime DM/rho c
+                Dg = np.insert(atm.Dzz[:,species.index('S8')], 0, atm.Dzz[0,species.index('S8')])
+                rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('S8')] - atm.sat_p['S8']/kb/atm.Tco)
+                
+                # how many gas molecules are contained in one particle with the assumed size r_p
+                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                
+                var.k[re] = rate 
+                var.k[re+1] = rate #/n_mol
+
+                # positive: condensation
+                var.k[re] = np.maximum(var.k[re], 0)
+                # negative: evaporation
+                var.k[re+1] = np.minimum(var.k[re+1], 0)
+                var.k[re+1] = np.abs(var.k[re+1])
+                
+            elif var.Rf[re] == 'C -> C_s' and 'C' in vulcan_cfg.condense_sp:
+                m = 12.011/Navo
+                rho_p = atm.rho_p['C_s']
+                r_p = atm.r_p['C_s']
+                
+                # new approach: contiuum regime DM/rho c
+                Dg = np.insert(atm.Dzz[:,species.index('C')], 0, atm.Dzz[0,species.index('C')])
+                rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('C')] - atm.sat_p['C']/kb/atm.Tco)
+                
+                # how many gas molecules are contained in one particle with the assumed size r_p
+                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                
+                var.k[re] = rate 
+                var.k[re+1] = rate #/n_mol
+
+                # positive: condensation
+                var.k[re] = np.maximum(var.k[re], 0)
+                # negative: evaporation
+                var.k[re+1] = np.minimum(var.k[re+1], 0)
+                var.k[re+1] = np.abs(var.k[re+1])
+                
+            
+        # for sp in vulcan_cfg.condense_sp:
 #             atm.sat_mix[sp] = atm.sat_p[sp]/atm.pco
 #             pre_conden = np.copy(var.y[:,species.index(sp)])
 #             var.y[:,species.index(sp)] = np.minimum(atm.n_0 * atm.sat_mix[sp], var.y[:,species.index(sp)])
 #             # storing the removed species
 #             var.y_conden[:,species.index(sp)] += np.abs(pre_conden - var.y[:,species.index(sp)])
-        
-        # re-scaling every species
-        #var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
     
         return var
     
     def h2o_conden_relax(self, var, atm):
         m = 18./Navo
         rho_p = 0.95 # mix of water and ice
-        r_p = atm.r_p_h2o 
+        r_p = atm.r_p['H2O_l_s'] 
         # relative humidity
         sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity  
         
@@ -962,10 +1250,103 @@ class Integration(object):
         var.ymix[conden_indx,species.index('H2O')] = y_conden[conden_indx]
         # restore the unsaturated parts (only relax where ymix > ysat)
 
-        var.y = var.ymix * np.vstack( np.sum(var.y, axis=1) )
+        var.y = var.ymix * np.vstack( np.sum(var.y[:,atm.gas_indx], axis=1) )
+        
+        #print ("relax conden...")
         
         return var
+    
+    def h2o_conden_evap_relax(self, var, atm):
+        m = 18./Navo
+        rho_p = atm.rho_p['H2O_l_s'] # mix of water and ice
+        r_p = atm.r_p['H2O_l_s'] 
+        # relative humidity
+        sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity  
         
+        # new approach: contiuum regime DM/rho c
+        Dg = np.insert(atm.Dzz[:,species.index('H2O')], 0, atm.Dzz[0,species.index('H2O')])        
+        tau = 1./(Dg * m/rho_p /r_p**2 * (var.y[:,species.index('H2O')]-sat_humidity) ) 
+        conden_indx = np.where( tau > 0 )
+        evap_indx = np.where(tau < 0)
+        sat_mix = sat_humidity/atm.n_0
+        #tau = np.abs(tau)
+        
+        # implicit-Euler to remove water
+        y_conden = (var.ymix[:,species.index('H2O')] + var.dt/tau*sat_mix) / (1. + var.dt/tau)
+        
+        # evaporation to remove ice/water(liquid)
+        ice_loss = (var.y[:,species.index('H2O')] - sat_humidity)*var.dt/tau # both tau < 0 and y_H2O - sat < 0 
+        # cannot lose more than it has
+        ice_loss = np.minimum(var.y[:,species.index('H2O_l_s')], ice_loss)
+        
+        # how many gas molecules are contained in one particle with the assumed size r_p
+        # n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+        # and converting the mixing ratio of molecules /cm3 to droplets/cm3
+        # "move" the condensed water to H2O_l_s
+        var.ymix[conden_indx,species.index('H2O_l_s')] += (var.ymix[conden_indx,species.index('H2O')] - y_conden[conden_indx]) 
+        var.ymix[conden_indx,species.index('H2O')] = y_conden[conden_indx]
+        # store the saturated parts (only relax where ymix > ysat)
+         
+        var.ymix[evap_indx,species.index('H2O')] += ice_loss[evap_indx]/atm.n_0[evap_indx]
+        var.ymix[evap_indx,species.index('H2O_l_s')] -= ice_loss[evap_indx]/atm.n_0[evap_indx]
+        
+        var.y = var.ymix * np.vstack( np.sum(var.y[:,atm.gas_indx], axis=1) )
+        
+        return var
+    
+    def nh3_conden_evap_relax(self, var, atm):
+        m = 17./Navo
+        rho_p = atm.rho_p['NH3_l_s'] # mix of water and ice
+        r_p = atm.r_p['NH3_l_s'] 
+        # relative humidity
+        sat_p = atm.sat_p['NH3']/kb/atm.Tco 
+        sat_mix = sat_p/atm.n_0
+        
+        conden_top = np.argmin(sat_mix)
+        
+        # new approach: contiuum regime DM/rho c
+        Dg = np.insert(atm.Dzz[:,species.index('NH3')], 0, atm.Dzz[0,species.index('NH3')])        
+        tau = 1./(Dg * m/rho_p /r_p**2 * (var.y[:,species.index('NH3')]-sat_p) ) 
+        conden_indx = np.where( tau > 0 )[0]
+        evap_indx = np.where(tau < 0)[0]
+        
+        # above the top of condensation zone, there should NOT be any condensation when using the relaxiation method
+        conden_indx = [i for i in conden_indx if i <= conden_top]
+        #evap_indx = [i for i in evap_indx if i <= conden_top]
+        
+        # implicit-Euler to remove water
+        y_conden = (var.ymix[:,species.index('NH3')] + var.dt/tau*sat_mix) / (1. + var.dt/tau)
+        
+        # evaporation to remove ice/water(liquid)
+        ice_loss =  (var.y[:,species.index('NH3')] - sat_p)*var.dt/tau # both tau < 0 and y_H2O - sat < 0 
+        # cannot lose more than it has
+        ice_loss = np.minimum(var.y[:,species.index('NH3_l_s')], ice_loss)
+        
+        # how many gas molecules are contained in one particle with the assumed size r_p
+        # n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+        # and converting the mixing ratio of molecules /cm3 to droplets/cm3
+        # "move" the condensed water to H2O_l_s
+        var.ymix[conden_indx,species.index('NH3_l_s')] += (var.ymix[conden_indx,species.index('NH3')] - y_conden[conden_indx]) 
+        var.ymix[conden_indx,species.index('NH3')] = y_conden[conden_indx]
+        # store the saturated parts (only relax where ymix > ysat)
+        
+        
+        # print ("Condex Indx:")
+        # print (conden_indx)
+        # print ("evap index:")
+        # print (evap_indx)
+        # print (ice_loss[evap_indx]/atm.n_0[evap_indx] /var.ymix[evap_indx,species.index('NH3_l_s')])
+         
+        var.ymix[evap_indx,species.index('NH3')] += ice_loss[evap_indx]/atm.n_0[evap_indx]
+        # instaneous evaporation
+        var.ymix[evap_indx,species.index('NH3_l_s')] -= ice_loss[evap_indx]/atm.n_0[evap_indx]
+        #var.ymix[evap_indx,species.index('NH3_l_s')] = 0
+        
+        var.ymix[:,species.index('NH3_l_s')] = np.maximum(var.ymix[:,species.index('NH3_l_s')], 0) # cannot lose more than it has
+        
+        var.y = var.ymix * np.vstack( np.sum(var.y[:,atm.gas_indx], axis=1) )
+        
+        return var
     
 class ODESolver(object):
     
@@ -975,7 +1356,10 @@ class ODESolver(object):
         self.atol = vulcan_cfg.atol
         self.non_gas_sp = vulcan_cfg.non_gas_sp
         
-        if vulcan_cfg.use_condense == True:  self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
+        if vulcan_cfg.use_condense == True:  
+            self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
+            self.condense_sp_index = [species.index(sp) for sp in vulcan_cfg.condense_sp]
+            
         self.fix_sp_bot_index = [species.index(sp) for sp in vulcan_cfg.use_fix_sp_bot.keys()]
         self.fix_sp_bot_mix = np.array([vulcan_cfg.use_fix_sp_bot[sp] for sp in vulcan_cfg.use_fix_sp_bot.keys()])
   
@@ -985,12 +1369,11 @@ class ODESolver(object):
         in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
         """
         y = y.copy()
-        # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        # TEST excluding non-gaseous species
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
-        # TEST condensation excluding non-gaseous species
+        # TEST excluding non-gaseous species
         dzi = atm.dzi.copy()
         Kzz = atm.Kzz.copy()
         vz = atm.vz.copy()
@@ -1032,7 +1415,7 @@ class ODESolver(object):
         if vulcan_cfg.use_topflux == True:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux
+            diff[-1] += atm.top_flux /dzi[-1]
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
@@ -1047,9 +1430,8 @@ class ODESolver(object):
         y = y.copy()
         
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
     
@@ -1061,16 +1443,18 @@ class ODESolver(object):
         Tco = atm.Tco.copy()
         ms = atm.ms.copy()
         Hp = atm.Hp.copy()
-        g = vulcan_cfg.g
+        g = atm.g
+        Ti = atm.Ti
+        Hpi = atm.Hpi
         
-        # define T_1/2 for the molecular diffusion
-        Ti = 0.5*(Tco + np.roll(Tco,-1))
-        Ti = Ti[:-1] 
-        Hpi = 0.5*(Hp + np.roll(Hp,-1))
-        Hpi = Hpi[:-1]
-        # store Ti and Hpi
-        atm.Ti = Ti
-        atm.Hpi = Hpi
+        # # define T_1/2 for the molecular diffusion
+        # Ti = 0.5*(Tco + np.roll(Tco,-1))
+        # Ti = Ti[:-1]
+        # Hpi = 0.5*(Hp + np.roll(Hp,-1))
+        # Hpi = Hpi[:-1]
+        # # store Ti and Hpi
+        # atm.Ti = Ti
+        # atm.Hpi = Hpi
         
         A, B, C = np.zeros(nz), np.zeros(nz), np.zeros(nz)
         Ai, Bi, Ci = [ np.zeros((nz,ni)) for i in range(3)]
@@ -1088,18 +1472,18 @@ class ODESolver(object):
         A[-1] += ( (vz[-1]<0)*vz[-1] )/dzi[-1]
         C[-1] += ( (vz[-1]>0)*vz[-1] )/dzi[-1]
         # vertical adection
-        
+         
         # shape of ni-long 1D array
         Ai[0] = -1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[0] +\
-        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  
         Bi[0] = 1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] +\
-        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
         Ci[0] = 0 
         Ai[nz-1] = -1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] \
-        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
         Bi[nz-1] = 0
         Ci[nz-1] = 1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] \
-        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
         
         for j in range(1,nz-1):
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
@@ -1118,10 +1502,10 @@ class ODESolver(object):
             Bi[j] = 1./dz_ave * Dzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]
             Ci[j] = 1./dz_ave * Dzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]
             
-            Ai[j] += 1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
-            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+ alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) ) #/ysum[j]
-            Bi[j] += 1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
-            Ci[j] += -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+            Ai[j] += 1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+ alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) ) #/ysum[j]
+            Bi[j] += 1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+            Ci[j] += -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
  
         tmp0 = (A[0] + Ai[0])*y[0] + (B[0] + Bi[0])*y[1] # shape of ni-long 1D array  
         tmp1 = np.ndarray.flatten( (np.vstack(A[1:nz-1])*y[1:(nz-1)] + np.vstack(B[1:nz-1])*y[1+1:(nz-1)+1] + np.vstack(C[1:nz-1])*y[1-1:(nz-1)-1]) ) 
@@ -1133,7 +1517,7 @@ class ODESolver(object):
         if vulcan_cfg.use_topflux == True:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux
+            diff[-1] += atm.top_flux /dzi[-1]
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
@@ -1150,9 +1534,8 @@ class ODESolver(object):
         y = y.copy()
         
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
     
@@ -1165,16 +1548,17 @@ class ODESolver(object):
         Tco = atm.Tco.copy()
         ms = atm.ms.copy()
         Hp = atm.Hp.copy()
-        g = vulcan_cfg.g
-        
-        # define T_1/2 for the molecular diffusion
-        Ti = 0.5*(Tco + np.roll(Tco,-1))
-        Ti = Ti[:-1] 
-        Hpi = 0.5*(Hp + np.roll(Hp,-1))
-        Hpi = Hpi[:-1]
-        # store Ti and Hpi
-        atm.Ti = Ti
-        atm.Hpi = Hpi
+        g = atm.g
+        Ti = atm.Ti
+        Hpi = atm.Hpi
+        # # define T_1/2 for the molecular diffusion
+#         Ti = 0.5*(Tco + np.roll(Tco,-1))
+#         Ti = Ti[:-1]
+#         Hpi = 0.5*(Hp + np.roll(Hp,-1))
+#         Hpi = Hpi[:-1]
+#         # store Ti and Hpi
+#         atm.Ti = Ti
+#         atm.Hpi = Hpi
         
         A, B, C = np.zeros(nz), np.zeros(nz), np.zeros(nz)
         Ai, Bi, Ci = [ np.zeros((nz,ni)) for i in range(3)]
@@ -1196,15 +1580,15 @@ class ODESolver(object):
         # shape of ni-long 1D array
         # Including the settling velocity of the particles
         Ai[0] = -1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[0] +\
-        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]  
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]  
         Bi[0] = 1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] +\
-        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]<0)*vs[0] )/dzi[0]
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]<0)*vs[0] )/dzi[0]
         #Ci[0] = 0 
         Ai[nz-1] = -1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] \
-        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]<0)*vs[-1] )/dzi[-1]
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]<0)*vs[-1] )/dzi[-1]
         #Bi[nz-1] = 0
         Ci[nz-1] = 1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] \
-        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]>0)*vs[-1] )/dzi[-1]
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]>0)*vs[-1] )/dzi[-1]
         
         for j in range(1,nz-1):
             dz_ave = 0.5*(dzi[j-1] + dzi[j])
@@ -1224,10 +1608,10 @@ class ODESolver(object):
             Bi[j] = 1./dz_ave * Dzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]  -( (vs[j]<0)*vs[j] )/dz_ave
             Ci[j] = 1./dz_ave * Dzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
             
-            Ai[j] += 1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
-            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+ alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) ) #/ysum[j]
-            Bi[j] += 1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
-            Ci[j] += -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+            Ai[j] += 1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+ alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) ) #/ysum[j]
+            Bi[j] += 1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+            Ci[j] += -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
  
         tmp0 = (A[0] + Ai[0])*y[0] + (B[0] + Bi[0])*y[1] # shape of ni-long 1D array  
         tmp1 = np.ndarray.flatten( (np.vstack(A[1:nz-1])*y[1:(nz-1)] + np.vstack(B[1:nz-1])*y[1+1:(nz-1)+1] + np.vstack(C[1:nz-1])*y[1-1:(nz-1)-1]) ) 
@@ -1239,7 +1623,7 @@ class ODESolver(object):
         if vulcan_cfg.use_topflux == True:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ### 
-            diff[-1] += atm.top_flux
+            diff[-1] += atm.top_flux /dzi[-1]
         if vulcan_cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!   
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
@@ -1255,9 +1639,8 @@ class ODESolver(object):
         
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1267,7 +1650,7 @@ class ODESolver(object):
         alpha = atm.alpha.copy()
         Tco = atm.Tco.copy()
         mu, ms = atm.mu.copy(),  atm.ms.copy()
-        g = vulcan_cfg.g
+        g = atm.g
         
         # define T_1/2 for the molecular diffusion
         #Ti = 0.5*(Tco + np.roll(Tco,-1))
@@ -1293,30 +1676,30 @@ class ODESolver(object):
             
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] +=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
-            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
-            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
+            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
             dfdy[j_indx[j], j_indx[j+1]] += 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
-            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) 
+            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) 
             dfdy[j_indx[j], j_indx[j-1]] += 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
-            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
 
               
         dfdy[j_indx[0], j_indx[0]] += -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[0]] += -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
         # deposition velocity
         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep /dzi[0]
         
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
 
         dfdy[j_indx[nz-1], j_indx[nz-1]] += -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1] 
         dfdy[j_indx[nz-1], j_indx[nz-1]] += -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
-        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] += 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]  
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] += 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
-                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
 
         return dfdy
     
@@ -1329,8 +1712,8 @@ class ODESolver(object):
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
         if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
+            #ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1340,7 +1723,7 @@ class ODESolver(object):
         alpha = atm.alpha.copy()
         Tco = atm.Tco.copy()
         mu, ms = atm.mu.copy(),  atm.ms.copy()
-        g = vulcan_cfg.g
+        g = atm.g
 
         Ti = atm.Ti.copy()
         Hpi = atm.Hpi.copy()
@@ -1365,33 +1748,33 @@ class ODESolver(object):
 
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
-            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
-            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
+            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
-            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
-            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
     
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
         # deposition velocity
         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
 
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]  
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
-        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]  
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
-                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
 
         return dfdy
     
-    
+        
     def lhs_jac_no_mol(self, var, atm):      
         """
         directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy 
@@ -1400,9 +1783,8 @@ class ODESolver(object):
         """
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1410,7 +1792,6 @@ class ODESolver(object):
         vz = atm.vz.copy()
         Tco = atm.Tco.copy()
         mu, ms = atm.mu.copy(),  atm.ms.copy()
-        g = vulcan_cfg.g
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
@@ -1448,9 +1829,8 @@ class ODESolver(object):
         """
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1460,7 +1840,7 @@ class ODESolver(object):
         alpha = atm.alpha.copy()
         Tco = atm.Tco.copy()
         mu, ms = atm.mu.copy(),  atm.ms.copy()
-        g = vulcan_cfg.g
+        g = atm.g
 
         Ti = atm.Ti.copy()
         Hpi = atm.Hpi.copy()
@@ -1484,12 +1864,12 @@ class ODESolver(object):
 
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
-            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
-            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
+            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
-            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
-            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
     
         # deposition velocity (off with fixed all BC)
         # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
@@ -1500,14 +1880,14 @@ class ODESolver(object):
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
 
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1] 
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
-        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]  
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
-                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
 
         return dfdy
         
@@ -1519,9 +1899,8 @@ class ODESolver(object):
         """
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1529,7 +1908,6 @@ class ODESolver(object):
         vz = atm.vz.copy()
         Tco = atm.Tco.copy()
         mu, ms = atm.mu.copy(),  atm.ms.copy()
-        g = vulcan_cfg.g
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
@@ -1570,9 +1948,8 @@ class ODESolver(object):
         """
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #ysum = np.sum(y[:,atm.exc_conden], axis=1)
-            ysum = np.sum(y, axis=1)
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
         dzi = atm.dzi.copy()
@@ -1583,7 +1960,7 @@ class ODESolver(object):
         alpha = atm.alpha.copy()
         Tco = atm.Tco.copy()
         mu, ms = atm.mu.copy(),  atm.ms.copy()
-        g = vulcan_cfg.g
+        g = atm.g
 
         Ti = atm.Ti.copy()
         Hpi = atm.Hpi.copy()
@@ -1608,29 +1985,29 @@ class ODESolver(object):
 
             # [j_indx[j], j_indx[j]] has size ni*ni
             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
-            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
-            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )  -( (vs[j]>0)*vs[j] - (vs[j-1]<0)*vs[j-1] )/dz_ave
+            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )  -( (vs[j]>0)*vs[j] - (vs[j-1]<0)*vs[j-1] )/dz_ave
             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
-            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )  -( (vs[j]<0)*vs[j] )/dz_ave
+            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )  -( (vs[j]<0)*vs[j] )/dz_ave
             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
-            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
+            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
     
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]
         # deposition velocity
         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
         
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
-        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) -( (vs[0]<0)*vs[0] )/dzi[0]
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) -( (vs[0]<0)*vs[0] )/dzi[0]
 
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]  
         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
-        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]<0)*vs[-1] )/dzi[-1]
+        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]<0)*vs[-1] )/dzi[-1]
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]   
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
-                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]>0)*vs[-1] )/dzi[-1]
+                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]>0)*vs[-1] )/dzi[-1]
 
         return dfdy
             
@@ -1654,9 +2031,8 @@ class ODESolver(object):
         
         # store y and ymix
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
-            #var.y, var.ymix = y, var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1)) 
-            var.y, var.ymix = y, y/np.vstack(np.sum(y,axis=1))
+        if vulcan_cfg.non_gas_sp:
+            var.y, var.ymix = y, var.y/np.vstack(np.sum(var.y[:,atm.gas_indx],axis=1)) 
         else: var.y, var.ymix = y, y/np.vstack(np.sum(y,axis=1))
         # TEST condensation excluding non-gaseous species
         
@@ -1671,7 +2047,9 @@ class ODESolver(object):
         atom_sum = data_var.atom_sum
         
         for atom in atom_list:
-            data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
+            #data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
+            # TEST V scaling
+            data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)]) # *data_var.v_ratio 
             data_var.atom_loss[atom] = (data_var.atom_sum[atom] - data_var.atom_ini[atom])/data_var.atom_ini[atom]
 
         return data_var
@@ -1705,6 +2083,7 @@ class ODESolver(object):
         if var.dt < vulcan_cfg.dt_min:
             var.dt = vulcan_cfg.dt_min
             var.y[var.y<0] = 0. # clipping of negative values
+            
             print ('Keep producing negative values! Clipping negative solutions and moving on!')
             return True
         
@@ -1735,7 +2114,7 @@ class ODESolver(object):
     
     def print_lossBig(self, para):
         
-        print ('partical conservation is violated too large (by numerical errors)')
+        print ('Element conservation is violated too large')
         print ('at step: ' + str(para.count))
         print ('------------------------------------------------------------------')
         
@@ -1765,25 +2144,22 @@ class ODESolver(object):
         
         return x
     
-    ### photo-calculation starts from here
-    
-    # def tot_cross(self, var):
-#     ''' compute the total cross section from all species '''
-#         for sp in vulcan_cfg.photo_sp:
-#             cross[sp]
-    
-
+    #@njit
     def compute_tau(self, var, atm):
         ''' compute the optical depth '''
         
         # reset to zero
         var.tau.fill(0)
-        
-        for j in range(nz-1,-1,-1):
+        # absorption species
+        absp_sp = set.union(var.photo_sp,var.ion_sp)
             
-            for sp in set.union(var.photo_sp,var.ion_sp):
-            # summing over all photo species
-                var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross[sp] # only the j-th laye
+        for j in range(nz-1,-1,-1):    
+            for sp in absp_sp:
+                # summing over all T-dependentphoto species
+                if sp in vulcan_cfg.T_cross_sp:
+                    var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross_T[sp][j]  # 1-D shape of nbins from the j level
+                else: # summing over all T-independent photo species    
+                    var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross[sp] # only the j-th laye
             
             for sp in vulcan_cfg.scat_sp: # scat_sp are not necessary photo_sp, e.g. He
                 var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross_scat[sp]
@@ -1833,7 +2209,7 @@ class ODESolver(object):
         ''' Beer's law for the intensity'''
         var.sflux = var.sflux_top *  np.exp(-1.*tau/np.cos(vulcan_cfg.sl_angle) ) 
         # converting the intensity to flux for the raditive transfer calculation
-        dir_flux = var.sflux*np.cos(vulcan_cfg.sl_angle) # multiplied by the zenith angle for calculating the diffuse flux
+        dir_flux = var.sflux * np.cos(vulcan_cfg.sl_angle) # need to convert to diffuse flux in the RT definition so it can covert back to total intensity with eps
         
         # scattering
         # the transmission function (length nz)
@@ -1872,13 +2248,11 @@ class ODESolver(object):
         var.zeta_m = zeta_m
         var.zeta_p = zeta_p
         var.tran = tran
-        
-        
-        
+
+        # For testing computating speed
         #starting recording time
         #start_time = timeit.default_timer()
 
-        
         # propagating downward layer by layer and then upward
         # var.dflux_d and var.dflux_p are defined at the interfaces (staggerred)
         # the rest is defined in the center of the layer
@@ -1890,8 +2264,7 @@ class ODESolver(object):
 
         #print ("time passed...")
         #print (timeit.default_timer() - start_time)
-        
-        
+                
         # old
         # # the average intensity (not flux!) of the direct beam
 #         ave_int = 0.5*( var.sflux[:-1] + var.sflux[1:])
@@ -1902,19 +2275,15 @@ class ODESolver(object):
         # the average flux from the direct beam
         # !!! WITHOUT multiplied by the cos zenith angle (flux per unit area perpendicular to the direction of propagationat) !!! 
         ave_dir_flux = 0.5*( var.sflux[:-1] + var.sflux[1:]) 
-        # devided by the Eddington coefficient to recover the intensity then multiplied by 4pi to get the integrated flux
+        # devided by the Eddington coefficient to recover the total intensity (integrated over all directions)
         tot_flux = ave_dir_flux + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1])/edd 
         
-    
-        # ### Debug
-        
+        # For debugging
         #var.ave_int = ave_int
-        
         # var.ll = ll
         # var.chi=chi
         # var.phi=phi
         # var.xi = xi
-        #
         # var.i_u = i_u
         # var.i_d = i_d
         # var.w0 = w0
@@ -1922,12 +2291,11 @@ class ODESolver(object):
         # var.tot_scat = tot_scat
         # var.tran = tran
         # var.delta_tau = delta_tau
-        
-        ### Debug
-        if np.any(tot_flux< -1.e-20):
-            print (tot_flux[tot_flux<-1.e-20])
-            raise IOError ('\nNegative diffusive flux! ')
-        
+        # For debugging
+
+        # if np.any(tot_flux< -1.e-20):
+        #      print (tot_flux[tot_flux<-1.e-20])
+        #      raise IOError ('\nNegative diffusive flux! ')
          
         # store the previous actinic flux into prev_aflux
         var.prev_aflux = np.copy(var.aflux)
@@ -1938,13 +2306,25 @@ class ODESolver(object):
         
         #print ('aflux change: ' + '{:.4E}'.format(var.aflux_change) )
         
+    
+
+    # def compute_cross_JT(self, var, atm):
+    #     '''
+    #     computing T-dependent dissociation cross section based on Tco and stored in the 2D nz*nbins array
+    #     only call once at the start
+    #     '''
         
-    def compute_J(self, var, atm): # the vectorised version
+        
+    
+    def compute_J(self, var, atm): # the vectorized version
+        '''
+        computes photodissociation/photoionization rates; including T-dependent cross sections
+        '''
         flux = var.aflux
         
-        #cross = var.cross
-        diss_cross = var.cross_J # use the key (sp, br) e.g. ("H2O", 1)
-        
+        diss_cross = var.cross_J # use the key (sp, branch index) e.g. ("H2O", 1); 1D array 
+        diss_cross_T = var.cross_J_T # 2D array with the shape of nz * bins
+            
         bins = var.bins
         n_branch = var.n_branch
 
@@ -1953,32 +2333,31 @@ class ODESolver(object):
          
         for sp in var.photo_sp:
             # shape: flux (nz,nbin) cross (nbin)
-            
-            # I want to parallelize this bit
-            # for n in range(var.nbin):
-            # I want to parallelize this bit
 
-            for nbr in range(1, n_branch[sp]+1):
-                # axis=1 is to sum over all wavelength
-                var.J_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * diss_cross[(sp,nbr)][:var.sflux_din12_indx] * var.dbin1, axis=1)
-                var.J_sp[(sp, nbr)] -= 0.5* (flux[:,0] * diss_cross[(sp,nbr)][0] + flux[:,var.sflux_din12_indx-1] * diss_cross[(sp,nbr)][var.sflux_din12_indx-1]) * var.dbin1
-                var.J_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * diss_cross[(sp,nbr)][var.sflux_din12_indx:] * var.dbin2, axis=1)
-                var.J_sp[(sp, nbr)] -= 0.5* (flux[:,var.sflux_din12_indx] * diss_cross[(sp,nbr)][var.sflux_din12_indx] + flux[:,-1] * diss_cross[(sp,nbr)][-1]) * var.dbin2           
+            for nbr in range(1, n_branch[sp]+1): # axis=1 is to sum over all wavelength
+                if sp in vulcan_cfg.T_cross_sp:
+                    var.J_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * diss_cross_T[(sp,nbr)][:,:var.sflux_din12_indx] * var.dbin1, axis=1)
+                    var.J_sp[(sp, nbr)] -= 0.5* (flux[:,0] * diss_cross_T[(sp,nbr)][:,0] + flux[:,var.sflux_din12_indx-1] * diss_cross_T[(sp,nbr)][:,var.sflux_din12_indx-1]) * var.dbin1
+                    var.J_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * diss_cross_T[(sp,nbr)][:,var.sflux_din12_indx:] * var.dbin2, axis=1)
+                    var.J_sp[(sp, nbr)] -= 0.5* (flux[:,var.sflux_din12_indx] * diss_cross_T[(sp,nbr)][:,var.sflux_din12_indx] + flux[:,-1] * diss_cross_T[(sp,nbr)][:,-1]) * var.dbin2
+                    
+                else:
+                    var.J_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * diss_cross[(sp,nbr)][:var.sflux_din12_indx] * var.dbin1, axis=1)
+                    var.J_sp[(sp, nbr)] -= 0.5* (flux[:,0] * diss_cross[(sp,nbr)][0] + flux[:,var.sflux_din12_indx-1] * diss_cross[(sp,nbr)][var.sflux_din12_indx-1]) * var.dbin1
+                    var.J_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * diss_cross[(sp,nbr)][var.sflux_din12_indx:] * var.dbin2, axis=1)
+                    var.J_sp[(sp, nbr)] -= 0.5* (flux[:,var.sflux_din12_indx] * diss_cross[(sp,nbr)][var.sflux_din12_indx] + flux[:,-1] * diss_cross[(sp,nbr)][-1]) * var.dbin2
                 
-            # 0 is the total dissociation rate
-            # summing all branches
-            for nbr in range(1, n_branch[sp]+1):
+                # summing over all branches
                 var.J_sp[(sp, 0)] += var.J_sp[(sp, nbr)]
                 # incoperating J into rate coefficients
                 if var.pho_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
                     var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
-                    
-                    
-
-    # Do Jion here      
+                                
+     
     def compute_Jion(self, var, atm): 
         '''
-        compute the photoionisation rate
+        compute the photoionization rate
+        haven't considered any temperature dependence yet
         '''
         flux = var.aflux
         ion_cross = var.cross_Jion # use the key (sp, br) e.g. ("H2O", 1)
@@ -1993,32 +2372,32 @@ class ODESolver(object):
             # shape: flux (nz,nbin) cross (nbin)
 
             # convert to actinic flux *1/(hc/ld)
-            if wl_num == 0:
-                for nbr in range(1, n_branch[sp]+1):
-                    # axis=1 is to sum over all wavelength 
-                    var.Jion_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * ion_cross[(sp,nbr)][:var.sflux_din12_indx] * var.dbin1, axis=1)
-                    var.Jion_sp[(sp, nbr)] -= 0.5* (flux[:,0] * ion_cross[(sp,nbr)][0]  + flux[:,var.sflux_din12_indx-1] * ion_cross[(sp,nbr)][var.sflux_din12_indx-1]) * var.dbin1
-                    var.Jion_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * ion_cross[(sp,nbr)][var.sflux_din12_indx:] * var.dbin2, axis=1)
-                    var.Jion_sp[(sp, nbr)] -= 0.5* (flux[:,var.sflux_din12_indx] * ion_cross[(sp,nbr)][var.sflux_din12_indx]  + flux[:,-1] * ion_cross[(sp,nbr)][-1]) * var.dbin2
-
-            # end of the loop: for sp in var.photo_sp:
-
-            # 0 is the total dissociation rate
-            # summing all branches
             for nbr in range(1, n_branch[sp]+1):
+                # axis=1 is to sum over all wavelength 
+                var.Jion_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * ion_cross[(sp,nbr)][:var.sflux_din12_indx] * var.dbin1, axis=1)
+                var.Jion_sp[(sp, nbr)] -= 0.5* (flux[:,0] * ion_cross[(sp,nbr)][0]  + flux[:,var.sflux_din12_indx-1] * ion_cross[(sp,nbr)][var.sflux_din12_indx-1]) * var.dbin1
+                var.Jion_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * ion_cross[(sp,nbr)][var.sflux_din12_indx:] * var.dbin2, axis=1)
+                var.Jion_sp[(sp, nbr)] -= 0.5* (flux[:,var.sflux_din12_indx] * ion_cross[(sp,nbr)][var.sflux_din12_indx]  + flux[:,-1] * ion_cross[(sp,nbr)][-1]) * var.dbin2
+                
+                # 0 is the total dissociation rate
+                # summing all branches
+ 
                 var.Jion_sp[(sp, 0)] += var.Jion_sp[(sp, nbr)]
                 # incoperating J into rate coefficients
                 if var.ion_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
-                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
-                    
+                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets        
+                # end of the loop: for sp in var.photo_sp:
+                     
                     
 class Ros2(ODESolver):
     '''
     class inheritance from ODEsolver for 2nd order Rosenbrock solver 
     '''
     def __init__(self):
-        ODESolver.__init__(self)
-         
+        #ODESolver.__init__(self)
+        super().__init__()
+        
+           
     def store_bandM(self, a, nb, nn):
         """
         store block-tridiagonal matrix(bandwidth=1) into diagonal ordered form 
@@ -2045,13 +2424,13 @@ class Ros2(ODESolver):
             ab[:(2*bw+1 -ne),i] = a[-(2*bw+1 -ne):,i]
             
         return (ab, bw)
-    
+
     def solver(self, var, atm, para):
         """
         2nd order Rosenbrock [Verwer et al. 1997] with banded-matrix solver
         with switches to include the molecular diffusion or not
         """
-        
+                
         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
             
@@ -2070,48 +2449,92 @@ class Ros2(ODESolver):
         df = chemdf(y,M,k).flatten() + diffdf(y, atm).flatten()
         lhs = jac_tot(var, atm)
         
+        # TEST condensation
+        # Fixed species
+        if vulcan_cfg.use_condense == True and para.fix_species_start == True:
+            for sp in vulcan_cfg.fix_species:
+                df[atm.fix_sp_indx[sp]] = 0
+                lhs[atm.fix_sp_indx[sp],:] = 0
+                lhs[atm.fix_sp_indx[sp],atm.fix_sp_indx[sp]] = 1./(r*h)  # cuz the jacobian func is directly outputing 1./(r*h)*sparse.identity(ni*nz) - dfdy
+        
+        if vulcan_cfg.use_ion == True:
+            df[atm.fix_e_indx] = 0
+            lhs[atm.fix_e_indx,:] = 0
+            lhs[atm.fix_e_indx,atm.fix_e_indx] = 1./(r*h)
+        
         lhs_b, bw = self.store_bandM(lhs,ni,nz)
         k1_flat = scipy.linalg.solve_banded((bw,bw),lhs_b,df)
         k1 = k1_flat.reshape(y.shape)
         
         yk2 = y + k1/r
         df = chemdf(yk2,M,k).flatten() + diffdf(yk2, atm).flatten()
-
+        
+        # TEST condensation
+        # Fixed species
+        if vulcan_cfg.use_condense == True and para.fix_species_start == True:
+            for sp in vulcan_cfg.fix_species:
+                df[atm.fix_sp_indx[sp]] = 0
+        if vulcan_cfg.use_ion == True:
+            df[atm.fix_e_indx] = 0
+            
         rhs = df - 2./(r*h)*k1_flat
         k2 = scipy.linalg.solve_banded((bw,bw),lhs_b,rhs)
         k2 = k2.reshape(y.shape)
         
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2
-
+        
         # setting particles on the surace = 0
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
-        
-        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
-        if vulcan_cfg.use_ion == True: #pass
-            # clear e
-            sol[:,species.index('e')] = 0
-            # set e such that the net chare is zero
-            for sp in var.charge_list:
-                sol[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
                 
         delta = np.abs(sol-yk2)
         delta[ymix < self.mtol] = 0
         delta[sol < self.atol] = 0
-
+                
+        # neglecting the errors at the surface
+        if vulcan_cfg.use_botflux == True or vulcan_cfg.use_fix_sp_bot: delta[0] = 0
+        
         # TEST condensation
-        delta = np.amax( delta[sol>0]/sol[sol>0] )
+        if vulcan_cfg.use_condense == True:
+            delta[:,self.non_gas_sp_index] = 0
+            delta[:,self.condense_sp_index] = 0
+            
+            if para.fix_species_start == True:
+                
+                for sp in vulcan_cfg.fix_species:
+                    sol[:,species.index(sp)] = var.fix_y[sp].copy()
+                    # setting the trucation error = 0
+                    delta[:,species.index(sp)] = 0
+                            
 
+        if vulcan_cfg.use_print_delta == True and para.count % vulcan_cfg.print_prog_num==0:
+            max_indx = np.nanargmax(delta/sol, axis=1)
+            max_lev_indx = np.nanargmax(delta/sol)
+            print ('Largest delta (truncation error) from nz = ' + str(int(max_lev_indx/ni) ) )
+            print ( np.array(species)[max_indx] )
+            #print ('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) ) 
+
+        delta = np.amax( delta[sol>0]/sol[sol>0] )
+        
         var.y = sol
-        var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
         
         # # TEST condensation excluding non-gaseous species
-        # if vulcan_cfg.use_condense == True:
-        #     #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
-        #     var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
-        # else: var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
-        # # TEST condensation excluding non-gaseous species
+        if vulcan_cfg.non_gas_sp:
+            var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.gas_indx],axis=1))
+        else:
+            var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+        # TEST condensation excluding non-gaseous species
+        
         para.delta = delta    
+        
+        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
+        if vulcan_cfg.use_ion == True: 
+            # clear e
+            var.y[:,species.index('e')] = 0
+            # set e such that the net chare is zero
+            for sp in var.charge_list:
+                var.y[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
+        
         
         return var, para
         
@@ -2120,7 +2543,7 @@ class Ros2(ODESolver):
         2nd order Rosenbrock [Verwer et al. 1997] with banded-matrix solver
         with switches to include the molecular diffusion or not
         """
-        
+
         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
         
@@ -2164,14 +2587,23 @@ class Ros2(ODESolver):
 
         var.y = sol
         
-        if vulcan_cfg.use_condense == True:
-            #var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.exc_conden],axis=1))
-            var.ymix = var.y/np.vstack(np.sum(var.y,axis=1)) 
-        else: var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+        # # TEST condensation excluding non-gaseous species
+        if vulcan_cfg.non_gas_sp:
+            var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.gas_indx],axis=1))
+        else:
+            var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
         # TEST condensation excluding non-gaseous species
-
+        
         para.delta = delta    
         
+        # use charge balance to obtain the number density of electrons (such that [ions] = [e])
+        if vulcan_cfg.use_ion == True: 
+            # clear e
+            var.y[:,species.index('e')] = 0
+            # set e such that the net chare is zero
+            for sp in var.charge_list:
+                var.y[:,species.index('e')] -= compo[compo_row.index(sp)]['e'] * var.y[:,species.index(sp)]
+
         return var, para   
       
     
@@ -2252,10 +2684,11 @@ class Output(object):
         print ('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )      
         print ('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
         print ('------------------------------------------------------------------------' )
-
+        
+        
     def print_end_msg(self, var, para ): 
         print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time') 
-        print ('VULCAN has sucesfully run to steady-state with ' + str(para.count) + ' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
+        print (vulcan_cfg.out_name[:-4] + ' has successfully run to steady-state with ' + str(para.count) + ' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
         print ('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
         
         print ('total atom loss:')
@@ -2323,7 +2756,7 @@ class Output(object):
                 outfile.write(str({'variable': var_save, 'atm': vars(atm), 'parameter': vars(para)}))
             else:
                 # the protocol must be <= 2 for python 2.X
-                pickle.dump( {'variable': var_save, 'atm': vars(atm), 'parameter': vars(para) }, outfile, protocol=2)
+                pickle.dump( {'variable': var_save, 'atm': vars(atm), 'parameter': vars(para) }, outfile, protocol=4)
                 # how to add  'config': vars(vulcan_cfg) ?
         
             
@@ -2347,7 +2780,7 @@ class Output(object):
                 para.tableau20.append(tuple(np.random.rand(3)))
             if vulcan_cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab)
-                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condesne_sp:
+                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
                     plt.plot(atm.sat_mix[sp], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab + ' sat', ls='--')
                 
                 plt.gca().set_yscale('log')
@@ -2356,23 +2789,24 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab)
-                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condesne_sp:
+                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
                     plt.plot(atm.sat_mix[sp], atm.zco[1:]/1.e5, color = para.tableau20[color_index], label=sp_lab + ' sat', ls='--')
                 
-                plt.ylim((atm.zco[0]/1e5,80))
+                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
                 plt.ylabel("Height (km)")
                 
             images.append((line,))
         
         plt.title(str(para.count)+' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
         plt.gca().set_xscale('log')         
-        plt.xlim(1.E-16, 1.)
+        plt.xlim(1.E-20, 1.)
         plt.legend(frameon=0, prop={'size':14}, loc=3)
         plt.xlabel("Mixing Ratios")
         plt.show(block=0)
         plt.pause(0.001)
         if vulcan_cfg.use_save_movie == True: 
-            plt.savefig( vulcan_cfg.movie_dir+str(int(para.count/vulcan_cfg.save_movie_rate))+'.jpg', dpi=200)
+            plt.savefig( vulcan_cfg.movie_dir+str(para.pic_count)+'.png', dpi=200)
+            para.pic_count += 1
         plt.clf()
     
     def plot_flux_update(self, var, atm, para):
@@ -2420,7 +2854,7 @@ class Output(object):
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp)
-                plt.ylim((atm.zco[0]/1e5,80))
+                plt.ylim((atm.zco[0]/1e5,atm.zco[0]/1e5))
                 plt.ylabel("Height (km)")
             color_index +=1
                   
@@ -2490,19 +2924,27 @@ class Output(object):
     
     def plot_TP(self, atm):
         plot_dir = vulcan_cfg.plot_dir
-        plt.figure('TP')
+        #plt.figure('TPK')
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twiny() # ax1 and ax2 share y-axis
+
         if vulcan_cfg.plot_height == False:
-            plt.semilogy( atm.Tco, atm.pco/1.e6, c='black')
+            ax1.semilogy( atm.Tco, atm.pco/1.e6, c='black')
+            ax2.loglog( atm.Kzz, atm.pico[1:-1]/1.e6, c='k', ls='--')
             plt.gca().invert_yaxis()
             plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
-            plt.ylabel("Pressure (bar)")
+            ax1.set_ylabel("Pressure (bar)")
+
         else: # plotting with height
-            
-            line, = plt.plot(atm.Tco, atm.zmco/1.e5, c='black')            
-            plt.ylabel("Height (km)")
+            ax1.plot(atm.Tco, atm.zmco/1.e5, c='black')
+            ax2.semilogx( atm.Kzz, atm.zmco[1:]/1.e5, c='k', ls='--') 
+            ax1.set_ylabel("Height (km)")
+
+        #plt.xlabel("Temperature (K)")
+        ax1.set_xlabel("Temperature (K)")
+        ax2.set_xlabel(r'K$_{zz}$ (cm$^2$s$^{-1}$)')
         
-        plt.xlabel("Temperature (K)")
-        plot_name = plot_dir + 'TP.png'
+        plot_name = plot_dir + 'TPK.png'
         plt.savefig(plot_name)
         if vulcan_cfg.use_PIL == True:        
             plot = Image.open(plot_name)
@@ -2510,113 +2952,832 @@ class Output(object):
             # close the matplotlib window
             plt.close()
         else: plt.show(block = False)
+        
+        
+
+## back up ###
+# class SemiEU(ODESolver):
+#     '''
+#     class inheritance from ODEsolver for semi-implicit Euler solver
+#     '''
+#     def __init__(self):
+#         ODESolver.__init__(self)
+#
+#     def solver(self, var, atm):
+#         """
+#         semi-implicit Euler solver (1st order)
+#         """
+#         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
+#         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
+#
+#         diffdf = self.diffdf
+#         jac_tot = self.jac_tot
+#
+#         df = chemdf(y,M,k).flatten() + diffdf(var, atm).flatten()
+#         dfdy = jac_tot(var, atm)
+#         aa = np.identity(ni*nz) - h*dfdy
+#         aa = scipy.linalg.solve(aa,df)
+#         aa = aa.reshape(y.shape)
+#         y = y + aa*h
+#
+#         var.y = y
+#         var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+#
+#         return var
+#
+#     def step_ok(self, var, para, loss_eps = vulcan_cfg.loss_eps):
+#         if np.all(var.y>=0) and np.amax( np.abs( np.fromiter(var.atom_loss.values(),float) - np.fromiter(var.atom_loss_prev.values(),float) ) )<loss_eps and para.delta<=rtol:
+#             return True
+#         else:
+#             return False
+#
+#     def one_step(self, var, atm, para):
+#
+#         while True:
+#            var = self.solver(var, atm)
+#
+#            # clipping small negative values and also calculating atomic loss (atom_loss)
+#            var , para = self.clip(var, para, atm)
+#
+#            if self.step_ok(var, para): break
+#            elif self.step_reject(var, para): break # giving up and moving on
+#
+#         return var, para
+#
+#     def step_size(self, var, para):
+#         '''
+#         PID control required for all semi-Euler like methods
+#         '''
+#         dt_var_min, dt_var_max, dt_min, dt_max = vulcan_cfg.dt_var_min, vulcan_cfg.dt_var_max, vulcan_cfg.dt_min, vulcan_cfg.dt_max
+#         PItol = vulcan_cfg.PItol
+#         dy, dy_prev, h = var.dy, var.dy_prev, var.dt
+#
+#         if dy == 0 or dy_prev == 0:
+#             var.dt = np.minimum(h*2.,dt_max)
+#             return var
+#
+#         if para.count > 0:
+#
+#             h_factor = (dy_prev/dy)**0.075 * (PItol/dy)**0.175
+#             h_factor = np.maximum(h_factor, dt_var_min)
+#             h_factor = np.minimum(h_factor, dt_var_max)
+#             h *= h_factor
+#             h = np.maximum(h, dt_min)
+#             h = np.minimum(h, dt_max)
+#
+#         # store the adopted dt
+#         var.dt = h
+#
+#         return var
+#
+#
+# class SparSemiEU(SemiEU):
+#     '''
+#     class inheritance from SemiEU.
+#     It is the same semi-implicit Euler solver except for utilizing sparse-matrix solvers
+#     '''
+#     def __init__(self):
+#         SemiEU.__init__(self)
+#
+#     # override solver
+#     def solver(self, var, atm):
+#         """
+#         sparse-matrix semi-implicit Euler solver (1st order)
+#         """
+#         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
+#         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
+#
+#         diffdf = self.diffdf
+#         jac_tot = self.jac_tot
+#
+#         df = chemdf(y,M,k).flatten() + diffdf(var, atm).flatten()
+#         dfdy = jac_tot(var, atm)
+#
+#         aa = sparse.csc_matrix( np.identity(ni*nz) - h*dfdy )
+#         aa = sparse.linalg.spsolve(aa,df)
+#         aa = aa.reshape(y.shape)
+#         y = y + aa*h
+#
+#         var.y = y
+#         var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+#
+#         return var
+#
+#
+# ### back-up methods: extrapolation semi_implicit Euler ###
+#         Kzz = atm.Kzz.copy()
+#         vz = atm.vz.copy()
+#         Tco = atm.Tco.copy()
+#         mu, ms = atm.mu.copy(),  atm.ms.copy()
+#         g = vulcan_cfg.g
+#
+#         r = 1. + 1./2.**0.5
+#         c0 = 1./(r*var.dt)
+#         dfdy = neg_achemjac(y, atm.M, var.k)
+#         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
+#         j_indx = []
+#
+#         for j in range(nz):
+#             j_indx.append( np.arange(j*ni,j*ni+ni) )
+#
+#         for j in range(1,nz-1):
+#             # excluding the buttom and the top cell
+#             # at j level consists of ni species
+#             dz_ave = 0.5*(dzi[j-1] + dzi[j])
+#             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
+#
+#         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
+#         # deposition velocity
+#         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+#
+#         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
+#
+#         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]
+#         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]
+#
+#         return dfdy
+#
+#     def lhs_jac_fix_all_bot(self, var, atm):
+#         """
+#         directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy
+#         jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion)
+#         Fixed all species BC: all species at bottom (y[0]) remains fixed
+#         """
+#         y = var.y.copy()
+#         # TEST condensation excluding non-gaseous species
+#         if vulcan_cfg.use_condense == True:
+#             #ysum = np.sum(y[:,atm.gas_indx], axis=1)
+#             ysum = np.sum(y, axis=1)
+#         else: ysum = np.sum(y, axis=1)
+#         # TEST condensation excluding non-gaseous species
+#         dzi = atm.dzi.copy()
+#         Kzz = atm.Kzz.copy()
+#         Dzz = atm.Dzz.copy()
+#         vz = atm.vz.copy()
+#         alpha = atm.alpha.copy()
+#         Tco = atm.Tco.copy()
+#         mu, ms = atm.mu.copy(),  atm.ms.copy()
+#         g = vulcan_cfg.g
+#
+#         Ti = atm.Ti.copy()
+#         Hpi = atm.Hpi.copy()
+#
+#         r = 1. + 1./2.**0.5
+#         c0 = 1./(r*var.dt)
+#         dfdy = neg_achemjac(y, atm.M, var.k)
+#         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
+#         j_indx = []
+#
+#         for j in range(nz):
+#             j_indx.append( np.arange(j*ni,j*ni+ni) )
+#
+#         for j in range(1,nz-1):
+#             # excluding the buttom and the top cell
+#             # at j level consists of ni species
+#             dz_ave = 0.5*(dzi[j-1] + dzi[j])
+#             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
+#
+#             # [j_indx[j], j_indx[j]] has size ni*ni
+#             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
+#             +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+#             - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
+#             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
+#             +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+#             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
+#             -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+#
+#         # deposition velocity (off with fixed all BC)
+#         # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+#
+#         # Fix bottom BC
+#         #print (dfdy[:, j_indx[0]])
+#         dfdy[:, j_indx[0]] = 0.
+#
+#         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
+#         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
+#         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+#
+#         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]
+#         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
+#         - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+#         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]
+#         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
+#                 -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+#
+#         return dfdy
+#
+#     def lhs_jac_no_mol_fix_all_bot(self, var, atm):
+#         """
+#         directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy
+#         jacobian matrix for dn/dt + dphi/dz = P - L (WITHOUT molecular diffusion)
+#         Fixed all species BC: all species at bottom (y[0]) remains fixed
+#         """
+#         y = var.y.copy()
+#         # TEST condensation excluding non-gaseous species
+#         if vulcan_cfg.use_condense == True:
+#             #ysum = np.sum(y[:,atm.gas_indx], axis=1)
+#             ysum = np.sum(y, axis=1)
+#         else: ysum = np.sum(y, axis=1)
+#         # TEST condensation excluding non-gaseous species
+#         dzi = atm.dzi.copy()
+#         Kzz = atm.Kzz.copy()
+#         vz = atm.vz.copy()
+#         Tco = atm.Tco.copy()
+#         mu, ms = atm.mu.copy(),  atm.ms.copy()
+#         g = vulcan_cfg.g
+#
+#         r = 1. + 1./2.**0.5
+#         c0 = 1./(r*var.dt)
+#         dfdy = neg_achemjac(y, atm.M, var.k)
+#         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
+#         j_indx = []
+#
+#         for j in range(nz):
+#             j_indx.append( np.arange(j*ni,j*ni+ni) )
+#
+#         for j in range(1,nz-1):
+#             # excluding the buttom and the top cell
+#             # at j level consists of ni species
+#             dz_ave = 0.5*(dzi[j-1] + dzi[j])
+#             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
+#
+#         #dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
+#         # deposition velocity (off with fixed all BC)
+#         # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+#
+#         # Fix bottom BC
+#         dfdy[:, j_indx[0]] = 0.
+#
+#         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
+#
+#         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]
+#         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]
+#
+#         return dfdy
+#
+#     def lhs_jac_settling(self, var, atm):
+#         """
+#         directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy
+#         jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion and gravitation settling for particles)
+#         zero-flux BC:  1st derivitive of y is zero
+#         """
+#         y = var.y.copy()
+#         # TEST condensation excluding non-gaseous species
+#         if vulcan_cfg.use_condense == True:
+#             #ysum = np.sum(y[:,atm.gas_indx], axis=1)
+#             ysum = np.sum(y, axis=1)
+#         else: ysum = np.sum(y, axis=1)
+#         # TEST condensation excluding non-gaseous species
+#         dzi = atm.dzi.copy()
+#         Kzz = atm.Kzz.copy()
+#         Dzz = atm.Dzz.copy()
+#         vz = atm.vz.copy()
+#         vs = atm.vs.copy()
+#         alpha = atm.alpha.copy()
+#         Tco = atm.Tco.copy()
+#         mu, ms = atm.mu.copy(),  atm.ms.copy()
+#         g = vulcan_cfg.g
+#
+#         Ti = atm.Ti.copy()
+#         Hpi = atm.Hpi.copy()
+#
+#         # c0 = 1./(r*h) where r = 1. + 1./2.**0.5
+#         r = 1. + 1./2.**0.5
+#         c0 = 1./(r*var.dt)
+#         dfdy = neg_achemjac(y, atm.M, var.k)
+#         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
+#         j_indx = []
+#
+#         for j in range(nz):
+#             j_indx.append( np.arange(j*ni,j*ni+ni) )
+#
+#         for j in range(1,nz-1):
+#             # excluding the buttom and the top cell
+#             # at j level consists of ni species
+#             dz_ave = 0.5*(dzi[j-1] + dzi[j])
+#             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
+#
+#             # [j_indx[j], j_indx[j]] has size ni*ni
+#             dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
+#             +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+#             - Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )  -( (vs[j]>0)*vs[j] - (vs[j-1]<0)*vs[j-1] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
+#             +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )  -( (vs[j]<0)*vs[j] )/dz_ave
+#             dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
+#             -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
+#
+#         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
+#         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
+#         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]
+#         # deposition velocity
+#         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+#
+#         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
+#         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
+#         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) -( (vs[0]<0)*vs[0] )/dzi[0]
+#
+#         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]
+#         dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
+#         - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]<0)*vs[-1] )/dzi[-1]
+#         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]
+#         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
+#                 -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]>0)*vs[-1] )/dzi[-1]
+#
+#         return dfdy
+#
+#
+#
+#     def clip(self, var, para, atm, pos_cut = vulcan_cfg.pos_cut, nega_cut = vulcan_cfg.nega_cut):
+#         '''
+#         function to clip samll and negative values
+#         and to calculate the particle loss
+#         '''
+#         y, ymix = var.y, var.ymix.copy()
+#
+#         para.small_y += np.abs(np.sum(y[np.logical_and(y<pos_cut, y>=0)]))
+#         para.nega_y += np.abs(np.sum(y[np.logical_and(y>nega_cut, y<=0)]))
+#         y[np.logical_and(y<pos_cut, y>=nega_cut)] = 0.
+#
+#         # Also setting y=0 when ymix<mtol
+#         y[np.logical_and(ymix<self.mtol, y<0)] = 0.
+#
+#         var = self.loss(var)
+#
+#         # store y and ymix
+#         # TEST condensation excluding non-gaseous species
+#         if vulcan_cfg.use_condense == True:
+#             #var.y, var.ymix = y, var.y/np.vstack(np.sum(var.y[:,atm.gas_indx],axis=1))
+#             var.y, var.ymix = y, y/np.vstack(np.sum(y,axis=1))
+#         else: var.y, var.ymix = y, y/np.vstack(np.sum(y,axis=1))
+#         # TEST condensation excluding non-gaseous species
+#
+#         return var , para
+#
+#     def loss(self, data_var):
+#
+#         y = data_var.y
+#         atom_list = vulcan_cfg.atom_list
+#
+#         # changed atom_tot to dictionary atom_sum
+#         atom_sum = data_var.atom_sum
+#
+#         for atom in atom_list:
+#             data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
+#             data_var.atom_loss[atom] = (data_var.atom_sum[atom] - data_var.atom_ini[atom])/data_var.atom_ini[atom]
+#
+#         return data_var
+#
+#     def step_ok(self, var, para, loss_eps = vulcan_cfg.loss_eps, rtol = vulcan_cfg.rtol):
+#         if np.all(var.y>=0) and np.amax( np.abs( np.fromiter(var.atom_loss.values(),float) - np.fromiter(var.atom_loss_prev.values(),float) ) )<loss_eps and para.delta<=rtol:
+#             return True
+#         else:
+#             return False
+#
+#     def step_reject(self, var, para, loss_eps = vulcan_cfg.loss_eps, rtol = vulcan_cfg.rtol):
+#
+#         if para.delta > rtol: # truncation error larger than the tolerence value
+#             para.delta_count += 1
+#
+#         elif np.any(var.y < 0):
+#             para.nega_count += 1
+#             if vulcan_cfg.use_print_prog == True:
+#                 self.print_nega(var,para) # print the info for the negative solutions (where y < 0)
+#             # print input: y, t, count, dt
+#
+#
+#         else: # meaning np.amax( np.abs( np.abs(y_loss) - np.abs(loss_prev) ) )<loss_eps
+#             para.loss_count +=1
+#             if vulcan_cfg.use_print_prog == True:
+#                 self.print_lossBig(para)
+#
+#
+#         var = self.reset_y(var) # reset y and dt to the values at previous step
+#
+#         if var.dt < vulcan_cfg.dt_min:
+#             var.dt = vulcan_cfg.dt_min
+#             var.y[var.y<0] = 0. # clipping of negative values
+#             print ('Keep producing negative values! Clipping negative solutions and moving on!')
+#             return True
+#
+#         return False
+#
+#     def reset_y(self, var, dt_reduc = vulcan_cfg.dt_var_min):
+#         '''
+#         reset y and reduce dt by dt_reduc
+#         '''
+#
+#         # reset and store y and dt
+#         var.y = var.y_prev
+#         var.dt *= dt_reduc
+#         # var.dt = np.maximum(var.dt, vulcan_cfg.dt_min)
+#
+#         return var
+#
+#     def print_nega(self, data_var, data_para):
+#
+#         nega_i = np.where(data_var.y<0)
+#         print ('Negative y at time ' + str("{:.2e}".format(data_var.t)) + ' and step: ' + str(data_para.count) )
+#         print ('Negative values:' + str(data_var.y[data_var.y<0]) )
+#         print ('from levels: ' + str(nega_i[0]) )
+#         print ('species: ' + str([species[_] for _ in nega_i[1]]) )
+#         print ('dt= ' + str(data_var.dt))
+#         print ('...reset dt to dt*0.2...')
+#         print ('------------------------------------------------------------------')
+#
+#     def print_lossBig(self, para):
+#
+#         print ('partical conservation is violated too large (by numerical errors)')
+#         print ('at step: ' + str(para.count))
+#         print ('------------------------------------------------------------------')
+#
+#     def thomas_vec(a, b, c, d):
+#         '''
+#         Thomas vectorized solver, a b c d refer to http://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
+#         d is a matrix
+#         not used in this current version
+#         '''
+#         # number of equations
+#         nf = len(a)
+#         aa, bb, cc, dd = map(np.copy, (a, b, c, d))
+#         # d needs to reshape
+#         dd = dd.reshape(nf,-1)
+#         #C' and D'
+#         cp = [cc[0]/bb[0]]; dp = [dd[0]/bb[0]]
+#         x = np.zeros((nf, np.shape(dd)[1]))
+#
+#         for i in range(1, nf-1):
+#             cp.append( cc[i]/(bb[i] - aa[i]*cp[i-1]) )
+#             dp.append( (dd[i] - aa[i]*dp[i-1])/(bb[i] - aa[i]*cp[i-1]) )
+#
+#         dp.append( (dd[(nf-1)] - aa[(nf-1)]*dp[(nf-1)-1])/(bb[(nf-1)] - aa[(nf-1)]*cp[(nf-1)-1]) ) # nf-1 is the last element
+#         x[nf-1] = dp[nf-1]/1
+#         for i in range(nf-2, -1, -1):
+#             x[i] = dp[i] - cp[i]*x[i+1]
+#
+#         return x
+#
+#     ### photo-calculation starts from here
+#
+#     # def tot_cross(self, var):
+# #     ''' compute the total cross section from all species '''
+# #         for sp in vulcan_cfg.photo_sp:
+# #             cross[sp]
+#
+#
+#     def compute_tau(self, var, atm):
+#         ''' compute the optical depth '''
+#
+#         # reset to zero
+#         var.tau.fill(0)
+#
+#         for j in range(nz-1,-1,-1):
+#
+#             for sp in set.union(var.photo_sp,var.ion_sp):
+#             # summing over all photo species
+#                 var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross[sp] # only the j-th laye
+#
+#             for sp in vulcan_cfg.scat_sp: # scat_sp are not necessary photo_sp, e.g. He
+#                 var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross_scat[sp]
+#             # adding the layer above at the end of species loop
+#             var.tau[j] += var.tau[j+1]
+#
+#     # Lines like chi = zeta_m**2*tran**2 - zeta_p**2 doing large np 2D array multiplication
+#     # can be sped up with cython
+#     def compute_flux(self, var, atm): # Vectorise this loop!
+#         # change it to stagerred grids
+#         # top: stellar flux
+#         # bottom BC: zero upcoming flux
+#
+#         # Note!!! Matej's mu is defined in the outgoing hemisphere so his mu<0
+#         # My cos[sl_angle] is always 0<=mu<=1
+#         # Converting my mu to Matej's mu (e.g. 45 deg -> 135 deg)
+#
+#         mu_ang = -1.*np.cos(vulcan_cfg.sl_angle)
+#         edd = vulcan_cfg.edd
+#         tau = var.tau
+#
+#         # delta_tau (length nz) is used in the transmission function
+#         delta_tau = tau - np.roll(tau,-1,axis=0) # np.roll(tau,-1,axis=0) are the upper layers
+#         delta_tau = delta_tau[:-1]
+#
+#
+#         # single-scattering albedo
+#         nbins = len(var.bins)
+#         tot_abs, tot_scat = np.zeros((nz, nbins)), np.zeros((nz, nbins))
+#         for sp in var.photo_sp:
+#             tot_abs += np.vstack(var.ymix[:,species.index(sp)])*var.cross[sp] # nz * nbins
+#         for sp in vulcan_cfg.scat_sp:
+#             tot_scat += np.vstack(var.ymix[:,species.index(sp)])*var.cross_scat[sp]
+#
+#         total = tot_abs + tot_scat
+#
+#         w0 = tot_scat  / (tot_abs + tot_scat) # 2D: nz * nbins
+#         # tot_abs + tot_scat can be zero when certain gas (e.g. H2) does not exist
+#
+#         # Replace nan with zero and inf with very large numbers
+#         w0 = np.nan_to_num(w0)
+#
+#         # to avoit w0=1
+#         w0 = np.minimum(w0,1.-1.E-8)
+#
+#         # sflux: the direct beam; dflux: diffusive flux
+#         ''' Beer's law for the intensity'''
+#         var.sflux = var.sflux_top *  np.exp(-1.*tau/np.cos(vulcan_cfg.sl_angle) )
+#         # converting the intensity to flux for the raditive transfer calculation
+#         dir_flux = var.sflux*np.cos(vulcan_cfg.sl_angle) # multiplied by the zenith angle for calculating the diffuse flux
+#
+#         # scattering
+#         # the transmission function (length nz)
+#         if ag0 == 0: # to save memory
+#             tran = np.exp( -1./edd *(1.- w0)**0.5 * delta_tau ) # 2D: nz * nbins
+#             zeta_p = 0.5*( 1. + (1.-w0)**0.5 )
+#             zeta_m = 0.5*( 1. - (1.-w0)**0.5 )
+#             ll = -1.*w0/( 1./mu_ang**2 -1./edd**2 *(1.-w0) )
+#             g_p = 0.5*( ll*(1./edd+1./mu_ang) )
+#             g_m = 0.5*( ll*(1./edd-1./mu_ang) )
+#
+#         else:
+#             tran = np.exp( -1./edd *( (1.- w0*ag0)*(1.- w0) )**0.5 * delta_tau )
+#             zeta_p = 0.5*( 1. + ((1.-w0)/(1-w0*ag0))**0.5 )
+#             zeta_m = 0.5*( 1. - ((1.-w0)/(1-w0*ag0))**0.5 )
+#             ll = ( (1.-w0)*(1-w0*ag0) - 1.)/( 1./mu_ang**2 -1./edd**2 *(1.-w0)*(1-w0*ag0) )
+#             g_p = 0.5*( ll*(1./edd+1/(mu_ang*(1.-w0*ag0))) + w0*ag0*mu_ang/(1.-w0*ag0)  )
+#             g_m = 0.5*( ll*(1./edd-1/(mu_ang*(1.-w0*ag0))) - w0*ag0*mu_ang/(1.-w0*ag0)  )
+#
+#
+#         # to avoit zero denominator
+#         ll = np.minimum(ll, 1.e10)
+#         ll = np.maximum(ll, -1.e10)
+#
+#
+#         # 2D: nz * nbins
+#         chi = zeta_m**2*tran**2 - zeta_p**2
+#         xi = zeta_p*zeta_m*(1.-tran**2)
+#         phi = (zeta_m**2-zeta_p**2)*tran
+#
+#         # 2D: nz * nbins
+#         i_u = phi*g_p*dir_flux[:-1] - (xi*g_m+chi*g_p)*dir_flux[1:]
+#         i_d = phi*g_m*dir_flux[1:] - (chi*g_m+xi*g_p)*dir_flux[:-1]
+#         # sflux[1:] are all the layers above and sflux[:-1] are all the layers abelow
+#
+#         var.zeta_m = zeta_m
+#         var.zeta_p = zeta_p
+#         var.tran = tran
+#
+#
+#
+#         #starting recording time
+#         #start_time = timeit.default_timer()
+#
+#
+#         # propagating downward layer by layer and then upward
+#         # var.dflux_d and var.dflux_p are defined at the interfaces (staggerred)
+#         # the rest is defined in the center of the layer
+#         for j in range(nz-1,-1,-1): # dflux_d goes from the second top interface (nz+1 interfaces)
+#             var.dflux_d[j] = 1./chi[j]*(phi[j]*var.dflux_d[j+1] - xi[j]*var.dflux_u[j] + i_d[j]/mu_ang )
+#         for j in range(1,nz+1):
+#             var.dflux_u[j] = 1./chi[j-1]*(phi[j-1]*var.dflux_u[j-1] - xi[j-1]*var.dflux_d[j] + i_u[j-1]/mu_ang )
+#
+#
+#         #print ("time passed...")
+#         #print (timeit.default_timer() - start_time)
+#
+#
+#         # old
+#         # # the average intensity (not flux!) of the direct beam
+# #         ave_int = 0.5*( var.sflux[:-1] + var.sflux[1:])
+# #         tot_int = (ave_int + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1]) )/edd
+# #         # devided by the Eddington coefficient to recover the intensity
+#
+#
+#         # the average flux from the direct beam
+#         # !!! WITHOUT multiplied by the cos zenith angle (flux per unit area perpendicular to the direction of propagationat) !!!
+#         ave_dir_flux = 0.5*( var.sflux[:-1] + var.sflux[1:])
+#         # devided by the Eddington coefficient to recover the intensity then multiplied by 4pi to get the integrated flux
+#         tot_flux = ave_dir_flux + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1])/edd
+#
+#
+#         # ### Debug
+#
+#         #var.ave_int = ave_int
+#
+#         # var.ll = ll
+#         # var.chi=chi
+#         # var.phi=phi
+#         # var.xi = xi
+#         #
+#         # var.i_u = i_u
+#         # var.i_d = i_d
+#         # var.w0 = w0
+#         # var.tot_abs = tot_abs
+#         # var.tot_scat = tot_scat
+#         # var.tran = tran
+#         # var.delta_tau = delta_tau
+#
+#         ### Debug
+#         if np.any(tot_flux< -1.e-20):
+#             print (tot_flux[tot_flux<-1.e-20])
+#             raise IOError ('\nNegative diffusive flux! ')
+#
+#
+#         # store the previous actinic flux into prev_aflux
+#         var.prev_aflux = np.copy(var.aflux)
+#         # converting to the actinic flux and storing the current flux
+#         var.aflux = tot_flux / (hc/var.bins)
+#         # the change of the actinic flux
+#         var.aflux_change = np.nanmax( np.abs(var.aflux-var.prev_aflux)[var.aflux>vulcan_cfg.flux_atol]/var.aflux[var.aflux>vulcan_cfg.flux_atol] )
+#
+#         #print ('aflux change: ' + '{:.4E}'.format(var.aflux_change) )
+#
+#
+#     def compute_J(self, var, atm): # the vectorised version
+#         flux = var.aflux
+#
+#         #cross = var.cross
+#         diss_cross = var.cross_J # use the key (sp, br) e.g. ("H2O", 1)
+#
+#         bins = var.bins
+#         n_branch = var.n_branch
+#
+#         # reset to zeros every time
+#         var.J_sp = dict([( (sp,bn) , np.zeros(nz)) for sp in var.photo_sp for bn in range(n_branch[sp]+1) ])
+#
+#         for sp in var.photo_sp:
+#             # shape: flux (nz,nbin) cross (nbin)
+#
+#             # I want to parallelize this bit
+#             # for n in range(var.nbin):
+#             # I want to parallelize this bit
+#
+#             for nbr in range(1, n_branch[sp]+1):
+#                 # axis=1 is to sum over all wavelength
+#                 var.J_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * diss_cross[(sp,nbr)][:var.sflux_din12_indx] * var.dbin1, axis=1)
+#                 var.J_sp[(sp, nbr)] -= 0.5* (flux[:,0] * diss_cross[(sp,nbr)][0] + flux[:,var.sflux_din12_indx-1] * diss_cross[(sp,nbr)][var.sflux_din12_indx-1]) * var.dbin1
+#                 var.J_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * diss_cross[(sp,nbr)][var.sflux_din12_indx:] * var.dbin2, axis=1)
+#                 var.J_sp[(sp, nbr)] -= 0.5* (flux[:,var.sflux_din12_indx] * diss_cross[(sp,nbr)][var.sflux_din12_indx] + flux[:,-1] * diss_cross[(sp,nbr)][-1]) * var.dbin2
+#
+#             # 0 is the total dissociation rate
+#             # summing all branches
+#             for nbr in range(1, n_branch[sp]+1):
+#                 var.J_sp[(sp, 0)] += var.J_sp[(sp, nbr)]
+#                 # incoperating J into rate coefficients
+#                 if var.pho_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
+#                     var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
+#
+#
+#
+#     # Do Jion here
+#     def compute_Jion(self, var, atm):
+#         '''
+#         compute the photoionisation rate
+#         '''
+#         flux = var.aflux
+#         ion_cross = var.cross_Jion # use the key (sp, br) e.g. ("H2O", 1)
+#
+#         bins = var.bins
+#         n_branch = var.ion_branch
+#
+#         # reset to zeros every time
+#         var.Jion_sp = dict([( (sp,bn) , np.zeros(nz)) for sp in var.ion_sp for bn in range(n_branch[sp]+1) ])
+#
+#         for sp in var.ion_sp:
+#             # shape: flux (nz,nbin) cross (nbin)
+#
+#             # convert to actinic flux *1/(hc/ld)
+#             if wl_num == 0:
+#                 for nbr in range(1, n_branch[sp]+1):
+#                     # axis=1 is to sum over all wavelength
+#                     var.Jion_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * ion_cross[(sp,nbr)][:var.sflux_din12_indx] * var.dbin1, axis=1)
+#                     var.Jion_sp[(sp, nbr)] -= 0.5* (flux[:,0] * ion_cross[(sp,nbr)][0]  + flux[:,var.sflux_din12_indx-1] * ion_cross[(sp,nbr)][var.sflux_din12_indx-1]) * var.dbin1
+#                     var.Jion_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * ion_cross[(sp,nbr)][var.sflux_din12_indx:] * var.dbin2, axis=1)
+#                     var.Jion_sp[(sp, nbr)] -= 0.5* (flux[:,var.sflux_din12_indx] * ion_cross[(sp,nbr)][var.sflux_din12_indx]  + flux[:,-1] * ion_cross[(sp,nbr)][-1]) * var.dbin2
+#
+#             # end of the loop: for sp in var.photo_sp:
+#
+#             # 0 is the total dissociation rate
+#             # summing all branches
+#             for nbr in range(1, n_branch[sp]+1):
+#                 var.Jion_sp[(sp, 0)] += var.Jion_sp[(sp, nbr)]
+#                 # incoperating J into rate coefficients
+#                 if var.ion_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
+#                     var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
+#
+#
             
-class SemiEU(ODESolver):
-    '''
-    class inheritance from ODEsolver for semi-implicit Euler solver 
-    '''
-    def __init__(self):
-        ODESolver.__init__(self)
-           
-    def solver(self, var, atm):
-        """
-        semi-implicit Euler solver (1st order) 
-        """
-        y, ymix, h, k = var.y, var.ymix, var.dt, var.k
-        M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
-
-        diffdf = self.diffdf
-        jac_tot = self.jac_tot
-        
-        df = chemdf(y,M,k).flatten() + diffdf(var, atm).flatten()
-        dfdy = jac_tot(var, atm)        
-        aa = np.identity(ni*nz) - h*dfdy
-        aa = scipy.linalg.solve(aa,df)
-        aa = aa.reshape(y.shape)
-        y = y + aa*h
-        
-        var.y = y
-        var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
-        
-        return var
-
-    def step_ok(self, var, para, loss_eps = vulcan_cfg.loss_eps):
-        if np.all(var.y>=0) and np.amax( np.abs( np.fromiter(var.atom_loss.values(),float) - np.fromiter(var.atom_loss_prev.values(),float) ) )<loss_eps and para.delta<=rtol:
-            return True
-        else:
-            return False    
-    
-    def one_step(self, var, atm, para):
-        
-        while True:
-           var = self.solver(var, atm)
-           
-           # clipping small negative values and also calculating atomic loss (atom_loss)  
-           var , para = self.clip(var, para, atm) 
-            
-           if self.step_ok(var, para): break
-           elif self.step_reject(var, para): break # giving up and moving on
-               
-        return var, para                    
-    
-    def step_size(self, var, para):
-        '''
-        PID control required for all semi-Euler like methods
-        '''
-        dt_var_min, dt_var_max, dt_min, dt_max = vulcan_cfg.dt_var_min, vulcan_cfg.dt_var_max, vulcan_cfg.dt_min, vulcan_cfg.dt_max
-        PItol = vulcan_cfg.PItol
-        dy, dy_prev, h = var.dy, var.dy_prev, var.dt
-        
-        if dy == 0 or dy_prev == 0: 
-            var.dt = np.minimum(h*2.,dt_max)
-            return var
-            
-        if para.count > 0:
-            
-            h_factor = (dy_prev/dy)**0.075 * (PItol/dy)**0.175
-            h_factor = np.maximum(h_factor, dt_var_min)    
-            h_factor = np.minimum(h_factor, dt_var_max)
-            h *= h_factor
-            h = np.maximum(h, dt_min)
-            h = np.minimum(h, dt_max)
-        
-        # store the adopted dt
-        var.dt = h
-
-        return var
-
-
-class SparSemiEU(SemiEU):
-    '''
-    class inheritance from SemiEU.
-    It is the same semi-implicit Euler solver except for utilizing sparse-matrix solvers
-    '''
-    def __init__(self):
-        SemiEU.__init__(self)
-    
-    # override solver
-    def solver(self, var, atm):
-        """
-        sparse-matrix semi-implicit Euler solver (1st order) 
-        """
-        y, ymix, h, k = var.y, var.ymix, var.dt, var.k
-        M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
-
-        diffdf = self.diffdf
-        jac_tot = self.jac_tot
-        
-        df = chemdf(y,M,k).flatten() + diffdf(var, atm).flatten()
-        dfdy = jac_tot(var, atm)        
-                
-        aa = sparse.csc_matrix( np.identity(ni*nz) - h*dfdy )
-        aa = sparse.linalg.spsolve(aa,df)
-        aa = aa.reshape(y.shape)
-        y = y + aa*h
-        
-        var.y = y
-        var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
-
-        return var 
-    
-
-### back-up methods: extrapolation semi_implicit Euler ###
+# class SemiEU(ODESolver):
+#     '''
+#     class inheritance from ODEsolver for semi-implicit Euler solver
+#     '''
+#     def __init__(self):
+#         ODESolver.__init__(self)
+#
+#     def solver(self, var, atm):
+#         """
+#         semi-implicit Euler solver (1st order)
+#         """
+#         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
+#         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
+#
+#         diffdf = self.diffdf
+#         jac_tot = self.jac_tot
+#
+#         df = chemdf(y,M,k).flatten() + diffdf(var, atm).flatten()
+#         dfdy = jac_tot(var, atm)
+#         aa = np.identity(ni*nz) - h*dfdy
+#         aa = scipy.linalg.solve(aa,df)
+#         aa = aa.reshape(y.shape)
+#         y = y + aa*h
+#
+#         var.y = y
+#         var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+#
+#         return var
+#
+#     def step_ok(self, var, para, loss_eps = vulcan_cfg.loss_eps):
+#         if np.all(var.y>=0) and np.amax( np.abs( np.fromiter(var.atom_loss.values(),float) - np.fromiter(var.atom_loss_prev.values(),float) ) )<loss_eps and para.delta<=rtol:
+#             return True
+#         else:
+#             return False
+#
+#     def one_step(self, var, atm, para):
+#
+#         while True:
+#            var = self.solver(var, atm)
+#
+#            # clipping small negative values and also calculating atomic loss (atom_loss)
+#            var , para = self.clip(var, para, atm)
+#
+#            if self.step_ok(var, para): break
+#            elif self.step_reject(var, para): break # giving up and moving on
+#
+#         return var, para
+#
+#     def step_size(self, var, para):
+#         '''
+#         PID control required for all semi-Euler like methods
+#         '''
+#         dt_var_min, dt_var_max, dt_min, dt_max = vulcan_cfg.dt_var_min, vulcan_cfg.dt_var_max, vulcan_cfg.dt_min, vulcan_cfg.dt_max
+#         PItol = vulcan_cfg.PItol
+#         dy, dy_prev, h = var.dy, var.dy_prev, var.dt
+#
+#         if dy == 0 or dy_prev == 0:
+#             var.dt = np.minimum(h*2.,dt_max)
+#             return var
+#
+#         if para.count > 0:
+#
+#             h_factor = (dy_prev/dy)**0.075 * (PItol/dy)**0.175
+#             h_factor = np.maximum(h_factor, dt_var_min)
+#             h_factor = np.minimum(h_factor, dt_var_max)
+#             h *= h_factor
+#             h = np.maximum(h, dt_min)
+#             h = np.minimum(h, dt_max)
+#
+#         # store the adopted dt
+#         var.dt = h
+#
+#         return var
+#
+#
+# class SparSemiEU(SemiEU):
+#     '''
+#     class inheritance from SemiEU.
+#     It is the same semi-implicit Euler solver except for utilizing sparse-matrix solvers
+#     '''
+#     def __init__(self):
+#         SemiEU.__init__(self)
+#
+#     # override solver
+#     def solver(self, var, atm):
+#         """
+#         sparse-matrix semi-implicit Euler solver (1st order)
+#         """
+#         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
+#         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
+#
+#         diffdf = self.diffdf
+#         jac_tot = self.jac_tot
+#
+#         df = chemdf(y,M,k).flatten() + diffdf(var, atm).flatten()
+#         dfdy = jac_tot(var, atm)
+#
+#         aa = sparse.csc_matrix( np.identity(ni*nz) - h*dfdy )
+#         aa = sparse.linalg.spsolve(aa,df)
+#         aa = aa.reshape(y.shape)
+#         y = y + aa*h
+#
+#         var.y = y
+#         var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
+#
+#         return var
+#
+#
+# ### back-up methods: extrapolation semi_implicit Euler ###

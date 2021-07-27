@@ -102,7 +102,7 @@ for sp in plot_spec:
 plt.gca().set_xscale('log')       
 #plt.gca().set_yscale('log') 
 #plt.gca().invert_yaxis() 
-plt.xlim((1.E-18, 1.e-2))
+plt.xlim((1.E-14, 1.e-2))
 plt.ylim((0, 80.))
 #plt.ylim((1.E3,data['atm']['pco'][-1]/1e6))
 plt.legend(frameon=0, prop={'size':13}, loc='best')

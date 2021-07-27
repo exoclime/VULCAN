@@ -1,6 +1,8 @@
 #species flux [cm-2 s-1] 
 CO            +2e7       
 H2            -3.6e8   
-N             -2e6
-NO            -2e7
-O             +2e7     
+N             +2e6
+NO            +2e7
+O             -2e7
+
+# +: inflow; -: outflow     

@@ -1,0 +1,8 @@
+# wavelength (nm) photoabsorption  photodissociation  photoionisation (cm^2)  # from Mainz and assuming the absorption followed by dissociation too (e.g. Zhang+ 2012)
+425.,            1.34e-19,        1.34e-19,        0
+450.,            2.54e-18,        2.54e-18,        0
+475.,            3.40e-18,        3.40e-18,        0
+500.,            5.20e-18,        5.20e-18,        0 
+525.,            3.52e-18,        3.52e-18,        0
+550.,            2.27e-18,        2.27e-18,        0
+575.,            1.82e-18,        1.82e-18,        0
