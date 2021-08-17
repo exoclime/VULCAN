@@ -769,7 +769,7 @@ class Atm(object):
             elif sp == "S2":
                 atm.sat_p[sp] = np.zeros(nz)
                 # from Zahnle 2014 (refitted from Lyons 2008)
-                atm.sat_p[sp][T<413] = np.exp(27. - 1850./T[T<413]) *1e6 # in bar => cgs
+                atm.sat_p[sp][T<413] = np.exp(27. - 18500./T[T<413]) *1e6 # in bar => cgs
                 atm.sat_p[sp][T>=413] = np.exp(16.1 - 14000./T[T>=413]) *1e6
             
             elif sp == "S8":
