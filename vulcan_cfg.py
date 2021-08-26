@@ -7,12 +7,12 @@ atom_list = ['H', 'O', 'C', 'N']
 # ====== Setting up paths and filenames for the input and output files  ======
 # input:
 network = 'thermo/NCHO_photo_network.txt'
-use_lowT_limit_rates = False         # for low-T Jupiter
+use_lowT_limit_rates = False
 gibbs_text = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder = 'thermo/photo_cross/'
 com_file = 'thermo/all_compose.txt'
 atm_file = 'atm/atm_HD189_Kzz.txt' # TP and Kzz (optional) file
-sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' # This is the flux density at the stellar surface
+sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' # sflux-HD189_B2020.txt This is the flux density at the stellar surface
 top_BC_flux_file = 'atm/BC_top.txt' # the file for the top boundary conditions
 bot_BC_flux_file = 'atm/BC_bot.txt' # the file for the lower boundary conditions
 vul_ini = 'output/HD189-nominal.vul' # the file to initialize the abundances for ini_mix = 'vulcan_ini'
@@ -25,7 +25,7 @@ out_name =  'HD189.vul' # output file name
 # ====== Setting up the elemental abundance ======
 use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
 # customized elemental abundance (only read when use_solar = False)
-O_H = 6.0618E-4 *(0.85) #*(0.793)  
+O_H = 6.0618E-4 #*(0.793)  
 C_H = 2.7761E-4  
 N_H = 8.1853E-5
 S_H = 1.3183E-5
@@ -41,7 +41,7 @@ use_photo = True
 r_star = 0.805 # stellar radius in solar radius
 Rp = 1.138*7.1492E9 # Planetary radius (cm) (for computing gravity)
 orbit_radius = 0.03142 # planet-star distance in A.U.
-sl_angle = 58 /180.*3.14159 # the zenith angle of the star in degree (usually 58 deg for the dayside average)
+sl_angle = 48 /180.*3.14159 # the zenith angle of the star in degree (usually 58 deg for the dayside average)
 f_diurnal = 1. # to account for the diurnal average of solar flux (i.e. 0.5 for Earth; 1 for tidally-locked planets) 
 scat_sp = ['H2', 'He'] # the bulk gases that contribute to Rayleigh scattering
 T_cross_sp = [] # warning: slower start! available atm: 'CO2','H2O','NH3', 'SH','H2S','SO2', 'S2', 'COS', 'CS2'
@@ -65,14 +65,14 @@ if use_photo == False and use_ion == True:
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: changes the molecular diffsion, thermal diffusion factor, and settling velocity
 rocky = False # for the surface gravity
-nz = 120   # number of vertical layers
+nz = 150   # number of vertical layers
 P_b = 1e9  # pressure at the bottom (dyne/cm^2)
 P_t = 1e-2 # pressure at the top (dyne/cm^2)
 use_Kzz = True
 use_moldiff = True
 use_vz = False
 atm_type = 'file'  # Options: 'isothermal', 'analytical', 'file', or 'vulcan_ini' 'table'
-Kzz_prof = 'Pfunc' # Options: 'const','file' or 'Pfunc' (Kzz increased with P^-0.4)
+Kzz_prof = 'file' # Options: 'const','file' or 'Pfunc' (Kzz increased with P^-0.4)
 K_max = 1e5        # for Kzz_prof = 'Pfunc'
 K_p_lev = 0.1      # for Kzz_prof = 'Pfunc'
 vz_prof = 'const'  # Options: 'const' or 'file'
@@ -93,7 +93,7 @@ update_frq = 100
 use_topflux = False
 use_botflux = False
 use_fix_sp_bot = {} # fixed mixing ratios at the lower boundary
-diff_esc = ['H'] # species for diffusion-limit escape at TOA
+diff_esc = [] # species for diffusion-limit escape at TOA
 max_flux = 1e13  # upper limit for the diffusion-limit fluxes
 
 # ====== Reactions to be switched off  ======
@@ -102,9 +102,6 @@ remove_list = [] # in pairs e.g. [1,2]
 # == Condensation ======
 use_condense = False
 use_settling = False
-use_relax = ['H2O', 'NH3']
-r_p = {'H2O_l_s': 0.01, 'H2SO4_l': 1e-4}  # particle radius in cm (1e-4 = 1 micron)
-rho_p = {'H2O_l_s': 0.9, 'H2SO4_l': 1.8302} # particle density in g cm^-3
 start_conden_time = 1e10
 condense_sp = []     
 non_gas_sp = []
@@ -138,11 +135,11 @@ loss_eps = 1e-1
 yconv_cri = 0.01 # for checking steady-state
 slope_cri = 1.e-4
 yconv_min = 0.1
-flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
 flux_cri = 0.1
+flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
 
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
-rtol = 0.5             # relative tolerence for adjusting the stepsize 
+rtol = 0.2             # relative tolerence for adjusting the stepsize 
 post_conden_rtol = 0.1 # switched to this value after fix_species_time
 
 # ====== Setting up for ouwtput and plotting ======
@@ -159,7 +156,7 @@ use_PIL = True
 live_plot_frq = 10
 save_movie_rate = live_plot_frq
 y_time_freq = 1  #  storing data for every 'y_time_freq' step
-plot_spec = ['H2O', 'H', 'CH4', 'CO', 'CO2', 'HCN', 'NH3' ]
+plot_spec = ['H2O', 'H', 'CH4', 'CO', 'CO2', 'C2H2', 'HCN', 'NH3' ]
 # output:
 output_humanread = False
 use_shark = False
