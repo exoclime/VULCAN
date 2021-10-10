@@ -4,7 +4,7 @@
 Photochemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python code.
 VULCAN is implemented with the equilibrium chemistry code [FastChem](https://github.com/exoclime/FastChem)  created by Daniel Kitzmann, Joachim Stock, to initialise a state in chemical equilibrium.
 
-The theory papers of VULCAN can be found here: https://arxiv.org/abs/2108.01790 (with photochemistry) and https://arxiv.org/abs/1607.00409 (without photochemistry).
+The theory papers of VULCAN can be found here: [Tsai et al. 2021](https://arxiv.org/abs/2108.01790) (with photochemistry) and [Tsai et al. 2017](https://arxiv.org/abs/1607.00409) (without photochemistry).
 This is currently a release candidate version. Any questions or feedbacks is welcome and can be sent to [Shami Tsai](mailto:shang-min.tsai@physics.ox.ac.uk)
 
 * Running with realtime plotting:\
@@ -109,7 +109,10 @@ for a weaker vertical mixing (K<sub>zz</sub>) and carbon rich (C/O=1) run. Set u
 `vulcan.py`: the top-level main script of VULCAN  
 `vulcan_cfg.py`: the configuration file for VULCAN  
 
-```vulcan_cfg.py``` includes all the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc. Typically this is the only file you need to edit for each specific run. A summary of every setting is listed in ```vulcan_cfg_readme.txt```.
+Typically ```vulcan_cfg.py``` is the only file you need to edit for each specific run. If you want to look inside or modify the code, `store.py` is where almost all classes and variables are declared.  
+
+### Configuration File ###
+<strong>All the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc, are prescribed in ```vulcan_cfg.py```<\strong>. Typically this is the only file you need to edit for each specific run. A useful cheatsheet describing what every parameter does can be found in ```vulcan_cfg_readme.txt```. The configuration files used for the model validation in [Tsai et al. 2021](https://arxiv.org/abs/2108.01790) are also provided in the cfg_examples folder.  
 
 ### Input Files
 The key input files of VULCAN include the chemical network, atmospheric T-P profile, and stellar flux. ```NCHO_photo_network.txt``` is the deafult reaction network including nitrogen, carbon, hydrogen, and oxygen species. It is validated from ~ 500 to 3000 K with about 60 gaseous species and 700 reactions.
@@ -140,9 +143,6 @@ Here, a7 and a8 are separated by 0. The first two rows are for low temperature (
 
 The reaction number, i.e. **id**, is irrelevent as it will be automatically generated (and writing into the network file) while calling ```make_chem_funs```. Three-body or dissociation reactions should also be separately listed after the comment line as the default network.
 After changing the network, you can examine all the readable information, like the list of reactions and species in ```chem_funs.py```, being updated while running python vulcan.py (without -n argument).
-
-### Configuration File ###
-All the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc, are prescribed in ```vulcan_cfg.py```. A useful summary describing what every parameter does can be found in ```vulcan_cfg_readme.txt```.
 
 ### Boundary Conditions ###
 If both use_topflux and use_botflux in vulcan_cfg.py are set to False, it will use the default boundary condition -- zero flux boundary i.e. nothing coming in or out. When use_topflux = True, it reads the file prescribed in top_BC_flux_file as the incoming/outgoing flux at the top boundary. Similarly, when use_botflux = True, the file prescribed in bot_BC_flux_file is read in for the surface pressure and sinks at the bottom boundary. In addition, you can also use the dictionary use_fix_sp_bot to set fixed mole fraction at the surface. e.g. use_fix_sp_bot = {'CO2': 0.01} sets the surface CO<sub>2</sub> mixing ratio to 0.01.
