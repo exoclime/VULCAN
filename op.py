@@ -200,8 +200,8 @@ class ReadRate(object):
                         k_inf = 1.031E-10 * Tco**-0.018 *np.exp(16.74/Tco)
                         # the pressure dependence from Jasper 2017
                         Fc = 0.1855*np.exp(-Tco/155.8)+0.8145*np.exp(-Tco/1675.)+np.exp(-4531./Tco) 
-                        n = 0.75 - 1.27*np.log(Fc)
-                        ff = np.exp( np.log(Fc)/(1.+ (np.log(k[i]*M/k_inf)/n**2)**2 ) )
+                        nn = 0.75 - 1.27*np.log(Fc)
+                        ff = np.exp( np.log(Fc)/(1.+ (np.log(k[i]*M/k_inf)/nn**2)**2 ) )
                         
                         k[i] = k[i]/(1 + k[i]*M/k_inf ) *ff
                     
