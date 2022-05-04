@@ -170,7 +170,7 @@ $ xcode-select --install
 ## Remarks
 The project is financially support from the Center for Space and Habitability (CSH), the PlanetS NCCR framework and the Swiss-based MERAC Foundation.
 The Exoclime Simulation Platform ([ESP][1]) develops a set of open-source codes
-for research on exoplanets. The three parts of the ESP are
+for research on exoplanets. The parts of the ESP are
   - [HELIOS][2] radiative transfer and retrieval,
   - [THOR][3] atmospheric fluid dynamics,
   - [VULCAN][4] atmospheric chemistry,
