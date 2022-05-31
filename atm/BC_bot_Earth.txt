@@ -1,27 +1,38 @@
 #species flux [cm-2 s-1]   v_dep [cm s-1]
-CO            3.7e11                 0.01
-CH4           1.2e+11                  0
-NH3           5.0e+10                0.01
-N2O           1.0e+9                   0
-NO            1.0e+9                0.016
-NO2           1.0e+9                  0.1
-HCN           4.4e+8                 0.1  
-H2S           2.0e+8                 0.015
+CO            3.7e11                 0.03
+CH4           1.6e+11                 0.
+NO            1.3e10                 0.001
+NH3           1.5e+9                  1.
+N2O           2.3e+9                 1E-4
+NO2              0                    0.01
+NO3              0                    0.1
 SO2           9.0e+9                   1.
-COS           5.0e+7                 0.01
+H2S           2.0e+8                 0.015
+COS           5.4e+7                 0.003
 H2SO4         7.0e+8                   1 
-H2            1.0e+6                   0
+HCN           1.7e+8                 0.13
+CH3CN         1.3e+8                 0.13
+HNO3             0                     4.
+H2SO4            0                     1.
+H2SO4_l          0                    0.2
+
+			  
+# tunning
+# N2O before 1e9   now      2e+9
+# H2S   before vd = 0.05  now 0.015
+# NO    before 0.016  now 0.001
+# NO2   before 0.1  now 0.01
    
 # Earth bottom boundary from Hauglustain 1994 
-# NH3 from https://www.sciencedirect.com/science/article/pii/S0074614208606361
+# NH3 17.9 Tg/yr from Seinfeld (bacterial  nitrogen  fixation)
+#
 # (Chapter 9 Nitrogen Compounds in the Troposphere of Chemistry of the Natural Atmosphere)
 # Alos, Table 2.5(N2O -p.35) and 2.14(CO) in Seinfeld & Pandis  
-# HCN from Li 2003 (doi:10.1029/2002JD003975, 2003)
+# HCN from Li 2003 [A global three-dimensional model analysis of the atmo- spheric budgets of HCN and CH3CN: Constraints from aircraft and ground measurements]
 # H2 from Hauglustain 1994 
+# Earth surface area = 5.101E18 cm2
 
-# NO2              0                    0.1
-# NO3              0                    0.1
-# HNO3             0                     4.
-# N2O5             0                     4.
-# CO2              0                   6e-5
-# to balance carbon
+# Seinfeld & Pandis : 
+# N2O: 2.3e9 from Table 2.5
+# NO:  1.3e10 from Table 2.6
+# CH4: 1.6e11 from Table 2.11 
