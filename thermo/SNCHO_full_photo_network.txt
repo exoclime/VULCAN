@@ -12,6 +12,16 @@
 # 611	[ SH + H2S2 -> H2S + HS2             ]  1.00E-11     0.000       0.0       Jim
 # 615	[ H2S2 + OH -> H2O + HS2             ]  1.00E-10     0.000       0.0       Jim
 # 763	[ SH + SH + M -> H2S2 + M            ]   2.40E-29   -0.76       0.0         2006CER/KRO437-455       	
+# 9.2019 updated and added a few CH2_1 and O_1 reactions; removing CH3NH (only CH2NH, CH2NH2, CH3NH2 are important (Tsai2018))
+# v813: Add CH3HN2, CH3HN, CH2NH2, and CH2NH; v814 reduced from v813 and reromved a few reactions involving CH2NH
+# v827: removed N_D (N2D) because I don't have its nasa9 gibbs energy (only nasa7 in venot's thesis)
+# v925: removed O + C2H3 -> HCO + CH2 and O + C2H4 -> H2CO + CH2; corrected a typo in NH + NO -> N2O + H
+# v518: added NH2 + NH3 -> N2H3 + H2; NH2 + NH2 + M -> N2H4 + M; NH3 -> NH + H + H (2nd branch)
+# v618: added  CH + H2O -> H2CO + H; OH photo; CH3CHO; add HCCO + H2 -> H2CCO + H and OH + C2H2 -> H2CCO + H
+# v018: added HNO (HNO <-> NOx) and HNO2
+# v118: added the photodisociation of NO and NO2
+# v218: added more HNO <-> NOx reactions (so far v118 is the best)
+# v0718: Higher rate of CH + CH2 from Moses; updated C + C + M -> C2 + M and reverse NH + M -> N + H 
 ##########################################################################################################################################################
 ##########################################################################################################################################################
 # In Temp, KIDA means the values are close to those on KIDA
@@ -292,7 +302,7 @@
 541  [ SH + O -> H + SO                   ]  1.60E-10     0.000       0.0          1997DEM/SAN1-266         298
 543  [ H + SH -> H2 + S                   ]  2.16E-11     0.000       0.0          1979NIC/AMO1868          295
 545  [ H + H2S -> H2 + SH                 ]  5.80E-17     1.940     455.0          1999PEN/HU5307-5311   190-2237
-547  [ C + SH -> H + CS                   ]  2.00E-10     0.500       0.0       Kida                     10-800
+615  [ C + SH -> H + CS                   ]  2.00E-10     0.000       0.0       Kida                     10-800
 549  [ H + COS -> CO + SH                 ]  9.07E-12     0.000    1940.0          197
 551  [ C + COS -> CO + CS                 ]  1.01E-10     0.000       0.0       1991DOR/CAU5109-5116     298
 553  [ CH4 + S -> CH3 + SH                ]  3.39E-10     0.000   10000.0       1996TSU/YAM17202-17206   1140-1480
