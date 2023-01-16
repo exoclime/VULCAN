@@ -90,6 +90,8 @@ class InitialAbun(object):
             ele_list = list(vulcan_cfg.atom_list)
             ele_list.remove('H')
             
+            fc_list = ['C', 'N', 'O', 'S', 'P', 'Si', 'Ti','V','Cl','K','Na','Mg','F','Ca','Fe']
+            
             if vulcan_cfg.use_solar == True: 
                 new_str = f.read() # read in as a string
                 print ("Initializing with the default solar abundance.")
@@ -99,13 +101,27 @@ class InitialAbun(object):
                 print ("{:4}".format('H') + str('1.'))
                 for line in f.readlines():   
                         li = line.split()
-                        if li[0] in ele_list:
-                            sp = li[0].strip()
+                        sp = li[0].strip()
+                        
+                        if sp in ele_list:
                             # read-in vulcan_cfg.sp_H
                             sp_abun = getattr(vulcan_cfg, sp+'_H')
                             fc_abun = 12. + np.log10(sp_abun)
                             line = sp + '\t' + "{0:.4f}".format(fc_abun) + '\n'
                             print ("{:4}".format(sp) + "{0:.4E}".format(sp_abun))
+
+                        elif sp in fc_list: # other elements included in fastchem but not in VULCAN 
+                            sol_ratio = li[1].strip()
+                            # print (sp + ":  " + str(sol_ratio))
+                            if hasattr(vulcan_cfg, 'fastchem_met_scale'): # vulcan_cfg.fastchem_met_scale exists 
+                                met_scale = vulcan_cfg.fastchem_met_scale
+                            else:
+                                met_scale = 1.
+                                print ("fastchem_met_scale not specified in vulcan_cfg. Using solar metallicity for other elements not included in vulcan.")
+                            
+                            new_ratio = float(sol_ratio) + np.log10(met_scale)
+                            line = sp + '\t' + "{0:.4f}".format(new_ratio) + '\n'
+                            
                         new_str += line
                 
             # make the new elemental abundance file
@@ -198,23 +214,32 @@ class InitialAbun(object):
             for sp in vulcan_cfg.condense_sp:
                 data_atm.sat_mix[sp] = data_atm.sat_p[sp]/data_atm.pco
                 
-                if  vulcan_cfg.ini_mix != 'table' and vulcan_cfg.ini_mix != 'vul_ini':
-                    # the level where condensation starts    
-                    conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
-                    # conden_status: ture if the partial p >= the saturation p
-                    sat_rho = data_atm.n_0 * data_atm.sat_mix[sp]
-                    conden_status = data_var.y[:,species.index(sp)] >= sat_rho
-
-                    # take the min between the mixing ratio and the saturation mixing ratio
-                    data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
-
-                    if list(data_var.y[conden_status,species.index(sp)]): # if it condenses
-                        min_sat = np.amin(data_atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
-                        conden_min_lev = np.where(data_atm.sat_mix[sp] == min_sat)[0][0]
+                # fixed 2022
+                data_atm.sat_mix[sp] = np.minimum(1., data_atm.sat_mix[sp])
+                
+                if sp == 'H2O': data_atm.sat_mix[sp] *= vulcan_cfg.humidity
+                
+                if vulcan_cfg.use_ini_cold_trap == True:
                     
-                        print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
-                        #data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
-                        data_var.y[conden_min_lev:,species.index(sp)] = data_atm.sat_mix[sp][conden_min_lev] * data_atm.n_0[conden_min_lev:]  
+                    if  vulcan_cfg.ini_mix != 'table' and vulcan_cfg.ini_mix != 'vul_ini':
+                        # the level where condensation starts    
+                        conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                        # conden_status: ture if the partial p >= the saturation p
+                        sat_rho = data_atm.n_0 * data_atm.sat_mix[sp]
+                        conden_status = data_var.y[:,species.index(sp)] >= sat_rho
+
+                        # take the min between the mixing ratio and the saturation mixing ratio
+                        data_var.y[:,species.index(sp)] = np.minimum(data_atm.n_0 * data_atm.sat_mix[sp], data_var.y[:,species.index(sp)])
+
+                        if list(data_var.y[conden_status,species.index(sp)]): # if it condenses
+                            min_sat = np.amin(data_atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
+                            conden_min_lev = np.where(data_atm.sat_mix[sp] == min_sat)[0][0]
+                            
+                            data_atm.conden_min_lev = conden_min_lev
+                            
+                            print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
+                            #data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
+                            data_var.y[conden_min_lev:,species.index(sp)] = data_atm.sat_mix[sp][conden_min_lev] * data_atm.n_0[conden_min_lev:]  
                            
         # re-normalisation 
         # TEST
@@ -768,13 +793,18 @@ class Atm(object):
                 
             elif sp == "S2":
                 atm.sat_p[sp] = np.zeros(nz)
-                # from Zahnle 2014 (refitted from Lyons 2008)
+                # from Zahnle 2017 (refitted from Lyons 2008)
                 atm.sat_p[sp][T<413] = np.exp(27. - 18500./T[T<413]) *1e6 # in bar => cgs
                 atm.sat_p[sp][T>=413] = np.exp(16.1 - 14000./T[T>=413]) *1e6
             
+            elif sp == "S4":
+                atm.sat_p[sp] = np.zeros(nz)
+                # from Lyons 2008
+                atm.sat_p[sp] = 10**(6.0028 -6047.5/T) *1.01325e6 # atm to vgs
+            
             elif sp == "S8":
                 atm.sat_p[sp] = np.zeros(nz)
-                # from Zahnle 2014 (refitted from Lyons 2008)
+                # from Zahnle 2017 (refitted from Lyons 2008)
                 atm.sat_p[sp][T<413] = np.exp(20. - 11800./T[T<413]) *1e6 # in bar => cgs
                 atm.sat_p[sp][T>=413] = np.exp(9.6 - 7510./T[T>=413]) *1e6
             
