@@ -832,36 +832,52 @@ class Integration(object):
             
             
             # Condensation (needs to be after solver.one_step)
-            if vulcan_cfg.use_condense == True and var.t > vulcan_cfg.start_conden_time:
+            if vulcan_cfg.use_condense == True and var.t >= vulcan_cfg.start_conden_time and para.fix_species_start == False:
                 # updating the condensation rates 
                 var = self.conden(var,atm)
                 
-                if vulcan_cfg.fix_species and var.t > vulcan_cfg.fix_species_time:
+                if vulcan_cfg.fix_species and var.t > vulcan_cfg.stop_conden_time:
                     
-                    # TEST 2021
-                    vulcan_cfg.rtol = vulcan_cfg.post_conden_rtol
-                    
-                    if para.fix_species_start == False: # switch
+                    if para.fix_species_start == False: # switch to run for the first time
+                        
+                        para.fix_species_start = True
+                        vulcan_cfg.rtol = vulcan_cfg.post_conden_rtol
+                        print ("rtol changed to " + str(vulcan_cfg.rtol) + " after fixing the condensaed species.")
+            
                         var.fix_y = {}
                         for sp in vulcan_cfg.fix_species:
-                            var.fix_y[sp] = np.copy(var.y[:,species.index(sp)])
-                        para.fix_species_start = True
+                            var.fix_y[sp] = np.copy(var.y[:,species.index(sp)]) 
                             
+                            # record the cold trap levels
+                            if vulcan_cfg.fix_species_from_coldtrap_lev == True:
+                                
+                                if sp == 'H2O_l_s' or sp == 'H2SO4_l' or sp == 'NH3_l_s' or sp == 'S8_l_s': atm.conden_min_lev[sp] = -1 # fix condensates through the whole amtosphere
+                                else:                                
+                                    sat_rho = atm.n_0 * atm.sat_mix[sp]
+                                    conden_status = var.y[:,species.index(sp)] >= sat_rho
+                                
+                                    if list(var.y[conden_status,species.index(sp)]): # if it condenses
+                                        min_sat = np.amin(atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
+                                        conden_min_lev = np.where(atm.sat_mix[sp] == min_sat)[0][0]
+                                        atm.conden_min_lev[sp] = conden_min_lev
+                                        print (sp + " is now fixed from " + "{:.2f}".format(atm.pco[atm.conden_min_lev[sp]]/1e6) + " bar." )
+                                    else:
+                                        print (sp + " not condensed.")
+                                        atm.conden_min_lev[sp] = 0
+                                    
                     else: pass # do nothing after fix_species has started
-                        
-                if 'H2O' in vulcan_cfg.condense_sp:
-                    if 'H2O' in vulcan_cfg.fix_species and para.fix_species_start == True: pass
-                    elif vulcan_cfg.use_relax and var.t > vulcan_cfg.start_conden_time:
-                        if 'H2O' in vulcan_cfg.use_relax: 
-                            var = self.h2o_conden_evap_relax(var,atm)
-                        if 'NH3' in vulcan_cfg.use_relax:
-                            var = self.nh3_conden_evap_relax(var,atm)
+                
+                # this is inside the fix_species_start == False loop        
+                if vulcan_cfg.use_relax:
+                    if 'H2O' in vulcan_cfg.use_relax: 
+                        var = self.h2o_conden_evap_relax(var,atm)
+                    if 'NH3' in vulcan_cfg.use_relax:
+                        var = self.nh3_conden_evap_relax(var,atm)
                                           
             if para.count % vulcan_cfg.update_frq == 0: # updating mu and dz (dzi) due to diffusion
                 atm = self.update_mu_dz(var, atm, make_atm)
                 atm = self.update_phi_esc(var, atm) # updating the diffusion-limited flux
                 
-            # Test?
             # MAINTAINING HYDROSTATIC BALANCE
             if vulcan_cfg.use_condense == True:
                 #var.v_ratio = np.sum(var.y[:,atm.gas_indx], axis=1) / atm.n_0
@@ -1172,7 +1188,32 @@ class Integration(object):
                 # negative: evaporation
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
+            
+            elif var.Rf[re] == 'S4 -> S4_l_s' and 'S4' in vulcan_cfg.condense_sp:
+                m = 32.06*4/Navo 
+                rho_p = atm.rho_p['S4_l_s']
+                r_p = atm.r_p['S4_l_s']
                 
+                # new approach: contiuum regime DM/rho c
+                Dg = np.insert(atm.Dzz[:,species.index('S4')], 0, atm.Dzz[0,species.index('S4')])
+                rate = Dg * m/rho_p /r_p**2 * (var.y[:,species.index('S4')] - atm.sat_p['S4']/kb/atm.Tco)
+                
+                # how many gas molecules are contained in one particle with the assumed size r_p
+                n_mol = 4./3*np.pi*r_p**3 *rho_p /m
+                
+                # acc_ratio = var.y[:,species.index('S4_l_s')]/n_mol /vulcan_cfg.n_ccn # accomdation ratio: 0 all ccn available 1=no more free ccn
+                # lim_factor = 1-acc_ratio
+                # lim_factor[lim_factor<0] = 0
+                
+                var.k[re] = rate #*lim_factor 
+                var.k[re+1] = rate #/n_mol
+
+                # positive: condensation
+                var.k[re] = np.maximum(var.k[re], 0)
+                # negative: evaporation
+                var.k[re+1] = np.minimum(var.k[re+1], 0)
+                var.k[re+1] = np.abs(var.k[re+1])
+                    
             elif var.Rf[re] == 'S8 -> S8_l_s' and 'S8' in vulcan_cfg.condense_sp:
                 m = 360.152/Navo
                 rho_p = atm.rho_p['S8_l_s']
@@ -1760,7 +1801,14 @@ class ODESolver(object):
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
         # deposition velocity
         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
-        
+        # diffusion-limited escape
+        if vulcan_cfg.diff_esc: # not empty list
+            diff_lim = np.zeros(ni)
+            for sp in vulcan_cfg.diff_esc:
+                if y[-1,species.index(sp)] > 0:
+                    diff_lim[species.index(sp)] += atm.top_flux[species.index(sp)] /y[-1,species.index(sp)]
+            dfdy[j_indx[-1], j_indx[-1]] -= diff_lim # negative
+            
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
@@ -1874,6 +1922,14 @@ class ODESolver(object):
         # deposition velocity (off with fixed all BC)
         # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
         
+        # diffusion-limited escape
+        if vulcan_cfg.diff_esc: # not empty list
+            diff_lim = np.zeros(ni)
+            for sp in vulcan_cfg.diff_esc:
+                if y[-1,species.index(sp)] > 0:
+                    diff_lim[species.index(sp)] += atm.top_flux[species.index(sp)] /y[-1,species.index(sp)]
+            dfdy[j_indx[-1], j_indx[-1]] -= diff_lim # negative
+            
         # Fix bottom BC
         #print (dfdy[:, j_indx[0]])
         dfdy[:, j_indx[0]] = 0.
@@ -1998,6 +2054,14 @@ class ODESolver(object):
         # deposition velocity
         if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
         
+        # diffusion-limited escape
+        if vulcan_cfg.diff_esc: # not empty list
+            diff_lim = np.zeros(ni)
+            for sp in vulcan_cfg.diff_esc:
+                if y[-1,species.index(sp)] > 0:
+                    diff_lim[species.index(sp)] += atm.top_flux[species.index(sp)] /y[-1,species.index(sp)]
+            dfdy[j_indx[-1], j_indx[-1]] -= diff_lim # negative
+            
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) -( (vs[0]<0)*vs[0] )/dzi[0]
@@ -2443,19 +2507,29 @@ class Ros2(ODESolver):
         else:
             diffdf = self.diffdf_no_mol
             jac_tot = self.lhs_jac_no_mol
-    
+        
+        # now included in build_atm.py
+        # if para.count == 0 and vulcan_cfg.use_condense == True and species.index("H2O") in self.fix_sp_bot_index: # only do once at count = 0
+        #     self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))] = min(atm.sat_mix["H2O"][0],  self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))])
+        #     print ("\nThe fixed surface water is now reset by condensation and humidity to " + str(self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))]))
+        
         r = 1. + 1./2.**0.5
 
         df = chemdf(y,M,k).flatten() + diffdf(y, atm).flatten()
         lhs = jac_tot(var, atm)
         
-        # TEST condensation
-        # Fixed species
+        # Fixed species including only below the cold trap # TEST 2022
         if vulcan_cfg.use_condense == True and para.fix_species_start == True:
             for sp in vulcan_cfg.fix_species:
+                if vulcan_cfg.fix_species_from_coldtrap_lev == False: # if Ptop is not specified, fix the whole column # TEST2022
+                    pass
+                else:
+                    pfix_indx = atm.conden_min_lev[sp]
+                    atm.fix_sp_indx[sp] = np.arange(species.index(sp), species.index(sp) + ni*(pfix_indx), ni)
+                
                 df[atm.fix_sp_indx[sp]] = 0
                 lhs[atm.fix_sp_indx[sp],:] = 0
-                lhs[atm.fix_sp_indx[sp],atm.fix_sp_indx[sp]] = 1./(r*h)  # cuz the jacobian func is directly outputing 1./(r*h)*sparse.identity(ni*nz) - dfdy
+                lhs[atm.fix_sp_indx[sp],atm.fix_sp_indx[sp]] = 1./(r*h)  # cuz the jacobian func is directly outputing 1./(r*h)*sparse.identity(ni*nz) - dfdy                        
         
         if vulcan_cfg.use_ion == True:
             df[atm.fix_e_indx] = 0
@@ -2494,25 +2568,35 @@ class Ros2(ODESolver):
         # neglecting the errors at the surface
         if vulcan_cfg.use_botflux == True or vulcan_cfg.use_fix_sp_bot: delta[0] = 0
         
-        # TEST condensation
+        # TEST condensation 2022
         if vulcan_cfg.use_condense == True:
             delta[:,self.non_gas_sp_index] = 0
             delta[:,self.condense_sp_index] = 0
-            
+
             if para.fix_species_start == True:
-                
-                for sp in vulcan_cfg.fix_species:
-                    sol[:,species.index(sp)] = var.fix_y[sp].copy()
-                    # setting the trucation error = 0
+
+                for sp in vulcan_cfg.fix_species: 
+                    if vulcan_cfg.fix_species_from_coldtrap_lev == False: # if Ptop is not specified, fix the whole column # TEST2022
+                        sol[:,species.index(sp)] = var.fix_y[sp].copy() 
+                    else:
+                        #pfix_indx = min( range(len(atm.pco)), key=lambda i: abs(atm.pco[i]- vulcan_cfg.fix_species_Ptop[0] ))
+                        pfix_indx = atm.conden_min_lev[sp]
+                        sol[:pfix_indx,species.index(sp)] = var.fix_y[sp].copy()[:pfix_indx]
+
                     delta[:,species.index(sp)] = 0
-                            
+
+            # Recorde the condensing levels TEST 2022 # do we need this?
+            # for sp in ['H2O']:
+            #     conden_status = sol[:,species.index(sp)] >= atm.n_0 * atm.sat_mix[sp]*0.99
+            #     atm.conden_status = conden_status
+            # Recorde the condensing levels TEST 2022
 
         if vulcan_cfg.use_print_delta == True and para.count % vulcan_cfg.print_prog_num==0:
             max_indx = np.nanargmax(delta/sol, axis=1)
             max_lev_indx = np.nanargmax(delta/sol)
             print ('Largest delta (truncation error) from nz = ' + str(int(max_lev_indx/ni) ) )
             print ( np.array(species)[max_indx] )
-            #print ('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) ) 
+            print ('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) ) 
 
         delta = np.amax( delta[sol>0]/sol[sol>0] )
         
