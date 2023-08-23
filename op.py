@@ -843,7 +843,10 @@ class Integration(object):
                         para.fix_species_start = True
                         vulcan_cfg.rtol = vulcan_cfg.post_conden_rtol
                         print ("rtol changed to " + str(vulcan_cfg.rtol) + " after fixing the condensaed species.")
-            
+                        atm.vs *= 0
+                        print ("Turn off the settling velocity of all species")
+                        # updated 2023
+                        
                         var.fix_y = {}
                         for sp in vulcan_cfg.fix_species:
                             var.fix_y[sp] = np.copy(var.y[:,species.index(sp)]) 
@@ -851,7 +854,8 @@ class Integration(object):
                             # record the cold trap levels
                             if vulcan_cfg.fix_species_from_coldtrap_lev == True:
                                 
-                                if sp == 'H2O_l_s' or sp == 'H2SO4_l' or sp == 'NH3_l_s' or sp == 'S8_l_s': atm.conden_min_lev[sp] = -1 # fix condensates through the whole amtosphere
+                                if sp == 'H2O_l_s' or sp == 'H2SO4_l' or sp == 'NH3_l_s' or sp == 'S8_l_s': atm.conden_min_lev[sp] = nz-1 # fix condensates through the whole amtosphere 
+                                    # updated 2023
                                 else:                                
                                     sat_rho = atm.n_0 * atm.sat_mix[sp]
                                     conden_status = var.y[:,species.index(sp)] >= sat_rho
