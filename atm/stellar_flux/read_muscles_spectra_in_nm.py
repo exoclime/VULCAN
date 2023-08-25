@@ -35,7 +35,7 @@ spec = fits.getdata('hlsp_muscles_multi_multi_gj1214_broadband_v22_adapt-const-r
 new_str = '# WL(nm)\t Flux(ergs/cm**2/s/nm)\n'
 
 for n,wl in enumerate(spec['WAVELENGTH']):
-    new_str += '{:<12}'.format(wl*0.1) + "{:>12.2E}".format(float(spec['FLUX'][n]*10. *(47.5*(63241*au)/r_sun*0.2064)**2        )) + '\n'
+    new_str += '{:<12}'.format(wl*0.1) + "{:>12.2E}".format(float(spec['FLUX'][n]*10. *(47.5*(63241*au)/(r_sun*0.2064))**2        )) + '\n'
 
 
 

@@ -138,6 +138,7 @@ slope_cri = 1.e-4
 yconv_min = 0.1
 flux_cri = 0.1
 flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
+conver_ignore = [] # added 2023. to get rid off non-convergent species, e.g. HC3N without sinks 
 
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
 rtol = 0.2             # relative tolerence for adjusting the stepsize 

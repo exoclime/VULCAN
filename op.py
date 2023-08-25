@@ -1018,6 +1018,10 @@ class Integration(object):
         longdy[ymix < mtol_conv] = 0
         longdy[y < atol] = 0
         
+        # to get rid off non-convergent species, e.g. HC3N without sinks
+        if 'conver_ignore' in dir(vulcan_cfg):
+            for sp in vulcan_cfg.conver_ignore: longdy[:,species.index(sp)] = 0 # added 2023 
+        
         if vulcan_cfg.use_condense == True:
             longdy[:,self.non_gas_sp_index] = 0
         
