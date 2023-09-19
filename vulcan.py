@@ -46,6 +46,10 @@
 # ==============================================================================
 # ============ \V/ ========== Live long and prosper! ========== \V/ ============
 
+# needs to be placed before numpy is imported
+# Limiting the number of threads
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
 
 # import public modules
 import numpy as np
@@ -53,11 +57,9 @@ import matplotlib.pyplot as plt
 import matplotlib.legend as lg
 import scipy
 import scipy.optimize as sop
-import time, timeit, os, sys
+import time, timeit, sys
 import ast
 
-#Limiting the number of threads
-os.environ["OMP_NUM_THREADS"] = "1"
 # no arguments or not setting '-n' (no re-making chem_funs.py) option
 if len(sys.argv) < 2 or sys.argv[1] != '-n': 
     # running prepipe to construch chem_funs.py
