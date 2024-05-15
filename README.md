@@ -22,6 +22,7 @@ VULCAN requires the following python packages:
 - matplotlib
 - PIL/Pillow (optional: for interactive plotting)
 and the embeded [FastChem](https://github.com/exoclime/FastChem) requires a standard C++ compiler, like g++ or Clang.
+- numba (optional: for Monte Carlo RT module)
 
 If any of the python packages are missing, you can install the full SciPy Stack via Pip, e.g.
 ```bash
@@ -87,6 +88,7 @@ for a weaker vertical mixing (K<sub>zz</sub>) and carbon rich (C/O=1) run. Set u
 │   ├── op.py
 │   ├── phy_const.py
 │   ├── store.py
+│   ├── gCMCRT.py
 │   ├── vulcan.py
 │   ├── vulcan_cfg.py
 ```
@@ -104,7 +106,8 @@ for a weaker vertical mixing (K<sub>zz</sub>) and carbon rich (C/O=1) run. Set u
 `NCHO_photo_netowrk.txt`: the default N-C-H-O photochemical kinetics network  
 `op.py`: all the modules for the numerical operations, e.g. computing reaction rates, ODE solvers etc.    
 `make_chem_funs.py`: the routine that runs first to produce the required `chem_funs.py` based on the assigned chemical network    
-`phy_const.py`: physical constants  
+`phy_const.py`: physical constants 
+`gCMCRT.py`: 1D Monte Carlo radiative-transfer module 
 `store.py`: modules to store all the variables  
 `vulcan.py`: the top-level main script of VULCAN  
 `vulcan_cfg.py`: the configuration file for VULCAN  
@@ -156,6 +159,11 @@ will read vulcan output (.vul files) can plot the species profiles. Species shou
 
 The script of ```plot_vulcan.py``` should also serve as a good example of how to access to output files. The first step is to use "pickle.load" to unpack the binary files. The main variables are stored in three basic classes: data['variable'], data['atm'], and data['parameter'].
 You can also find all the names of variables and the class structure in ```store.py```.
+
+### Using the Monte Carlo radiative-transfer (MCRT) module ###
+To enable the MCRT module edit the use_gCMCRT variable to True in vulcan_cfg.py. The number of photon packets is given by the variable Nph in the same file.
+The MCRT will run slow at first past as it compiles and caches, but then will run a lot faster. We suggest lowering the number of packets if runtimes are too slow, but no smaller than 1000 packets. Alternativly, lower the number of wavelength bins for the photochemistry. 
+We include timing output of the MCRT module step to aid this determination.
 
 ### Troubleshooting ###
 - `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun`

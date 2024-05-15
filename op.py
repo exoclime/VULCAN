@@ -37,6 +37,10 @@ from phy_const import kb, Navo, hc, ag0 # hc is used to convert to the actinic f
 
 from vulcan_cfg import nz
 
+# gCMCRT radiative-transfer module
+import timeit
+from gCMCRT import gCMCRT_main
+
 # imported functions 
 chemdf = chem_funs.chemdf
 neg_achemjac = chem_funs.neg_symjac
@@ -819,13 +823,54 @@ class Integration(object):
                 if para.switch_final_photo_frq == False:
                     print ('update_photo_frq changed to ' + str(vulcan_cfg.final_update_photo_frq) +'\n')
                     para.switch_final_photo_frq = True
-            
+ 
             if vulcan_cfg.use_photo == True and para.count % self.update_photo_frq == 0:
-                self.odesolver.compute_tau(var, atm)
-                self.odesolver.compute_flux(var, atm)
-                self.odesolver.compute_J(var, atm)
+
+                if vulcan_cfg.use_gCMCRT == True:
+                  # Use Monte Carlo radiative-transfer module
+
+                  # Send positive cosine angle to gCMCRT
+                  mu_ang = np.cos(vulcan_cfg.sl_angle)
+
+                  # Need to strip dicts of vlaues into arrays
+                  abs_cross = np.zeros((len(var.photo_sp),len(var.bins)))
+                  i = 0
+                  for sp in var.photo_sp:
+                    abs_cross[i,:] = var.cross[sp]
+                    i += 1
+
+                  sca_cross = np.zeros((len(vulcan_cfg.scat_sp),len(var.bins)))
+                  i = 0
+                  for sp in vulcan_cfg.scat_sp:
+                    sca_cross[i,:] = var.cross_scat[sp]
+                    i += 1
+
+                  # Also set sets to lists
+                  ph_sp = list(var.photo_sp)
+
+                  start = timeit.default_timer()
+                  print('Start gCMCRT')
+
+                  Jdot = gCMCRT_main(para.count, vulcan_cfg.Nph, nz, len(var.bins), species, ph_sp, vulcan_cfg.scat_sp, var.y, abs_cross, sca_cross, var.sflux_top, mu_ang, atm.dz)
+
+                  end = timeit.default_timer()
+                  print('End gCMCRT, took: ', '{:.3f}'.format(end-start), 'seconds')
+
+                  # store the previous actinic flux into prev_aflux
+                  var.prev_aflux = np.copy(var.aflux)
+                  # converting to the actinic flux and storing the current flux
+                  var.aflux = Jdot / (hc/var.bins)
+                  # the change of the actinic flux
+                  var.aflux_change = np.nanmax( np.abs(var.aflux-var.prev_aflux)[var.aflux>vulcan_cfg.flux_atol]/var.aflux[var.aflux>vulcan_cfg.flux_atol] )
+
+                else:
+                  # Use regular two-stream shortwave approximation
+                  self.odesolver.compute_tau(var, atm)
+                  self.odesolver.compute_flux(var, atm)
+                  self.odesolver.compute_J(var, atm)
+
                 if vulcan_cfg.use_ion == True: # photoionisation rate
-                    self.odesolver.compute_Jion(var, atm)
+                   self.odesolver.compute_Jion(var, atm)
                                     
             # integrating one step
             var, para = self.odesolver.one_step(var, atm, para)
