@@ -585,8 +585,6 @@
 1067 [ C2H + M -> C2 + H + M              ]   2.92E+11	-5.160  	57400.0 
 1069 [ S + CO + M -> COS + M              ]   4.47E-34    0.00      1510.0      Tsai2020(reverse_of_COS+MandC_0_from_H2O_recombination) 
 1071 [ HSO + M -> SO + H + M              ]   1.40E-08    0.000     29500.       1994TSU/YOK8419-8423    1100-2000	
-1073 [ H2S + M -> S + H2 + M              ]   3.16E-10    0.000     3.29E04      1994WOI/ROT12958-12963  1890-2890	
-
 	  				
 # special cases
 # id	# Reactions 

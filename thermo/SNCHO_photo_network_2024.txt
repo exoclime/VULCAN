@@ -1,7 +1,7 @@
 # VULCAN N-C-H-O network for reducing atmospheres
 #########################################################################################################################################################
 # log history
-#
+# 2024: remove H2S + M -> S + H2 + M, which overest. the recombination rate   
 # 2023
 # Compared to SNCHO_photo_network, the rate consts of H + SH + M -> H2S + M and H + CS + M -> HCS + M  are updated, and H2S + M -> S + H2 + M is added
 ##########################################################################################################################################################
@@ -564,8 +564,6 @@
 1021 [ C2H + M -> C2 + H + M              ]   2.92E+11	-5.160  	57400.0 
 1023 [ S + CO + M -> COS + M              ]   4.47E-34    0.00      1510.0      Tsai2020(reverse_of_COS+MandC_0_from_H2O_recombination) 
 1025 [ HSO + M -> SO + H + M              ]   1.40E-08    0.000     29500.       1994TSU/YOK8419-8423    1100-2000	
-1027 [ H2S + M -> S + H2 + M              ]   3.16E-10    0.000     3.29E04      1994WOI/ROT12958-12963  1890-2890	
-
 	  				
 # special cases
 # id	# Reactions 
