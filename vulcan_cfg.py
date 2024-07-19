@@ -47,6 +47,9 @@ f_diurnal = 1. # to account for the diurnal average of solar flux (i.e. 0.5 for 
 scat_sp = ['H2', 'He'] # the bulk gases that contribute to Rayleigh scattering
 T_cross_sp = [] # warning: slower start! available atm: 'CO2','H2O','NH3', 'SH','H2S','SO2', 'S2', 'COS', 'CS2'
 
+use_gCMCRT = True  # Use Monte Carlo module for irradiation
+Nph = 2000          # Number of Monte Carlo photon packets
+
 edd = 0.5 # the Eddington coefficient 
 dbin1 = 0.1  # the uniform bin width < dbin_12trans (nm)
 dbin2 = 2.   # the uniform bin width > dbin_12trans (nm)
