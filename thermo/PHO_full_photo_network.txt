@@ -1,0 +1,382 @@
+# VULCAN P-H-O network for reducing atmospheres
+##########################################################################################################################################################
+# logged history
+# 11.2022 Elspeth K. H.  Lee - converted from Wang et al. (2016)/Twarowski (1995) P/H/O network with H/O reaction coefficients from VULCAN -
+# This is the full Wang et al. (2016) P/H/O network with added photochemical reactions
+# 5.2023 Elspeth K. H.  Lee - Added (non speculative) Moses reactions and replaced some reactions
+# 6.2023 Elspeth K. H. Lee - Added Plane P2O6 reaction rate + photochemical species
+##########################################################################################################################################################
+# In Temp, KIDA means the values are close to those on KIDA
+# in the form of k = A T^B exp(-C/T)
+# Two-body Reactions
+# id	Reactions                           	A       	B       	C      Ref 			             Temp
+
+1    [ O + OH -> O2 + H                   ]  7.47E-10    -0.500      30.0                       200-2500
+3    [ OH + H2 -> H2O + H                 ]  3.57E-16     1.520    1740.0      1992OLD/LOG8426-8430      250-2580
+5    [ O + H2O -> OH + OH                 ]  8.20E-14     0.950    8570.0                                250-2400
+7    [ O + H2 -> OH + H                   ]  8.52E-20     2.670    3160.0                                300-2500
+9    [ O_1 + H2 -> OH + H                 ]  2.87E-10     0.000       0.0       1975TUL1893              100-2100
+11   [ O_1 + O2 -> O + O2                 ]  3.20E-11     0.        -70.0       1997DEM/SAN1-266         200-300
+13   [ O_1 + H2O -> OH + OH               ]  1.62E-10     0.000     -65.0       2004DUN/RAV3333-3340     235-370
+15   [ HO2 + H -> OH + OH                 ]  2.81E-10     0.        440.0      1992BAU/COB411-429         300-1000
+17   [ HO2 + H -> O2 + H2                 ]  7.11E-11     0.        710.0      1992BAU/COB411-429         300-1000
+19   [ O + HO2 -> OH + O2                 ]  2.70E-11     0.       -224.0      2004ATK/BAU1461-1738       220-440
+21   [ OH + HO2 -> H2O + O2               ]  2.40E-08    -1.00        0.0       1986TSA/HAM1087          300-2500
+23   [ H2O2 + H -> H2 + HO2               ]  2.81E-12     0.       1890.0      1992BAU/COB411-429         300-1000
+25   [ H2O2 + H -> OH + H2O               ]  1.69E-11     0.       1800.0      1992BAU/COB411-429         300-1000
+27   [ O + H2O2 -> OH + HO2               ]  1.40E-12     0.       2000.0      2004ATK/BAU1461-1738       280-390
+29   [ OH + H2O2 -> H2O + HO2             ]  2.90E-12     0.        160.0      2004ATK/BAU1461-1738       240-460
+#69   [ H2O + PO3 -> OH + HOPO2            ]  5.25E-13      0.000    0.0         Wang et al. (2016)/Twarowski (1995)
+31   [ OH + HOPO2 -> PO3 + H2O            ]  1.993E-18      2.000  1007.00        Jayaweera+05; Glaude+00
+#69   [ H2 + PO3 -> H + HOPO2              ]  5.25E-13      0.000    0.0         Wang et al. (2016)/Twarowski (1995)
+33   [ H2 + PO3 -> H + HOPO2               ]  3.321E-12      0.000    0.0           Jayaweera+05; Glaude+00
+#75   [ O2 + PO -> O + PO2                 ]  5.25E-13      0.000    2884.13     Wang et al. (2016)/Twarowski (1995)
+#69   [ O2 + PO -> O + PO2                 ]  2.50E-12      0.305    0.0         Plane_et_al.(2021)
+35   [ O2 + PO -> O + PO2                 ]  2.30E-11      0.000    100.0      Douglas et al. (2020/2022)
+#77   [ O2 + P -> O + PO                   ]  5.25E-11      0.000    2111.98     Wang et al. (2016)/Twarowski (1995)
+#281  [ O2 + P -> O + PO                  ]  8.84e-19      2.24      0.0        Plane_et_al.(2021)
+37   [ O2 + P -> O + PO                   ]  4.20E-12      0.000    600.0       Douglas et al. (2019/2022)
+39   [ O2 + PH -> O + HPO                 ]  5.25E-13      0.000    2012.16     Wang et al. (2016)/Twarowski (1995)
+#81   [ H + HOPO -> H2O + PO               ]  5.25E-11      0.000    6013.62    Wang et al. (2016)/Twarowski (1995) 
+41   [ H + HOPO -> H2O + PO               ]  4.98E-12       0.000    4176.72    Jayaweera+05
+#41   [ H + HOPO -> H2O + PO               ]  5.25E-12      0.166    4176.72     Mackie et al. (2002)
+#83   [ H + HOPO -> H2 + PO2               ]  5.25E-11      0.000    21.65      Wang et al. (2016)/Twarowski (1995)
+43   [ H + HOPO -> H2 + PO2               ]  3.55E-17      1.94      5072.45    Haworth et al. (2002)
+#85   [ H + HOPO2 -> H2O + PO2             ]  5.25E-11      0.000    6013.62    Wang et al. (2016)/Twarowski (1995)
+#85   [ H + HOPO2 -> H2O + PO2             ]  9.13E-16      1.49      11372.76  Haworth et al. (2002)
+#85   [ H + HOPO2 -> H2O + PO2             ]  8.569E-05    -1.830    5401.00     Jayaweera+05
+45   [ H + HOPO2 -> H2O + PO2             ]  1.78E-11      0.176     5937.99    Mackie et al. (2002)
+#47   [ H + PO3 -> O + HOPO                ]  5.25E-11      0.000     0.0        Wang et al. (2016)/Twarowski (1995)
+47   [ O + HOPO -> H + PO3                ]   1.66E-12      0.00      7548.29    Jayaweera+05  
+#49   [ H + PO3 -> OH + PO2                ]  5.25E-11      0.000     19.24        Wang et al. (2016)/Twarowski (1995)
+49   [ H + PO3 -> OH + PO2                ]  1.16E-11      0.5     0.00         Plane_et_al.(2021)
+51   [ H + P2O3 -> PO + HOPO              ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+#91   [ H + HPO -> H2 + PO                 ]  5.25E-11      0.000     1989.30     Wang et al. (2016)/Twarowski (1995)
+53   [ H + HPO -> H2 + PO                 ]  4.000E-16      1.500      0.00       Jayaweera+05
+#93   [ H + PH3 -> H2 + PH2                ]  7.22E-11      0.000     884.0        Paul Rimmer (Arthur and Cooper 1997) (Disc.) 200-500 
+55   [ H + PH3 -> H2 + PH2                ]   7.000E-18    2.3576    45.123         Klippenstein calculation           (Disc.)
+#95   [ H + PH2 -> H2 + PH                 ]  5.25E-11      0.000     2609.91     Wang et al. (2016)/Twarowski (1995)
+57   [ H + PH2 -> H2 + PH                 ]   1.940E-16    1.8025    47.26        Klippenstein calculation
+#99   [ H + PH -> H2 + P                   ]  5.25E-11      0.000     2512.49     Wang et al. (2016)/Twarowski (1995)
+#95   [ H2 + P -> PH + H                   ]  6.7E-10       0.0       17349.00       Douglas et al. (2022)
+59   [ H + PH -> P + H2                   ]   1.540E-15     1.5073    5.7185      Klippenstein calculation
+61   [ H + P2O -> OH + P2                 ]  5.25E-11      0.000     2807.16     Wang et al. (2016)/Twarowski (1995)
+63   [ H + P2O -> PO + PH                 ]  5.25E-11      0.000     2810.76     Wang et al. (2016)/Twarowski (1995)
+65   [ H + P2O -> HPO + P                 ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+67   [ H + P2O2 -> PO + HPO               ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+69   [ H + H2POH -> H2O + PH2             ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+71   [ H + H2POH -> H2 + HPOH             ]  5.25E-11      0.000     2089.13     Wang et al. (2016)/Twarowski (1995)
+73   [ H + HPOH -> H2O + PH               ]  5.25E-11      0.000     0.0          Wang et al. (2016)/Twarowski (1995)
+75   [ H + HPOH -> H2 + HPO               ]  5.25E-11      0.000     2863.68     Wang et al. (2016)/Twarowski (1995)
+#115  [ O + HOPO -> OH + PO2               ]  5.25E-11      0.000     0.0          Wang et al. (2016)/Twarowski (1995)
+77   [ O + HOPO -> OH + PO2               ]  1.660E-11     0.000      0.00       Jayaweera+05; Glaude+00
+79   [ O + HOPO2 -> O2 + HOPO             ]  5.25E-11      0.000     4150.60     Wang et al. (2016)/Twarowski (1995)
+#81   [ O + PO3 -> O2 + PO2                ]  5.25E-11      0.000     0.0          Wang et al. (2016)/Twarowski (1995)
+81   [ O + PO3 -> O2 + PO2                ]  5.04E-11      -0.04     0.00        Plane_et_al.(2021)
+83   [ O + P2O3 -> PO + PO3               ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+85   [ O + P2O3 -> PO2 + PO2              ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+#125  [ O + HPO -> H + PO2                 ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+87   [ O + HPO -> H + PO2                 ]  1.660E-11      0.000     1511.00    Jayaweera+05
+#127  [ O + HPO -> OH + PO                 ]  5.25E-11      0.000     1392.75     Wang et al. (2016)/Twarowski (1995)
+89   [ O + HPO -> OH + PO                 ]  2.823E-16     1.500      0.00       Jayaweera+05
+91   [ O + P2 -> PO + P                   ]  5.25E-11      0.000     2288.78     Wang et al. (2016)/Twarowski (1995)
+#131  [ O + PH3 -> OH + PH2                ]  5.25E-11      0.000     1418.01     Wang et al. (2016)/Twarowski (1995)
+93   [ O + PH3 -> OH + PH2                ]  2.855E-18      2.296     915.60    Wang+05
+95   [ O + PH3 -> HPOH + H                ]  4.75E-11      0.000     0.0        Nava and Stief (1989) 208-408 
+97   [ O + PH2 -> H + HPO                 ]  5.25E-11      0.000     0.0        Wang et al. (2016)/Twarowski (1995)
+99   [ O + PH2 -> OH + PH                 ]  5.25E-11      0.000     1864.22     Wang et al. (2016)/Twarowski (1995)
+#141  [ O + PH -> H + PO                   ]  5.25E-11      0.000     1201.52    Wang et al. (2016)/Twarowski (1995)
+101  [ O + PH -> PO + H                   ]  2.00E-10     0.0     0.0         Douglas et al. (2022)
+103  [ O + PH -> OH + P                   ]  5.25E-11      0.000     1873.84     Wang et al. (2016)/Twarowski (1995)
+105  [ O + P2O -> O2 + P2                 ]  5.25E-11      0.000     1704.26     Wang et al. (2016)/Twarowski (1995)
+107  [ O + P2O -> PO + PO                 ]  5.25E-11      0.000     849.12     Wang et al. (2016)/Twarowski (1995)
+109  [ O + P2O -> PO2 + P                 ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+111  [ O + P2O2 -> O2 + P2O               ]  5.25E-11      0.000     3089.80     Wang et al. (2016)/Twarowski (1995)
+113  [ O + P2O2 -> PO + PO2               ]  5.25E-11      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+115  [ O + H2POH -> OH + HPOH             ]  5.25E-11      0.000     1408.39     Wang et al. (2016)/Twarowski (1995)
+117  [ O + HPOH -> H + HOPO               ]  5.25E-11      0.000     0.0          Wang et al. (2016)/Twarowski (1995)
+119  [ O + HPOH -> OH + HPO               ]  5.25E-11      0.000     2310.43     Wang et al. (2016)/Twarowski (1995)
+#161  [ OH + PO -> H + PO2                 ]  5.25E-13      0.000     3004.40        Wang et al. (2016)/Twarowski (1995)
+121  [ OH + PO -> H + PO2                 ]  1.2E-10      0.000      0.0          Douglas et al. (2022)
+#163  [ OH + HOPO -> H2O + PO2             ]  5.25E-13      0.000     0.0       Wang et al. (2016)/Twarowski (1995)
+123  [ OH + HOPO -> H2O + PO2             ]  6.17E-11      -0.219    1610.30    Mackie et al. (2002)
+#125  [ OH + HOPO -> H + HOPO2             ]  5.25E-13      0.000     4886.67     Wang et al. (2016)/Twarowski (1995)
+125  [ OH + HOPO -> H + HOPO2             ]  7.69E-08      -1.25     0.0        Plane_et_al.(2021)
+#163  [ OH + PO3 -> O + HOPO2              ]  5.25E-13      0.000     0.0        Wang et al. (2016)/Twarowski (1995)
+127  [ O + HOPO2 -> OH + PO3              ]  1.660E-11      0.000    6194.00    Jayaweera+05; Glaude+00
+129  [ OH + P2O3 -> PO + HOPO2            ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+131  [ OH + P2O3 -> PO2 + HOPO            ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+#169  [ OH + HPO -> H2O + PO               ]  5.25E-13      0.000     873.18     Wang et al. (2016)/Twarowski (1995)
+133  [ OH + HPO -> H2O + PO               ]  2.000E-18      2.000     1007.00   **Jayaweera+05; cap at 2e-10 low T (sign typo for Ea in file?)
+135  [ OH + HPO -> H + HOPO               ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+#177  [ OH + P -> H + PO                   ]  5.25E-11      0.000     2344.11   Wang et al. (2016)/Twarowski (1995)
+137  [ OH + P -> H + PO                   ]  3.61E-11      -0.29     0.0         Douglas et al. (2022)
+139  [ OH + PH3 -> H2O + PH2              ]  2.71E-11      0.000     155.15      Fritz et al. (1982) 250-450
+141  [ OH + PH3 -> H + H2POH              ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+143  [ OH + PH2 -> H2O + PH               ]  5.25E-13      0.000     1126.95     Wang et al. (2016)/Twarowski (1995)
+145  [ OH + PH2 -> H + HPOH               ]  5.25E-13      0.000     0.0         Wang et al. (2016)/Twarowski (1995)
+#187  [ OH + PH -> H2O + P                 ]  5.25E-13      0.000     1223.17   Wang et al. (2016)/Twarowski (1995) 
+147  [ OH + PH -> H2O + P                 ]  3.86E-11      0.167     0.0         Douglas et al. (2022)
+149  [ OH + PH -> H + HPO                 ]  5.25E-13      0.000     2287.58     Wang et al. (2016)/Twarowski (1995)
+151  [ OH + P2O -> H + P2O2               ]  5.25E-13      0.000     7167.03     Wang et al. (2016)/Twarowski (1995)
+153  [ OH + P2O -> HOPO + P               ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+155  [ OH + P2O2 -> PO + HOPO             ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+157  [ OH + H2POH -> H2O + HPOH          ]  5.25E-13      0.000     823.87      Wang et al. (2016)/Twarowski (1995)
+159  [ OH + HPOH -> H2O + HPO            ]  5.25E-13      0.000     1650.14     Wang et al. (2016)/Twarowski (1995)
+161  [ HO2 + PO -> O2 + HPO              ]  5.25E-13      0.000     3396.49     Wang et al. (2016)/Twarowski (1995)
+163  [ HO2 + PO -> O + HOPO              ]  5.25E-13      0.000     0.0          Wang et al. (2016)/Twarowski (1995)
+#165  [ HO2 + PO -> OH + PO2              ]  5.25E-13      0.000     908.06     Wang et al. (2016)/Twarowski (1995)
+165  [ HO2 + PO -> OH + PO2              ]  3.49E-12       0.000     -251.61    Jayaweera+05
+#167  [ HO2 + PO2 -> O2 + HOPO            ]  5.25E-13      0.000     315.11     Wang et al. (2016)/Twarowski (1995)
+167  [ O2 + HOPO -> HO2 + PO2            ]  1.16E-11      0.000     22795.84     Jayaweera+05
+169  [ HO2 + PO2 -> O + HOPO2            ]  5.25E-13      0.000     0.0         Wang et al. (2016)/Twarowski (1995)
+#171  [ HO2 + PO2 -> OH + PO3             ]  5.25E-13      0.000     0.0         Wang et al. (2016)/Twarowski (1995)
+171  [ HO2 + PO2 -> OH + PO3             ]  8.30E-13       0.000     0.0         Jayaweera+05
+#173  [ HO2 + HOPO -> OH + HOPO2          ]  5.25E-13      0.000     1860.61     Wang et al. (2016)/Twarowski (1995)
+173  [ HO2 + HOPO -> OH + HOPO2          ]  2.49E-10      0.000     11875.98    Jayaweera+05
+175  [ HO2 + HOPO -> H2O2 + PO2         ]   4.15E-12      0.000     11725.02    Jayaweera+05
+177  [ HO2 + HOPO2 -> H2O2 + PO3         ]  4.15E-12      0.000     12379.20    Jayaweera+05
+#175  [ HO2 + PO3 -> O2 + HOPO2           ]  5.25E-13      0.000     0.0         Wang et al. (2016)/Twarowski (1995)
+179  [ O2 + HOPO2 -> HO2 + PO3           ]  1.16E-11      0.000     33212.49    Jayaweera+05
+181  [ HO2 + HPO -> O2 + HPOH            ]  5.25E-13      0.000     5135.63     Wang et al. (2016)/Twarowski (1995)
+183  [ HO2 + P -> O2 + PH                ]  5.25E-11      0.000     3420.55     Wang et al. (2016)/Twarowski (1995)
+185  [ HO2 + P -> OH + PO                ]  5.25E-11      0.000     922.49     Wang et al. (2016)/Twarowski (1995)
+187  [ HO2 + P2 -> OH + P2O              ]  5.25E-13      0.000     2549.77     Wang et al. (2016)/Twarowski (1995)
+189  [ HO2 + PH2 -> O2 + PH3             ]  5.25E-13      0.000     2639.98     Wang et al. (2016)/Twarowski (1995)
+191  [ HO2 + PH2 -> O + H2POH            ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+193  [ HO2 + PH -> O2 + PH2              ]  5.25E-13      0.000     2629.15     Wang et al. (2016)/Twarowski (1995)
+195  [ HO2 + PH -> O + HPOH              ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+197  [ HO2 + PH -> OH + HPO              ]  5.25E-13      0.000     796.20     Wang et al. (2016)/Twarowski (1995)
+199  [ HO2 + P2O -> OH + P2O2            ]  5.25E-13      0.000     2265.93     Wang et al. (2016)/Twarowski (1995)
+201  [ HO2 + HPOH -> O2 + H2POH          ]  5.25E-13      0.000     2658.02     Wang et al. (2016)/Twarowski (1995)
+203  [ PO + HOPO2 -> PO2 + HOPO          ]  5.25E-13      0.000     4895.08     Wang et al. (2016)/Twarowski (1995)
+#237  [ PO + PO3 -> PO2 + PO2             ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+205  [ PO + PO3 -> PO2 + PO2             ] 8.30E-13      0.000     0.0         Jayaweera+05
+207  [ PO + P2O -> PO2 + P2              ]  5.25E-13      0.000     2050.64     Wang et al. (2016)/Twarowski (1995)
+209  [ PO + P2O2 -> PO2 + P2O            ]  5.25E-13      0.000     3612.98     Wang et al. (2016)/Twarowski (1995)
+211  [ PO + H2POH -> HOPO + PH2          ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+213  [ PO + HPOH -> HOPO + PH            ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+215  [ PO + HPOH -> HPO + HPO            ]  5.25E-13      0.000     5082.71     Wang et al. (2016)/Twarowski (1995)
+#217  [ PO2 + O3 -> PO3 + O2              ]  3.72E-11      0.000     1131.00     Plane_et_al.(2021)
+217  [ PO2 + HPO -> H + P2O3             ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+#251  [ PO2 + HPO -> PO + HOPO            ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+219  [ PO2 + HPO -> PO + HOPO            ]  3.321E-13      0.000     0.0       Jayaweera+05
+221  [ PO2 + P -> PO + PO                ]  5.25E-11      0.000     2472.80     Wang et al. (2016)/Twarowski (1995)
+223  [ PO2 + PH3 -> HOPO + PH2           ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+225  [ PO2 + PH2 -> HOPO + PH            ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+227  [ PO2 + PH -> PO + HPO              ]  5.25E-13      0.000     2418.68     Wang et al. (2016)/Twarowski (1995)
+229  [ PO2 + PH -> HOPO + P              ]  5.25E-13      0.000     36.08     Wang et al. (2016)/Twarowski (1995)
+231  [ PO2 + P2O -> PO3 + P2             ]  5.25E-13      0.000     309.10     Wang et al. (2016)/Twarowski (1995)
+233  [ PO2 + P2O -> P2O3 + P             ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+235  [ PO2 + P2O2 -> PO + P2O3           ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+237  [ PO2 + H2POH -> HOPO + HPOH        ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+239  [ PO2 + H2POH -> HOPO2 + PH2        ]  5.25E-13      0.000     6013.62     Wang et al. (2016)/Twarowski (1995)
+241  [ PO2 + HPOH -> HOPO + HPO          ]  5.25E-13      0.000     894.83     Wang et al. (2016)/Twarowski (1995)
+243  [ PO2 + HPOH -> HOPO2 + PH          ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+#277  [ HOPO + PO3 -> PO2 + HOPO2         ]  5.25E-13      0.000     730.05     Wang et al. (2016)/Twarowski (1995) (Desc.)
+245  [ HOPO + PO3 -> PO2 + HOPO2         ]  8.300E-13      0.620      0.00     Jayaweera+05 (Desc.)
+247  [ HOPO + P2O -> HOPO2 + P2          ]  5.25E-13      0.000     18040.85     Wang et al. (2016)/Twarowski (1995)
+249  [ HOPO + P2O2 -> HOPO2 + P2O        ]  5.25E-13      0.000     18040.85     Wang et al. (2016)/Twarowski (1995)
+251  [ HOPO2 + P -> PO + HOPO            ]  5.25E-11      0.000     3445.80     Wang et al. (2016)/Twarowski (1995)
+253  [ HOPO2 + PH -> HOPO + HPO          ]  5.25E-13      0.000     3502.33     Wang et al. (2016)/Twarowski (1995)
+#287  [ PO3 + HPO -> PO + HOPO2           ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+255  [ PO3 + HPO -> PO + HOPO2           ]  3.321E-13      0.000     0.0       Jayaweera+05
+257  [ PO3 + P -> PO + PO2               ]  5.25E-11      0.000     18.04     Wang et al. (2016)/Twarowski (1995)
+259  [ PO3 + PH3 -> HOPO2 + PH2          ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+261  [ PO3 + PH2 -> HOPO2 + PH           ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+263  [ PO3 + PH -> PO2 + HPO             ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+265  [ PO3 + PH -> HOPO2 + P             ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+267  [ PO3 + P2O -> PO2 + P2O2           ]  5.25E-13      0.000     917.68     Wang et al. (2016)/Twarowski (1995)
+269  [ PO3 + H2POH -> HOPO2 + HPOH       ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+271  [ PO3 + HPOH -> HOPO2 + HPO         ]  5.25E-13      0.000     0.0     Wang et al. (2016)/Twarowski (1995)
+273  [ HPO + P -> PO + PH                ]  5.25E-11      0.000     3474.67     Wang et al. (2016)/Twarowski (1995)
+275  [ HPO + PH2 -> PO + PH3             ]  5.25E-13      0.000     2466.79     Wang et al. (2016)/Twarowski (1995)
+277  [ HPO + PH -> PO + PH2              ]  5.25E-13      0.000     2475.21     Wang et al. (2016)/Twarowski (1995)
+279  [ HPO + HPOH -> PO + H2POH          ]  5.25E-13      0.000     2489.64     Wang et al. (2016)/Twarowski (1995)
+#313  [ P + PH -> H + P2                  ]  5.25E-11      0.000     2013.36     Wang et al. (2016)/Twarowski (1995) (Disc.)
+281  [ P + PH -> H + P2                  ]  3.660E-11    0.198     -1.166         Klippenstein calculation          (Disc.)
+283  [ P + P2O -> PO + P2                ]  5.25E-11      0.000     1467.32     Wang et al. (2016)/Twarowski (1995)
+285  [ P + P2O2 -> PO + P2O              ]  5.25E-11      0.000     2815.58     Wang et al. (2016)/Twarowski (1995)
+287  [ P + HPOH -> HPO + PH              ]  5.25E-11      0.000     4874.64     Wang et al. (2016)/Twarowski (1995)
+289  [ PH3 + PH -> PH2 + PH2             ]  5.25E-13      0.000     2759.05     Wang et al. (2016)/Twarowski (1995)
+291  [ PH3 + HPOH -> PH2 + H2POH         ]  5.25E-13      0.000     2830.01     Wang et al. (2016)/Twarowski (1995)
+#325  [ PH2 + PH -> P + PH3              ]  5.25E-13      0.000     3442.19     Wang et al. (2016)/Twarowski (1995)  (Disc.)
+293  [ PH2 + PH -> P + PH3               ]   2.510E-21    2.9224     -240.52      Klippenstein calculation          (Disc.)
+295  [ PH2 + HPOH -> HPO + PH3           ]  5.25E-13      0.000     3825.86     Wang et al. (2016)/Twarowski (1995)
+297  [ PH + PH -> P + PH2                ]  5.25E-13      0.000     3317.11     Wang et al. (2016)/Twarowski (1995)
+#295  [ PH + PH -> P2H + H               ]  1.000E-10     0.000     1000.00      No_ref.(Visscher&Moses): Est. based on 2NH = N2H + H
+299  [ PH + P2O -> HPO + P2              ]  5.25E-13      0.000     1721.10     Wang et al. (2016)/Twarowski (1995)
+301  [ PH + P2O2 -> HPO + P2O            ]  5.25E-13      0.000     2804.75     Wang et al. (2016)/Twarowski (1995)
+303  [ PH + H2POH -> PH2 + HPOH          ]  5.25E-13      0.000     2731.39     Wang et al. (2016)/Twarowski (1995)
+305  [ PH + HPOH -> HPO + PH2            ]  5.25E-13      0.000     3675.52     Wang et al. (2016)/Twarowski (1995)
+307  [ PH + HPOH -> P + H2POH            ]  5.25E-13      0.000     3479.48     Wang et al. (2016)/Twarowski (1995)
+309  [ P2O + P2O -> P2 + P2O2            ]  5.25E-13      0.000     18040.85     Wang et al. (2016)/Twarowski (1995)
+311  [ HPOH + HPOH -> HPO + H2POH        ]  5.25E-13      0.000     3858.34     Wang et al. (2016)/Twarowski (1995)
+#315  [ P2O4 + H2O -> HOPO + HOPO2        ]  1.66E-13      0.000     0.00        Jayaweera+05
+#317  [ P2O5 + H2O -> HOPO2 + HOPO2       ]  1.66E-13      0.000     0.00        Jayaweera+05
+#300  [ H + HPO2 -> H2 + PO2              ]  3.99E-16      1.50     2516.10      Jayaweera+05;Glaude+00
+#319  [ H + HPO2 -> H2 + PO2              ]  5.42E-11      0.0       1548.00     Plane_et_al.(2021)
+#321  [ O + HPO2 -> OH + PO2              ]  2.82E-16      1.50     1258.05      Jayaweera+05;Glaude+00
+#323  [ O2 + HPO2 -> HO2 + PO2            ]  1.16E-11      0.00     17310.75     Jayaweera+05;Glaude+00
+#325  [ OH + HPO2 -> H2O + PO2            ]  1.99E-18      2.00     -1006.44     Jayaweera+05;Glaude+00
+#327  [ OH + HPO2 -> H + HOPO2           ]  1.66E-12      0.00     1006.44      Jayaweera+05;Glaude+00
+#327  [ OH + HPO2 ->  H + HOPO2           ]  8.32E-11      0.010     0.0        Plane_et_al.(2021)
+#329  [ OH + HPO2 -> OH + HOPO            ]  1.13E-12     0.363      0.0        Plane_et_al.(2021)
+#329  [ HO2 + HPO2 -> H2O2 + PO2          ]  3.32E-13      0.00     5032.20      Jayaweera+05;Glaude+00
+#331  [ HPO + PO2 -> HPO2 + PO            ]  1.66E-13      0.00      0.00        Jayaweera+05;Glaude+00
+#333  [ HPO2 + PO2 -> HOPO + PO2          ]  8.30E-13      0.00      0.00        Jayaweera+05;Glaude+00
+#335  [ HPO2 + PO3 -> HOPO2 + PO2         ]  8.30E-13      0.00      0.00        Jayaweera+05;Glaude+00
+313  [ H3PO4 -> HOPO2 + H2O               ]  88103.511	  2.12       19604.37 2021LIZ/SIR719-727 500-2000 (change units)
+315  [ He -> He                          ]  0.00E+00      0.000     0.00
+
+# 3-body and Disscoiation Reactions
+# id	# Reactions                         	A_0     	B_0     	C_0     	A_inf   	B_inf   	C_inf		Ref 		  	Temp
+
+317  [ H + H + M -> H2 + M                ]  2.70E-31    -0.600       0.0      3.31E-06    -1.000       0.0                             100-5000, ??
+319  [ H + O + M -> OH + M                ]  1.30E-29    -1.000       0.0      1.00E-11     0.000       0.0                             300-2500, ??
+321  [ OH + H + M -> H2O + M              ]  3.89E-25    -2.000       0.0      4.26E-11     0.230     -57.5                             300-3000, 300-3000
+323  [ H + O2 + M -> HO2 + M              ]  2.17E-29    -1.100       0.0      7.51E-11     0.0          0.0        2012TUR/NAG284-302 / 1997ATK/BAU1329-1499                   300-1850, 200-400
+325  [ HO2 + HO2 + M -> H2O2 + O2 + M     ]  1.90E-33     0.       -980.0      2.20E-13     0.       -600.        1997ATK/BAU1329-1499 / 2004ATK/BAU1461-1738                 200-300, 230-420
+327  [ OH + OH + M -> H2O2 + M            ]  7.97E-31    -0.760       0.0      1.51E-11    -0.370       0.0       1992BAU/COB411-429 / 1992BAU/COB411-429                        250-1400 /200-1400
+#363  [ PH3 + M -> PH2 + H + M             ]  3.40E-08     0.0        35644.0  1.91E+18     0.0         40063.0   Paul Rimmer  (Estimate from Cardelino et al. 2003 data)
+#327  [ PH3 + M -> PH2 + H + M             ]   5.2E+16    -6.2         11787.41  4.08E+13    0.81       44141.77     Baptista&Almeida(2023)
+329  [ H + PH2 + M -> PH3 + M             ]  4.320E-24   -2.1662       211.18   1.220E-10   0.200        -8.013       **Klippenstein calculation, this work
+331  [ H + PO2 + M -> HOPO + M            ]  7.95E-17    -4.33      513.28      1.91E-14    1.29      -754.83    Haworth et al. (2002)
+333  [ OH + PO2 + M -> HOPO2 + M         ]   0.28E+00    -8.59     4528.98      2.57e-10    -0.24      0.0      Haworth et al. (2002)
+335  [ H + P2 + M -> P2H + M              ]  2.470E-27   -1.230       152.00   1.450E-11    0.540      -58.9      Klippenstein calculation
+#335  [ PO + PO2 + M -> P2O3 + M           ]  2.757E-28   -2.000      0.00      6.642E-10   -1.000      0.00      Jayaweera+05
+337  [ PO + PO2 + M -> P2O3 + M           ]  1.49E-15     -4.25       0.00      2.819E-10   0.167       0.00      Plane_calculation
+#361  [ PO2 + PO2 + M -> P2O4 + M           ] 5.51E-28    -2.000      0.00      9.96E-10    -1.000      0.00       Jayaweera+05 
+#363  [ PO2 + PO3 + M -> P2O5 + M           ] 1.38E-27     -2.000     0.00      9.96E-10    -1.000      0.00       Jayaweera+05
+339  [ H + P + M -> PH + M                 ]  9.26E-30   -1.10       357.21      1.79E-12     -0.13     459.99        Wang_k_0+Babtista_k_inf
+#339  [ H + PH + M -> PH2 + M               ]   1.757E-28   -1.012    295.70    8.07E-11     0.67     120.36        Wang_k_0+Babtista_k_inf
+341  [ H + PH + M -> PH2 + M               ]   2.91e-28      -1.10     94.5      7.98e-11     0.222     0.535   **Klippenstein calculation, this work
+343  [ PH2 + PH2 + M -> P2H4 + M           ]  5.480E-15   -4.836        351.60  1.670E-10   -0.105      45.000     No_ref.(Visscher&Moses)
+345  [ P2H2 + H2 + M -> P2H4 + M           ]  6.550E-10   -6.990       6363.00  8.510E-19    2.238     4674.00     No_ref.(Visscher&Moses)
+#345  [ P + P + M -> P2 + M                ]   7.191e-27  -1.67       477.2   3.000E-11     0.000      0.0           based on Twarowski 95; k_infty est
+#347  [ P2 + P2 + M -> P4 + M              ]  3.721E-26   -1.867       545.40  1.000E-11  0.000    500.00            based on Twarowski 95; k_infty est
+347  [ OH + P + M -> HPO + M              ]  1.241E-25 -1.950     670.00  4.12E-10  0.16      128.41             based on Wang_k_0 OH + PO w. Babtista_k_inf
+#339  [ P2O3 + P2O3 + M -> P4O6 + M        ]  1.000E-25   -2.000      500.00    1.000E-16    0.000      0.00      No_ref.(Visscher&Moses)
+349  [ P2O3 + P2O3 + M -> P4O6 + M        ] 5.925E-18 -2.99      0.0     3.263E-10 0.166    0.0              Plane_Calculation
+
+
+# 3-body reactions without high-pressure rates
+# id	# Reactions                         	A_0     	B_0     	C_0        	Ref 		  	    Temp
+
+351  [ O + O + M -> O2 + M                ]	  5.21E-35	 0.		   -900.		1986TSA/HAM1087
+353  [ H + PO + M -> HPO + M              ]  1.241E-25 -1.950     670.00    Jayaweera+05;Twarowski95
+355  [ H + PO3 + M -> HOPO2 + M           ]   3.309E-23 -2.370   720.00     Jayaweera+05;Twarowski95
+357  [ H + HPO + M -> HPOH + M            ]  7.549E-26 -1.422   415.50      based_on_Twarowski95
+359  [ H + HPOH + M -> H2POH + M         ]  9.619E-24 -1.885    550.80     based_on_Twarowski95
+361  [ O + PO + M -> PO2 + M              ] 1.103E-22 -2.630   866.00      Jayaweera+05;Twarowski95
+363  [ O + PO2 + M -> PO3 + M             ]  8.962E-21 -3.150   946.70     Jayaweera+05;Twarowski95
+365  [ O + HOPO + M -> HOPO2 + M          ]  8.273E-21 -2.990  1027.00     Jayaweera+05;Twarowski95
+367  [ O + P + M -> PO + M                ]  1.642E-29 -0.747   218.20      based_on_Twarowski95
+369  [ OH + PO + M -> HOPO + M            ]  6.894E-27 -2.090   800.70      Jayaweera+05;Twarowski95
+371  [ OH + PH2 + M -> H2POH + M          ]  5.715E-29 -1.223   357.20      based_on_Twarowski95
+373  [ OH + PH + M -> HPOH + M           ]  2.175E-33  -0.415   121.40      based_on_Twarowski95
+375  [ O + P2 + M -> P2O + M              ] 7.774E-31   -0.844   265.5     based_on_Twarowski95
+377  [ O + PH + M -> HPO + M              ] 2.162E-33   -0.309    97.2    based_on_Twarowski95
+379  [ O + P2O + M -> P2O2 + M            ]  5.995E-34   -0.268  84.4     based_on_Twarowski95
+381  [ PO + PO + M -> P2O2 + M            ] 2.117E-28  -2.077   595.2     based_on_Twarowski95
+383  [ PO + P + M -> P2O + M              ] 2.640E-24  -2.41    690.7     based_on_Twarowski95  
+385  [ HOPO2 + H2O + M -> H3PO4 + M      ]   1.35E-07   -7.53    0.0        Douglas_et_al.(2022)
+387  [ P + P + M -> P2 + M                ]   7.191e-27  -1.67       477.2    based_on_Twarowski95
+389  [ P2 + P2 + M -> P4 + M              ]  3.721E-26   -1.867       545.40   based_on_Twarowski95
+#341  [ H + PH + M -> PH2 + M               ] 1.757E-28   -1.012    295.70     based_on_Twarowski95
+#409  [ HPO2 + M -> HOPO + M               ] 3.90E-10    0.000    23349.39  Jayaweera+05;Glaude+00
+#411  [ H + PO2 + M -> HPO2 + M           ]   2.60E-22    -2.31    0.0       Plane_et_al.(2021)_w_2.5_H2_fact
+#415  [ HPO2 + H2O + M ->  H3PO3 + M      ]   8.30E-30    0.883    0.0        Plane_et_al.(2021)_w_2.5_H2_fact
+#349  [ P2H2 + M -> P2 + H2 + M           ]   1.000E-16  0.000    24000.00   No_ref.(Visscher&Moses)
+
+# special cases
+# id	# Reactions
+#387  [ H2O + HOPO2 + M -> H3PO4 + M      ]
+
+# reverse stops
+# condensation
+
+# photo disscoiation (no reversals) 		            # use sp to link br_index to RXXX
+# id	# Reactions                                     sp		br_index #(starting from 1)
+
+391  [ H2O -> H + OH                      ]       		H2O		1
+393  [ H2O -> H2 + O_1                    ]             H2O		2
+395  [ H2O -> H + H + O                   ]             H2O		3
+397  [ H2 -> H + H                        ] 			      H2		1
+399  [ OH -> H + O                        ]             OH      1
+401  [ HO2 -> O + OH                      ]             HO2     1
+403  [ H2O2 -> OH + OH                    ]              H2O2    1
+405  [ O2 -> O + O                        ]              O2      1
+407  [ O2 -> O + O_1                      ]              O2      2
+409  [ PH -> P + H                        ]             PH      1 
+411  [ PH2 -> PH + H                      ]             PH2      1 
+413  [ PH3 -> PH2 + H                     ]             PH3     1 
+415  [ PO -> P + O                        ]             PO      1
+417  [ PO2 -> PO + O                      ]             PO2      1 
+419  [ HOPO -> H + PO2                    ]             HOPO    1 
+421  [ HOPO2 -> OH + PO2                  ]             HOPO2   1 
+423  [ P2 -> P + P                        ]             P2      1
+425  [ P2H2 -> PH + PH                    ]             P2H2      1
+427  [ P2H4 -> PH2 + PH2                  ]             P2H4      1
+#441  [ HPO2 -> H + PO2                    ]             HPO2    1 
+#441  [ PH3 -> PH + H2                     ]             PH3     2 
+# re_end
+
+
+### Wanted reactions
+#23   [ P_2D + H2O -> PO + H2              ]  1.6E-11    0.0      0.0        Douglas et al. (2022) 
+#25   [ P_2D + H2O -> P + H2O              ]  3.0E-11    0.0      0.0        Douglas et al. (2022)
+#27   [ P_2D + O2 -> PO + O                ]  1.12E-13   0.82    -177.00     Douglas et al. (2022)
+#29   [ P_2D + H2 -> P + H2                ]  8.0E-11    0.0      699.00     Douglas et al. (2022)    
+
+### Discarded
+#357  [ H3PO4 + M -> H2O + HOPO2 + M       ]  3.49E-17   1.46    21167.91   2004SUL/SUM4296-4309 300-1500
+#343  [ PH2 + PH2 -> P2H4                 ]  8.97E-12      0.000     22946.81      1981FER/BEN1922 w. Pimmentel Ea
+#345  [ PH2 + PH2 -> P2H2 + H2            ]  8.97E-12      0.000     9309.56      1981FER/BEN1922 w. Pimmentel Ea
+#349  [ H2 + P2H2 ->  P2H4                ]  5.25E-13      0.000     18040.85       Est. (molecule + molecule)
+
+### Decomposition reactions from Twarowski - for conversion to tertiary (+ M) reactions or replacement
+#31   [ H + PO -> HPO                      ]  3.11E-02    -1.96      639.85        Wang et al. (2016)/Twarowski (1995)
+#23   [ HPO -> H + PO                    ]  2.03E+09     1.279     26690.87    Baptista&Almeida(2023)
+#25   [ H + PO2 -> HOPO                    ]  2.64E+03     -3.03     964.58     Wang et al. (2016)/Twarowski (1995)  - (see 3 body for alt.)
+#31   [ H + PO3 -> HOPO2                   ]  6.19E+00     -2.32     757.72     Wang et al. (2016)/Twarowski (1995)
+#31   [ H + HPO -> HPOH                    ]  2.84E+01     -2.65     864.76     Wang et al. (2016)/Twarowski (1995)
+#29   [ H + P -> PH                        ]  5.58E-06     -1.10     357.21     Wang et al. (2016)/Twarowski (1995)
+#31   [ H + P -> PH                       ]  1.4788E-12     -0.13     459.99       Baptista&Almeida(2023)
+#29   [ PH -> P + H                         ]  9.72E+10      0.12     36940.07       Baptista&Almeida(2023)
+#27   [ H + PH2 -> PH3                     ]  2.19E+01     -2.67     871.97     Wang et al. (2016)/Twarowski (1995)
+#31   [ H + PH2 -> PH3                     ]  3.70E-10      0.0      340.00       Kaye and Strobel (1984)
+#31   [ H + PH -> PH2                      ]  2.08E-26     -1.89     615.79     Wang et al. (2016)/Twarowski (1995)
+#33   [ H + PH -> PH2                      ]  8.07e-11     0.67      120.36     Baptista&Almeida(2023)
+#31   [ PH2 -> H + PH                      ]  4.08E+13     0.20      40982.2     Baptista&Almeida(2023)
+#31   [ H + HPOH -> H2POH                  ]  9.32E+04     -3.52     1147.40     Wang et al. (2016)/Twarowski (1995)
+#33   [ O + PO -> PO2                      ]  6.79E+00     -2.44     796.20     Wang et al. (2016)/Twarowski (1995)
+#35   [ O + PO2 -> PO3                     ]  2.34E+03     -3.15     1027.13     Wang et al. (2016)/Twarowski (1995)
+#37   [ O + HOPO -> HOPO2                  ]  1.83E+02     -2.67     869.57     Wang et al. (2016)/Twarowski (1995)
+#39   [ O + P -> PO                        ]  2.64E-04     -1.39     454.63     Wang et al. (2016)/Twarowski (1995)
+#31   [ O + P2 -> P2O                      ]  8.29E-08     -0.73     236.94     Wang et al. (2016)/Twarowski (1995)
+#33   [ O + PH -> HPO                      ]  3.87E-10     -0.27     86.87     Wang et al. (2016)/Twarowski (1995)
+#37   [ O + P2O -> P2O2                    ]  1.12E-10     -0.23     75.41     Wang et al. (2016)/Twarowski (1995)
+#49   [ OH + PO -> HOPO                    ]  5.62E-05     -1.64     534.01     Wang et al. (2016)/Twarowski (1995)
+#55   [ OH + PO2 -> HOPO2                  ]  1.88E+06     -4.06     1323.00  Wang et al. (2016)/Twarowski (1995)
+#51   [ OH + PH2 -> H2POH                  ]  1.34E-02     -2.28     743.28     Wang et al. (2016)/Twarowski (1995)
+#53   [ OH + PH -> HPOH                    ]  1.48E-08     -0.93     303.09     Wang et al. (2016)/Twarowski (1995)
+#39   [ OH + P -> HPO                      ]  4.12e-10     0.16      128.41     Baptista&Almeida(2023) - note mistake for Ea in paper
+#57   [ HPO -> P + OH                      ]  2.34E+17      -0.61    43106.66     Baptista&Almeida(2023)
+#41   [ PO + PO -> P2O2                    ]  1.57E-05     -1.90     618.20     Wang et al. (2016)/Twarowski (1995)
+#61   [ PO + PO2 -> P2O3                   ]  7.82E+06     -4.41     1431.24     Wang et al. (2016)/Twarowski (1995)
+#43   [ PO + P -> P2O                      ]  1.63E-01     -2.20     716.82     Wang et al. (2016)/Twarowski (1995)
+
+### Plane reactions (unused, likely, need NASA polynomials)
+#357  [ OP(OH)2 + H -> HOPO2 + H2           ]  1.16E-11     0.5        0.0        Plane et al. (2021)
+#359  [ HPOOH + O -> HOPO2 + OH           ]  1.16E-11     0.5        0.0        Plane et al. (2021)
+#361  [ HPOOH + H -> HOPO + H2            ]  1.16E-11     0.5        0.0        Plane et al. (2021)
+#363  [ HPOOH + O -> PO2 + H2O            ]  5.89E-11     0.125      0.0        Plane et al. (2021)
+#365  [ HPOOH + O -> HOPO2 + H            ]  3.45E-11     -0.028     0.0        Plane et al. (2021)
+#367  [ HPOOH + O -> HPO2 + OH            ]  2.11E-11     -0.018     0.0        Plane et al. (2021)
+#369  [ HPOOH + O -> HOPO + OH            ]  2.73E-11     -0.08      0.0        Plane et al. (2021)
+#371  [ HPOOH + OH -> HOPO + H2O          ]  1.16E-11     0.5        0.0        Plane et al. (2021)
+#397  [ HOPO2 + H + M -> OP(OH)2 + M         ]   7.61E-26   0.358 0.0       Plane et al. (2021)
+#399  [ HOPO + H + M -> HPOOH + M          ]   6.77E-21   -3.31 0.0       Plane et al. (2021)
+#370  [ H3PO3 -> OP(OH)2 + H               ]             H3PO3   1 
+#370  [ H3PO4 -> OP(OH)2 + OH              ]             H3PO4   1 
