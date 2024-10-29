@@ -722,7 +722,7 @@ def check_conserv():
     compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=None)
     compo_row = list(compo['species'])
     # Convert bytes to strings
-    compo_row = [sp.decode("utf-8") for sp in compo_row]
+    compo_row = [sp for sp in compo_row]
     #print (compo_row)
     num_atoms = len(compo.dtype.names) - 2 # dtype.names returns the column names and -2 is for 'species' and 'mass'
  

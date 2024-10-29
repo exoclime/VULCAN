@@ -132,7 +132,8 @@ def inc_stellar(ph, nlay, z, mu_z):
 def scatter(ph, g):
 
   # Find the type of scattering the packet undergoes 
-  # (1 = isotropic, 2 = Rayleigh, 3 = Henyey-Greenstein)
+  # (1 = isotropic, 2 = Rayleigh, 3 = Henyey-Greenstein 
+  # 4 = Two-Term Henyey-Greenstein, 5 = Draine 2003)
   match ph.iscat:
 
     case 1:
@@ -145,24 +146,74 @@ def scatter(ph, g):
       # Rayleigh scattering via direct spherical coordinate sampling
       # Assumes non-polarised incident packet
       q = 4.0*random() - 2.0
-      u = (-q + np.sqrt(1.0 + q**2))**(1.0/3.0)
+      u = np.cbrt(-q + np.sqrt(1.0 + q**2))
       bmu = u - 1.0/u
 
     case 3:
       # Sample from single HG function
-      if (g != 0.0):
-        hgg = g
-        g2 = hgg**2
+      if (abs(g) > 1e-4):
+        # Avoid division by zero - is isotropic as g -> 0 anyway.
+        g2 = g**2
 
         bmu = ((1.0 + g2) - \
-          ((1.0 - g2) / (1.0 - hgg + 2.0 * hgg * random()))**2) \
-          / (2.0*hgg)
+          ((1.0 - g2) / (1.0 - g + 2.0 * g * random()))**2) \
+          / (2.0*g)
       else:
-        # g = 0, Isotropic scattering
+        # g ~ 0, Isotropic scattering
+        ph.cost = 2.0 * random() - 1.0
+        ph.nzp = ph.cost
+        return
+    case 4:
+      # Sample from two-term HG function following Cahoy et al. (2010)
+      # Check if near isotropic and sample isotropic
+      if (abs(g) < 1e-4):
+        # g ~ 0, Isotropic scattering
         ph.cost = 2.0 * random() - 1.0
         ph.nzp = ph.cost
         return
       
+      gb = -g/2.0
+      alph = 1.0 - gb**2
+
+      zeta1 = random()
+      if (zeta1 < alph):
+        # sample forward direction
+        g2 = g**2
+        bmu = ((1.0 + g2) - \
+          ((1.0 - g2) / (1.0 - g + 2.0 * g * random()))**2) \
+          / (2.0*g)
+      else:
+        # sample backward direction
+        gb2 = gb**2
+        bmu = ((1.0 + gb2) - \
+          ((1.0 - gb2) / (1.0 - gb + 2.0 * gb * random()))**2) \
+          / (2.0*gb)
+    case 5:
+      # Sample from Draine (2003) phase function (= Cornette and Shanks (1992) when alpha = 1)
+      # Use the analytical approach of Jendersie & d’Eon (2023)
+
+      # First calculate big G from small g
+      alpha = 1.0
+      a1 = 1.0/2.0  + 5.0/(6.0*alpha) - (25.0/81.0) * g**2
+      b1 = (125.0/729.0)*g**3 + 5.0/(9.0*alpha) * g
+      G1 = np.cbrt(np.sqrt(a1**3 + b1**2) + b1) - np.cbrt(np.sqrt(a1**3 + b1**2) - b1) + (5.0/9.0) * g
+      G2 = G1**2
+      G4 = G1**4
+
+      # Sample Draine (2003) function analytically (Jendersie & d’Eon 2023)
+      zeta1 = random()
+      t0 = alpha - alpha*G2
+      t1 = alpha*G4 - alpha
+      t2 = -3.0*(4.0*(G4 - G2) + t1*(1.0 + G2))
+      t3 = G1*(2.0*zeta1 - 1.0)
+      t4 = 3.0*G2*(1.0+t3) + alpha*(2.0+G2*(1.0+(1.0+2.0*G2)*t3))
+      t5 = t0*(t1*t2+t4**2)+t1**3
+      t6 = t0*4.0*(G4 - G2)
+      t7 = np.cbrt(t5 + np.sqrt(t5**2 - t6**3))
+      t8 = 2.0*(t1+t6/t7+t7)/t0
+      t9 = np.sqrt(6.0*(1.0+G2) + t8)
+      bmu = G1/2.0 + (1.0/(2.0*G1) - 1.0/(8.0*G1)*(np.sqrt(6.0*(1.0+G2) -  t8 + 8.0*t4/(t0*t9)) - t9)**2)
+
     case _ :
       # Invalid iscat value
       print('Invalid iscat chosen: ' + str(ph.iscat) + ' doing isotropic')
@@ -219,7 +270,8 @@ def scatter_surf(ph, z):
 
 ## Main gCMCRT function for wavelength and packet loop
 @jit(nopython=True, cache=True, parallel=True)
-def gCMCRT_main(nit, Nph, nlay, nwl, all_sp, ph_sp, ray_sp, nd_sp, cross, ray, Iinc, mu_z, dze):
+def gCMCRT_main(nit, Nph, nlay, nwl, all_sp, ph_sp, ray_sp, nd_sp, \
+  cross_sp, cross_sca_sp, nd_aer, cross_aer, cross_sca_aer, g_aer, Iinc, mu_z, dze):
 
   # Number of levels
   nlev = nlay + 1
@@ -239,9 +291,19 @@ def gCMCRT_main(nit, Nph, nlay, nwl, all_sp, ph_sp, ray_sp, nd_sp, cross, ray, I
   # Initialise single scattering albedo
   alb = np.zeros((nlay, nwl))
 
+  # Initialise gas phase scattering probability
+  P_gas = np.zeros((nlay, nwl))
+
   # Initialise extinction and scattering opacity arrays
-  sig_ext = np.zeros((nlay, nwl))
-  sig_sca = np.zeros((nlay, nwl))
+  sig_ext_tot = np.zeros((nlay, nwl))
+  sig_abs_tot = np.zeros((nlay, nwl))
+  sig_sca_tot = np.zeros((nlay, nwl))
+
+  sig_abs_gas = np.zeros((nlay, nwl))
+  sig_sca_gas = np.zeros((nlay, nwl))
+
+  sig_abs_aer = np.zeros((nlay, nwl))
+  sig_sca_aer = np.zeros((nlay, nwl))
 
   # Reconstruct altitude grid from dze
   z = np.zeros(nlev)
@@ -259,17 +321,33 @@ def gCMCRT_main(nit, Nph, nlay, nwl, all_sp, ph_sp, ray_sp, nd_sp, cross, ray, I
 
     # Find the total absorption opacity from photocross sections
     for i in range(n_cross):
-      sig_ext[:,l] += nd_sp[:,all_sp.index(ph_sp[i])] * cross[i,l] # Absorption opacity [cm-1]
+      sig_abs_gas[:,l] += nd_sp[:,all_sp.index(ph_sp[i])] * cross_sp[i,l] # Absorption opacity [cm-1]
 
     # Find the total rayleigh opacity from Rayleigh species cross sections
     for i in range(n_ray):
-      sig_sca[:,l] += nd_sp[:,all_sp.index(ray_sp[i])] * ray[i,l]   # Scattering opacity [cm-1]
+      sig_sca_gas[:,l] += nd_sp[:,all_sp.index(ray_sp[i])] * cross_sca_sp[i,l]   # Scattering opacity [cm-1]
 
-    # Extinction = photocross + Rayleigh
-    sig_ext[:,l] += sig_sca[:,l]
+    # Find absorption opacity of aerosol
+    sig_abs_aer[:,l] = nd_aer[:] * cross_aer[:,l]
 
-    # Find scattering albedo - MCRT only works well up to around 0.98 ssa, so limit to that
-    alb[:,l] = np.minimum(sig_sca[:,l]/sig_ext[:,l],0.95)
+    # Find scattering opacity of aerosol
+    sig_sca_aer[:,l] = nd_aer[:] * cross_sca_aer[:,l]
+
+    # Total absorption and scattering is gas + aerosol
+    sig_abs_tot[:,l] = sig_abs_gas[:,l] + sig_abs_aer[:,l]
+    sig_sca_tot[:,l] = sig_sca_gas[:,l] + sig_sca_aer[:,l]
+
+    # Total extinction = absorption + scattering
+    sig_ext_tot[:,l] = sig_abs_tot[:,l] + sig_sca_tot[:,l]
+
+    # Find total scattering albedo - MCRT only works well up to around 0.98 ssa, so limit to that
+    alb[:,l] = np.minimum(sig_sca_tot[:,l]/sig_ext_tot[:,l],0.95)
+
+    # Asymmetry factor for this wavelength 
+    g[:,l] = g_aer[:,l]
+
+    # Probability of gas phase scattering
+    P_gas[:,l] = sig_sca_gas[:,l]/sig_sca_tot[:,l]
 
     # Energy carried by each packet for this wavelength
     e0dt[l] = (mu_z * Iinc[l])/float(Nph)
@@ -284,10 +362,9 @@ def gCMCRT_main(nit, Nph, nlay, nwl, all_sp, ph_sp, ray_sp, nd_sp, cross, ray, I
       # Initialise packet variables (janky python way)
       flag = 0
       id_ph = l*Nph + n
-      iscat = 2
 
       # Initialise photon packet with initial values
-      ph = pac(flag, id_ph, 0.0, 0.0, 0, 0.0, 0.0, 0.0, iscat)
+      ph = pac(flag, id_ph, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 2)
 
       # Place photon at top of atmosphere with negative zenith angle
       inc_stellar(ph, nlay, z, mu_z)
@@ -299,7 +376,7 @@ def gCMCRT_main(nit, Nph, nlay, nwl, all_sp, ph_sp, ray_sp, nd_sp, cross, ray, I
         ph.tau_p = -np.log(random())
 
         # Move the photon through the grid given by the sampled tau
-        tauint_1D_pp(ph, nlay, z, sig_ext, l, Jdot)
+        tauint_1D_pp(ph, nlay, z, sig_ext_tot, l, Jdot)
 
         # Check status of the photon after moving
         match ph.flag:
@@ -317,6 +394,13 @@ def gCMCRT_main(nit, Nph, nlay, nwl, all_sp, ph_sp, ray_sp, nd_sp, cross, ray, I
           case 0:
             # Photon still in grid, test atmospheric albedo
             if (random() < alb[ph.zc,l]):
+
+              # Check if gas or aerosol scattering and allocate iscat
+              if (random() < P_gas[ph.zc,l]):
+                ph.iscat = 2
+              else:
+                ph.iscat = 5
+
               # Packet get scattered into new direction
               scatter(ph, g[ph.zc,l])
             else:

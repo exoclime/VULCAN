@@ -3,7 +3,7 @@
 # Copyright (C) 2016 Shang-Min Tsai (Shami)                    
 # ==============================================================================
 # ReadRate() reads in the chemical network and construct the rate constants based
-# on the T-P sturcture.
+# on the T-P structure.
 # Integration() is the backbone of integrating for one time step
 # ODESolver() contains the functions for solving system of ODEs (e.g. dy/dt, Jacobian, etc.)
 # ==============================================================================
@@ -40,6 +40,9 @@ from vulcan_cfg import nz
 # gCMCRT radiative-transfer module
 import timeit
 from gCMCRT import gCMCRT_main
+
+# Mie theory calculation module
+from mie import read_nk, calc_mie
 
 # imported functions 
 chemdf = chem_funs.chemdf
@@ -826,13 +829,43 @@ class Integration(object):
  
             if vulcan_cfg.use_photo == True and para.count % self.update_photo_frq == 0:
 
+                if (vulcan_cfg.use_aer == True) and (para.count < 2):
+                    # Calculate aerosol opacity
+
+                    start = timeit.default_timer()
+                    print('Start Mie')
+                    # Initialise variabiles for Mie calculations
+                    var.cross_aer = np.zeros((nz,var.nbin))
+                    var.cross_scat_aer = np.zeros((nz,var.nbin))
+                    var.g_aer = np.zeros((nz,var.nbin))
+                    var.aer_n = np.zeros(var.nbin)
+                    var.aer_k = np.zeros(var.nbin)
+
+                    var.aer_n, var.aer_k = read_nk(vulcan_cfg.aer_sp, var.bins)
+
+                    atm.rm[:] = 1.0e-1
+                    atm.sig2[:] = 1.0
+
+                    var.cross_aer, var.cross_scat_aer, var.g_aer = \
+                        calc_mie(nz,var.bins,var.aer_n,var.aer_k,atm.rm,atm.sig2)
+                    
+                    end = timeit.default_timer()
+                    print('End Mie, took: ', '{:.3f}'.format(end-start), 'seconds')
+
+                elif (vulcan_cfg.use_aer == False):
+                    # Set aerosol opacity to zero
+                    var.cross_aer = np.zeros((nz,var.nbin))
+                    var.cross_scat_aer = np.zeros((nz,var.nbin))
+                    var.g_aer = np.zeros((nz,var.nbin)) 
+
+
                 if vulcan_cfg.use_gCMCRT == True:
                   # Use Monte Carlo radiative-transfer module
 
                   # Send positive cosine angle to gCMCRT
                   mu_ang = np.cos(vulcan_cfg.sl_angle)
 
-                  # Need to strip dicts of vlaues into arrays
+                  # Need to strip dicts of values into arrays
                   abs_cross = np.zeros((len(var.photo_sp),len(var.bins)))
                   i = 0
                   for sp in var.photo_sp:
@@ -851,7 +884,10 @@ class Integration(object):
                   start = timeit.default_timer()
                   print('Start gCMCRT')
 
-                  Jdot = gCMCRT_main(para.count, vulcan_cfg.Nph, nz, len(var.bins), species, ph_sp, vulcan_cfg.scat_sp, var.y, abs_cross, sca_cross, var.sflux_top, mu_ang, atm.dz)
+                  atm.nd[:] = 1.0
+
+                  Jdot = gCMCRT_main(para.count, vulcan_cfg.Nph, nz, len(var.bins), species, ph_sp, vulcan_cfg.scat_sp, var.y, \
+                    abs_cross, sca_cross, atm.nd, var.cross_aer, var.cross_scat_aer, var.g_aer, var.sflux_top, mu_ang, atm.dz)
 
                   end = timeit.default_timer()
                   print('End gCMCRT, took: ', '{:.3f}'.format(end-start), 'seconds')

@@ -83,7 +83,7 @@ class Variables(object):
         self.var_save = ['k','y','ymix','y_ini','t','dt','longdy','longdydt',\
         'atom_ini','atom_sum','atom_loss','atom_conden','aflux_change','Rf'] 
         if vulcan_cfg.use_photo == True: 
-            self.var_save.extend(['nbin','bins','dbin1','dbin2','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','n_branch'])
+            self.var_save.extend(['nbin','bins','dbin1','dbin2','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','n_branch','cross_aer','cross_scat_aer','g_aer'])
             if vulcan_cfg.T_cross_sp: self.var_save.extend(['cross_J','cross_T'])
             if vulcan_cfg.use_ion == True: self.var_save.extend(['charge_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
         # 'ion_list' stores all the non-neutral species in build.atm whereas 'ion_sp' is for the species that actually have ionisation reactions in the network 
@@ -132,6 +132,10 @@ class AtmData(object):
         self.alpha = np.zeros(ni) # thermal diffusion factor = -0.25 for every species except for H and H2 (defined in mol_diff() in build_atm.py)
         self.gs = vulcan_cfg.gs # the gravitational acceleration at the surface or at 1 bar
         self.g = np.zeros(nz) # g(z) 
+
+        self.nd = np.zeros(nz) # Total number density of aerosol [cm-3]
+        self.rm = np.zeros(nz) # Mean radius of aerosol [cm]
+        self.sig2 = np.zeros(nz) # Variance of aerosol distribution [cm2]
         
         self.top_flux = np.zeros(ni) # the assigned flux at the top boundary
         self.bot_flux = np.zeros(ni) # the assigned flux at the bottom boundary
