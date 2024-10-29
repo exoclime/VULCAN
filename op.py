@@ -830,7 +830,8 @@ class Integration(object):
             if vulcan_cfg.use_photo == True and para.count % self.update_photo_frq == 0:
 
                 if (vulcan_cfg.use_aer == True) and (para.count < 2):
-                    # Calculate aerosol opacity
+                    # Calculate aerosol opacity - just required once at start of simulation
+                    # Assume static aerosol profile
 
                     start = timeit.default_timer()
                     print('Start Mie')
@@ -843,11 +844,8 @@ class Integration(object):
 
                     var.aer_n, var.aer_k = read_nk(vulcan_cfg.aer_sp, var.bins)
 
-                    atm.rm[:] = 1.0e-1
-                    atm.sig2[:] = 1.0
-
                     var.cross_aer, var.cross_scat_aer, var.g_aer = \
-                        calc_mie(nz,var.bins,var.aer_n,var.aer_k,atm.rm,atm.sig2)
+                        calc_mie(nz,var.bins,var.aer_n,var.aer_k,atm.nd,atm.rm,atm.sig2)
                     
                     end = timeit.default_timer()
                     print('End Mie, took: ', '{:.3f}'.format(end-start), 'seconds')
@@ -883,8 +881,6 @@ class Integration(object):
 
                   start = timeit.default_timer()
                   print('Start gCMCRT')
-
-                  atm.nd[:] = 1.0
 
                   Jdot = gCMCRT_main(para.count, vulcan_cfg.Nph, nz, len(var.bins), species, ph_sp, vulcan_cfg.scat_sp, var.y, \
                     abs_cross, sca_cross, atm.nd, var.cross_aer, var.cross_scat_aer, var.g_aer, var.sflux_top, mu_ang, atm.dz)

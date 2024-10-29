@@ -44,7 +44,7 @@ def read_nk(sp,wl_nm):
 
   return n, k
 
-def calc_mie(nz,wl_nm,n,k,rm,var):
+def calc_mie(nz,wl_nm,n,k,nd,rm,sig2):
 
   # Number of wavelengths
   nwl = len(wl_nm)
@@ -58,6 +58,12 @@ def calc_mie(nz,wl_nm,n,k,rm,var):
   aer_g = np.zeros((nz,nwl))
 
   for i in range(nz):
+
+    if ((rm[i] < 1.0e-4) or (nd[i] < 1e-10)):
+      aer_abs[i,:] = 0.0
+      aer_scat[i,:] = 0.0 
+      aer_g[i,:] = 0.0
+      continue
 
     if (vulcan_cfg.idist == 1):
       # Single particle size calculation

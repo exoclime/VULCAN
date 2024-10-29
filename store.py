@@ -134,7 +134,7 @@ class AtmData(object):
         self.g = np.zeros(nz) # g(z) 
 
         self.nd = np.zeros(nz) # Total number density of aerosol [cm-3]
-        self.rm = np.zeros(nz) # Mean radius of aerosol [cm]
+        self.rm = np.zeros(nz) # Mean radius of aerosol [um]
         self.sig2 = np.zeros(nz) # Variance of aerosol distribution [cm2]
         
         self.top_flux = np.zeros(ni) # the assigned flux at the top boundary

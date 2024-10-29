@@ -337,6 +337,9 @@ class Atm(object):
             if self.Kzz_prof == 'file':
                 atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
                 p_file, T_file, Kzz_file = atm_table['Pressure'], atm_table['Temp'], atm_table['Kzz']
+
+                if (vulcan_cfg.use_aer == True):
+                  nd_file, rm_file, sig2_file = atm_table['nd'], atm_table['rm'], atm_table['sig2']
             
             else:     
                 atm_table = np.genfromtxt(vulcan_cfg.atm_file, names=True, dtype=None, skip_header=1)
@@ -370,6 +373,32 @@ class Atm(object):
             
             elif self.Kzz_prof == 'const': data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
         
+            if (vulcan_cfg.use_aer == True):
+                PTK_fun['pnd'] = interpolate.interp1d(p_file, nd_file, assume_sorted = False, bounds_error=False, fill_value=(nd_file[np.argmin(p_file)], nd_file[np.argmax(p_file)]) )
+                # store aerosol data in data_atm
+                try:
+                    data_atm.nd = PTK_fun['pnd'](data_atm.pco)
+                # for SciPy earlier than v0.18.0
+                except ValueError:
+                    PTK_fun['pnd'] = interpolate.interp1d(p_file, nd_file, assume_sorted = False, bounds_error=False, fill_value=nd_file[np.argmin(p_file)] )
+                    data_atm.nd = PTK_fun['pnd'](data_atm.pco)
+                PTK_fun['prm'] = interpolate.interp1d(p_file, rm_file, assume_sorted = False, bounds_error=False, fill_value=(rm_file[np.argmin(p_file)], rm_file[np.argmax(p_file)]) )
+                # store aerosol data in data_atm
+                try:
+                    data_atm.rm = PTK_fun['prm'](data_atm.pco)
+                # for SciPy earlier than v0.18.0
+                except ValueError:
+                    PTK_fun['prm'] = interpolate.interp1d(p_file, rm_file, assume_sorted = False, bounds_error=False, fill_value=rm_file[np.argmin(p_file)] )
+                    data_atm.rm = PTK_fun['prm'](data_atm.pco)
+                PTK_fun['psig2'] = interpolate.interp1d(p_file, sig2_file, assume_sorted = False, bounds_error=False, fill_value=(sig2_file[np.argmin(p_file)], sig2_file[np.argmax(p_file)]) )
+                # store aerosol data in data_atm
+                try:
+                    data_atm.sig2 = PTK_fun['psig2'](data_atm.pco)
+                # for SciPy earlier than v0.18.0
+                except ValueError:
+                    PTK_fun['psig2'] = interpolate.interp1d(p_file, sig2_file, assume_sorted = False, bounds_error=False, fill_value=sig2_file[np.argmin(p_file)] )
+                    data_atm.sig2 = PTK_fun['psig2'](data_atm.pco)
+
         elif self.type == 'vulcan_ini':
             print ("Initializing PT from the prvious run " + vulcan_cfg.vul_ini)
             with open(vulcan_cfg.vul_ini, 'rb') as handle:

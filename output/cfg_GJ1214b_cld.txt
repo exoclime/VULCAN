@@ -3,10 +3,10 @@
 # ============================================================================= 
 
 # ====== Setting up the elements included in the network ======
-atom_list = ['H', 'O', 'C', 'N', 'S']
+atom_list = ['H', 'O', 'C', 'N']
 # ====== Setting up paths and filenames for the input and output files  ======
 # input:
-network = 'thermo/SNCHO_photo_network.txt'
+network = 'thermo/NCHO_photo_network.txt'
 use_lowT_limit_rates = False
 gibbs_text = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder = 'thermo/photo_cross/'
@@ -20,16 +20,16 @@ vul_ini = 'output/HD189-nominal.vul' # the file to initialize the abundances for
 output_dir = 'output/'
 plot_dir = 'plot/'
 movie_dir = 'plot/movie/'
-out_name =  'GJ1214b_no_aer.vul' # output file name
+out_name =  'GJ1214b_cld.vul' # output file name
 
 # ====== Setting up the elemental abundance ======
 use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
 # customized elemental abundance (only read when use_solar = False)
-O_H = 4.8978E-4 * 1.0
-C_H = 2.8840E-4  * 1.0
-N_H = 6.7608E-5 * 1.0
-S_H = 1.3183E-5 * 1.0
-He_H = 0.0820 * 1.0
+O_H = 6.0618E-4 #*(0.793)  
+C_H = 2.7761E-4  
+N_H = 8.1853E-5
+S_H = 1.3183E-5
+He_H = 0.09692
 ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini', 'table' (for 'vulcan_ini, the T-P grids have to be exactly the same)
 fastchem_met_scale = 1.0 # scaling factor for other elements in fastchem (e.g., if fastchem_met_scale = 0.1, other elements such as Si and Mg will take 0.1 solar values)
 
