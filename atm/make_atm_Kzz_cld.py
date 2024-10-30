@@ -23,8 +23,8 @@ sig2 = np.zeros(nz)
 
 for i in range(nz):
   if (p[i]/1e6 < 1e-1):
-    nd[i] = 1e5
-    rm[i] = 1e-2
+    nd[i] = 1e6
+    rm[i] = 1e0
     sig2[i] = 1.0
 
 fout = 'atm_GJ1214b_Kzz_aer.txt'

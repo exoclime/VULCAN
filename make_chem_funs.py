@@ -722,15 +722,16 @@ def check_conserv():
     compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=None)
     compo_row = list(compo['species'])
     # Convert bytes to strings
-    compo_row = [sp for sp in compo_row]
-    #print (compo_row)
+    compo_row = [str(sp,'utf-8') for sp in compo_row]
+    #print(compo_row)
     num_atoms = len(compo.dtype.names) - 2 # dtype.names returns the column names and -2 is for 'species' and 'mass'
+    #print(num_atoms)
  
     for re in range(1,nr+1,2):
     
         reac_atoms, prod_atoms = np.zeros(num_atoms), np.zeros(num_atoms)
     
-        for sp in re_dict[re][0]:        
+        for sp in re_dict[re][0]:       
             # 1:7 for all the atoms (H	O	C	He	N	S)
             reac_atoms += np.array(list(compo[compo_row.index(sp)])[1:num_atoms+1])
             
@@ -740,7 +741,6 @@ def check_conserv():
         if not np.all(reac_atoms == prod_atoms):
             print ('Re ' + str(re) + ' not conserving element!')
             conserv_check = False
-            
     if conserv_check == True: 
         print ('Elements conserved in the network.')
     else:

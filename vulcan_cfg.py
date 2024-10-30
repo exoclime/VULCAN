@@ -3,10 +3,11 @@
 # ============================================================================= 
 
 # ====== Setting up the elements included in the network ======
-atom_list = ['H', 'O', 'C', 'N', 'S']
+atom_list = ['H', 'O', 'C', 'N']
 # ====== Setting up paths and filenames for the input and output files  ======
 # input:
-network = 'thermo/SNCHO_photo_network.txt'
+#network = 'thermo/SNCHO_photo_network.txt'
+network = 'thermo/NCHO_photo_network.txt'
 use_lowT_limit_rates = False
 gibbs_text = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder = 'thermo/photo_cross/'
@@ -20,7 +21,7 @@ vul_ini = 'output/HD189-nominal.vul' # the file to initialize the abundances for
 output_dir = 'output/'
 plot_dir = 'plot/'
 movie_dir = 'plot/movie/'
-out_name =  'GJ1214b_no_aer.vul' # output file name
+out_name =  'GJ1214b_w_aer_w_mc.vul' # output file name
 
 # ====== Setting up the elemental abundance ======
 use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
@@ -28,7 +29,7 @@ use_solar = False # True: using the solar abundance from Table 10. K.Lodders 200
 O_H = 4.8978E-4 * 1.0
 C_H = 2.8840E-4  * 1.0
 N_H = 6.7608E-5 * 1.0
-S_H = 1.3183E-5 * 1.0
+#S_H = 1.3183E-5 * 1.0
 He_H = 0.0820 * 1.0
 ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini', 'table' (for 'vulcan_ini, the T-P grids have to be exactly the same)
 fastchem_met_scale = 1.0 # scaling factor for other elements in fastchem (e.g., if fastchem_met_scale = 0.1, other elements such as Si and Mg will take 0.1 solar values)
@@ -71,7 +72,7 @@ atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphe
 rocky = False # for the surface gravity
 nz = 150   # number of vertical layers
 P_b = 1e8  # pressure at the bottom (dyne/cm^2)
-P_t = 1e-2 # pressure at the top (dyne/cm^2)
+P_t = 1e-3 # pressure at the top (dyne/cm^2)
 use_Kzz = True
 use_moldiff = True
 use_vz = False
@@ -93,8 +94,8 @@ const_vz = 0 # (cm/s) Only reads when use_vz = True and vz_prof = 'const'
 update_frq = 100 
 
 # ====  Aerosol opacity parameters ====
-use_aer = False # Include aerosol opacity calculation in VULCAN
-aer_sp = 'Tholin' # Aerosol species
+use_aer = True # Include aerosol opacity calculation in VULCAN
+aer_sp = 'Soot_Lavvas' # Aerosol species
 idist = 1 # Choice of size distribution
 ndist = 21 # Number of points for size distribution integration
 r_min = 1e-3 # Minimum radius of size distribution [um]
@@ -145,7 +146,7 @@ mtol_conv = 1.E-20
 pos_cut = 0
 nega_cut = -1.
 loss_eps = 1e-1
-yconv_cri = 0.01 # for checking steady-state
+yconv_cri = 0.1 # for checking steady-state
 slope_cri = 1.e-3
 yconv_min = 0.1
 flux_cri = 0.1
@@ -159,7 +160,7 @@ post_conden_rtol = 0.1 # switched to this value after fix_species_time
 # ====== Setting up for ouwtput and plotting ======
 # plotting:
 plot_TP = False
-use_live_plot = True
+use_live_plot = False
 use_live_flux = False
 use_plot_end = False
 use_plot_evo = False
@@ -170,7 +171,7 @@ use_PIL = True
 live_plot_frq = 10
 save_movie_rate = live_plot_frq
 y_time_freq = 1  #  storing data for every 'y_time_freq' step
-plot_spec = ['H2O', 'H', 'CH4', 'CO', 'CO2', 'C2H2', 'HCN', 'NH3' ]
+plot_spec = ['H2O', 'H', 'CH4', 'CO', 'CO2', 'C2H2', 'HCN', 'NH3', 'OH']
 # output:
 output_humanread = False
 use_shark = False

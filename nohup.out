@@ -1,0 +1,10 @@
+/home/gl20y334/VULCAN_Lee_dev/make_chem_funs.py:722: VisibleDeprecationWarning: Reading unicode strings without specifying the encoding argument is deprecated. Set the encoding, use None for the system default.
+  compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=None)
+Including condensation reactions.
+Traceback (most recent call last):
+  File "/home/gl20y334/VULCAN_Lee_dev/make_chem_funs.py", line 811, in <module>
+    check_conserv()
+  File "/home/gl20y334/VULCAN_Lee_dev/make_chem_funs.py", line 735, in check_conserv
+    reac_atoms += np.array(list(compo[compo_row.index(sp)])[1:num_atoms+1])
+ValueError: 'OH' is not in list
+Equilibrium calculation (Fastchem) finished. 
