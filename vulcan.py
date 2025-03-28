@@ -79,9 +79,10 @@ import vulcan_cfg
 from phy_const import kb, Navo
 
 # Setting the current working directory to the script location
-abspath = os.path.abspath(sys.argv[0])
-dname = os.path.dirname(abspath)
-os.chdir(dname)
+# abspath = os.path.abspath(sys.argv[0])
+# dname = os.path.dirname(abspath)
+# os.chdir(dname)
+dname = ""
 
 from chem_funs import ni, nr  # number of species and reactions in the network
 np.set_printoptions(threshold=np.inf)  # print all for debuging

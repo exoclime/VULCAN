@@ -27,7 +27,7 @@ compo_row = list(compo['species'])
 
 
 class InitialAbun(object):
-    """
+    """s
     Calculating the appropriate initial mixing ratios with the assigned elemental abundance
     """
 
