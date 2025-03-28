@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
 # ==============================================================================
-# This is the main file of VULCAN: the chemical kinetics code.                      
-# Copyright (C) 2016 Shang-Min Tsai (Shami)                                      
+# This is the main file of VULCAN: the chemical kinetics code.
+# Copyright (C) 2016 Shang-Min Tsai (Shami)
 #
-# To run VULCAN simply run this file with python.                              
-# 
+# To run VULCAN simply run this file with python.
+#
 # Requirements:
 # - Python and the following packages:
-#   numpy 
+#   numpy
 #   scipy
 #   Sympy
-#   matplotlib 
+#   matplotlib
 #   PIL/Pillow (optional)
 #   C++ compiler (e.g. g++, Clang) for the embede FastChem
 # - Following files in the same directory:
@@ -23,14 +23,14 @@
 #   store.py
 #   vulcan.py
 #   vulcan_cfg.py
-#   
+#
 # - Subdirectories:
 #   /atm/ - for the atmospheric input files
-#   /output/ - the default directory for the binary output files  
+#   /output/ - the default directory for the binary output files
 #   /plot/ - for plots
 #   /thermo/ - for thermodynamic data
 #
-# ============================================================================== 
+# ==============================================================================
 #     VULCAN is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
 #     the Free Software Foundation, either version 3 of the License, or
@@ -61,7 +61,7 @@ import time, timeit, sys
 import ast
 
 # no arguments or not setting '-n' (no re-making chem_funs.py) option
-if len(sys.argv) < 2 or sys.argv[1] != '-n': 
+if len(sys.argv) < 2 or sys.argv[1] != '-n':
     # running prepipe to construch chem_funs.py
     print ('Making chem_funs.py ...')
     python_executable = sys.executable
@@ -71,9 +71,9 @@ else: pass
 # import VULCAN modules
 import store, build_atm, op
 try: import chem_funs
-except: 
+except:
     raise IOError ('\nThe module "chem_funs" does not exist.\nPlease run prepipe.py first to create the module...')
-     
+
 # import the configuration inputs
 import vulcan_cfg
 from phy_const import kb, Navo
@@ -90,7 +90,7 @@ species = chem_funs.spec_list
 ### read in the basic chemistry data
 with open(vulcan_cfg.com_file, 'r') as f:
     columns = f.readline() # reading in the first line
-    num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass") 
+    num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass")
 type_list = ['int' for i in range(num_ele)]
 type_list.insert(0,'U20'); type_list.append('float')
 compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=type_list)
@@ -116,7 +116,7 @@ output.save_cfg(dname)
 
 # construct pico
 data_atm = make_atm.f_pico(data_atm)
-# construct Tco and Kzz 
+# construct Tco and Kzz
 data_atm =  make_atm.load_TPK(data_atm)
 # construct Dzz (molecular diffusion)
 
@@ -132,9 +132,9 @@ rate = op.ReadRate()
 # read-in network and calculating forward rates
 data_var = rate.read_rate(data_var, data_atm)
 
-# for low-T rates e.g. Jupiter       
+# for low-T rates e.g. Jupiter
 if vulcan_cfg.use_lowT_limit_rates == True: data_var = rate.lim_lowT_rates(data_var, data_atm)
-    
+
 # reversing rates
 data_var = rate.rev_rate(data_var, data_atm)
 # removing rates
@@ -155,7 +155,7 @@ make_atm.BC_flux(data_atm)
 
 
 # ============== Execute VULCAN  ==============
-# time-steping in the while loop until conv() returns True or count > count_max 
+# time-steping in the while loop until conv() returns True or count > count_max
 
 # setting the numerical solver to the desinated one in vulcan_cfg
 solver_str = vulcan_cfg.ode_solver
@@ -166,20 +166,20 @@ if vulcan_cfg.use_photo == True:
     rate.make_bins_read_cross(data_var, data_atm)
     #rate.read_cross(data_var)
     make_atm.read_sflux(data_var, data_atm)
-    
-    # computing the optical depth (tau), flux, and the photolisys rates (J) for the first time 
+
+    # computing the optical depth (tau), flux, and the photolisys rates (J) for the first time
     solver.compute_tau(data_var, data_atm)
     solver.compute_flux(data_var, data_atm)
     solver.compute_J(data_var, data_atm)
     # they will be updated in op.Integration by the assigned frequence
-    
+
     # removing rates
     data_var = rate.remove_rate(data_var)
 
 integ = op.Integration(solver, output)
 # Assgining the specific solver corresponding to different B.C.s
 solver.naming_solver(data_para)
- 
+
 # Running the integration loop
 integ(data_var, data_atm, data_para, make_atm)
 
