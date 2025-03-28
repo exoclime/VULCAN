@@ -1,3 +1,10 @@
+*.nc
+.DS_Store
+__pycache__
+nogit_*
+
+
 fastchem_vulcan/obj/*.o
 fastchem_vulcan/obj/*.d
 fastchem_vulcan/fastchem
+
