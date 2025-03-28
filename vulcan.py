@@ -82,7 +82,6 @@ from phy_const import kb, Navo
 # abspath = os.path.abspath(sys.argv[0])
 # dname = os.path.dirname(abspath)
 # os.chdir(dname)
-dname = ""
 
 from chem_funs import ni, nr  # number of species and reactions in the network
 np.set_printoptions(threshold=np.inf)  # print all for debuging
@@ -113,7 +112,7 @@ make_atm = build_atm.Atm()
 output = op.Output()
 
 # saving the config file
-output.save_cfg(dname)
+output.save_cfg()
 
 # construct pico
 data_atm = make_atm.f_pico(data_atm)
@@ -184,4 +183,4 @@ solver.naming_solver(data_para)
 # Running the integration loop
 integ(data_var, data_atm, data_para, make_atm)
 
-output.save_out(data_var, data_atm, data_para, dname)
+output.save_out(data_var, data_atm, data_para)
