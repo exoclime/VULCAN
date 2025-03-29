@@ -2860,29 +2860,49 @@ class Output(object):
 
         tex_labels = {'H':'H','H2':'H$_2$','O':'O','OH':'OH','H2O':'H$_2$O','CH':'CH','C':'C','CH2':'CH$_2$','CH3':'CH$_3$','CH4':'CH$_4$','HCO':'HCO','H2CO':'H$_2$CO', 'C4H2':'C$_4$H$_2$',\
         'C2':'C$_2$','C2H2':'C$_2$H$_2$','C2H3':'C$_2$H$_3$','C2H':'C$_2$H','CO':'CO','CO2':'CO$_2$','He':'He','O2':'O$_2$','CH3OH':'CH$_3$OH','C2H4':'C$_2$H$_4$','C2H5':'C$_2$H$_5$','C2H6':'C$_2$H$_6$','CH3O': 'CH$_3$O'\
-        ,'CH2OH':'CH$_2$OH', 'NH3':'NH$_3$'}
+        ,'CH2OH':'CH$_2$OH', 'NH3':'NH$_3$', "H2S":'H$_2$S'}
+
+        gas_cols = {
+                "H2O": "#027FB1",
+                "CO2": "#D24901",
+                "H2" : "#008C01",
+                "CH4": "#C720DD",
+                "CO" : "#D1AC02",
+                "N2" : "#870036",
+                "S2" : "#FF8FA1",
+                "SO2": "#00008B",
+                "H2S": "#2eff71",
+                "NH3": "#675200",
+            }
 
         plt.figure('live mixing ratios')
         plt.ion()
         color_index = 0
-        for color_index, sp in enumerate(vulcan_cfg.plot_spec):
-            if sp in tex_labels: sp_lab = tex_labels[sp]
-            else: sp_lab = sp
+        for sp in vulcan_cfg.plot_spec:
+            if sp in tex_labels:
+                sp_lab = tex_labels[sp]
+            else:
+                sp_lab = sp
             if color_index == len(para.tableau20): # when running out of colors
                 para.tableau20.append(tuple(np.random.rand(3)))
+            if sp in gas_cols.keys():
+                color = gas_cols[sp]
+            else:
+                color = para.tableau20[color_index]
+                color_index += 1
             if vulcan_cfg.plot_height == False:
-                line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab)
+                line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = color, label=sp_lab)
                 if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
-                    plt.plot(atm.sat_mix[sp], atm.pco/1.e6, color = para.tableau20[color_index], label=sp_lab + ' sat', ls='--')
+                    plt.plot(atm.sat_mix[sp], atm.pco/1.e6, color = color, label=sp_lab + ' sat', ls='--')
 
                 plt.gca().set_yscale('log')
                 plt.gca().invert_yaxis()
                 plt.ylabel("Pressure (bar)")
                 plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
             else: # plotting with height
-                line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = para.tableau20[color_index], label=sp_lab)
+                line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = color, label=sp_lab)
                 if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
-                    plt.plot(atm.sat_mix[sp], atm.zco[1:]/1.e5, color = para.tableau20[color_index], label=sp_lab + ' sat', ls='--')
+                    plt.plot(atm.sat_mix[sp], atm.zco[1:]/1.e5, color = color, label=sp_lab + ' sat', ls='--')
 
                 plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
                 plt.ylabel("Height (km)")
