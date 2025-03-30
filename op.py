@@ -2883,12 +2883,12 @@ class Output(object):
                 sp_lab = tex_labels[sp]
             else:
                 sp_lab = sp
-            if color_index == len(para.tableau20): # when running out of colors
-                para.tableau20.append(tuple(np.random.rand(3)))
+            if color_index == len(colors): # when running out of colors
+                colors.append(tuple(np.random.rand(3)))
             if sp in gas_cols.keys():
                 color = gas_cols[sp]
             else:
-                color = para.tableau20[color_index]
+                color = colors[color_index]
                 color_index += 1
             if vulcan_cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = color, label=sp_lab)
@@ -2911,9 +2911,10 @@ class Output(object):
 
         plt.title(str(para.count)+' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
         plt.gca().set_xscale('log')
-        plt.xlim(1.E-20, 1.)
-        plt.legend(frameon=0, prop={'size':14}, loc=3)
-        plt.xlabel("Mixing Ratios")
+        plt.xlim(1.E-16, 1.2)
+        plt.legend(frameon=0, fontsize=10, loc=3,
+                    labelspacing=0.2)
+        plt.xlabel("Volume mixing ratio")
         plt.show(block=0)
         plt.pause(0.001)
         if vulcan_cfg.use_save_movie == True:
