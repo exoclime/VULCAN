@@ -2855,7 +2855,7 @@ class Output(object):
     def plot_update(self, var, atm, para):
 
         images = []
-        colors = ['b','g','r','c','m','y','k','orange','pink', 'grey',\
+        colors = ['b','r','c','m','y','k','orange','pink', 'grey',\
         'darkred','darkblue','salmon','chocolate','mediumspringgreen','steelblue','plum','hotpink']
 
         tex_labels = {'H':'H','H2':'H$_2$','O':'O','OH':'OH','H2O':'H$_2$O','CH':'CH','C':'C','CH2':'CH$_2$','CH3':'CH$_3$','CH4':'CH$_4$','HCO':'HCO','H2CO':'H$_2$CO', 'C4H2':'C$_4$H$_2$',\
