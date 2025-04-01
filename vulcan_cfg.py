@@ -10,36 +10,36 @@ com_file                = 'thermo/all_compose.txt'
 
 atm_base                = 'CO2'
 rocky                   = True           # for the surface gravity
-nz                      = 61   # number of vertical layers
-P_b                     = 59338166.251575835  # pressure at the bottom (dyne/cm^2)
-P_t                     = 99.99999999999999  # pressure at the top (dyne/cm^2)
+nz                      = 41   # number of vertical layers
+P_b                     = 553737221.7263721  # pressure at the bottom (dyne/cm^2)
+P_t                     = 10.0  # pressure at the top (dyne/cm^2)
 atm_type                = 'file'
-atm_file                = '/home/n/nichollsh/PROTEUS/VULCAN/output/profile.dat'
+atm_file                = '/home/n/nichollsh/PROTEUS/output/minimal/offchem/profile.dat'
 
-sflux_file              = '/home/n/nichollsh/PROTEUS/VULCAN/output/star.dat'
+sflux_file              = '/home/n/nichollsh/PROTEUS/output/minimal/offchem/star.dat'
 top_BC_flux_file        = 'atm/BC_top.txt' # the file for the top boundary conditions
 bot_BC_flux_file        = 'atm/BC_bot.txt' # the file for the lower boundary conditions
 
-output_dir              = '/home/n/nichollsh/PROTEUS/VULCAN/output/'
-plot_dir                = '/home/n/nichollsh/PROTEUS/VULCAN/plot/'
-movie_dir               = '/home/n/nichollsh/PROTEUS/VULCAN/plot//movie/'
+output_dir              = '/home/n/nichollsh/PROTEUS/output/minimal/offchem/'
+plot_dir                = '/home/n/nichollsh/PROTEUS/output/minimal/offchem/'
+movie_dir               = '/home/n/nichollsh/PROTEUS/output/minimal/offchem//movie/'
 out_name                = 'recent.vul'
 
 # ====== Setting up the elemental abundance ======
 ini_mix = 'table'
-const_mix = { 'H2O':1.41365911e-02, 'CO2':9.58912176e-02, 'H2':2.42011347e-02, 'CH4':5.26367966e-08, 'CO':8.58145764e-01, 'N2':7.49046953e-03, 'NH3':7.74536228e-05, 'S2':2.41720535e-07, 'SO2':1.09465104e-05, 'H2S':4.61290744e-05 }
-vul_ini = '/home/n/nichollsh/PROTEUS/VULCAN/output/vmrs.dat'
+const_mix = { 'H2O':2.53707710e-02, 'CO2':7.21205078e-01, 'H2':7.26513554e-04, 'CO':1.65532653e-01, 'N2':2.14324802e-03, 'NH3':1.30432368e-06, 'S2':3.15480171e-03, 'SO2':8.17037713e-02, 'H2S':1.61859560e-04 }
+vul_ini = '/home/n/nichollsh/PROTEUS/output/minimal/offchem/vmrs.dat'
 
 
 # ====== Setting up photochemistry ======
 use_ion         = False
 use_photo       = True
-r_star          = 0.31342940635331323     # stellar radius (R_sun)
-Rp              = 494113992.0      # Planetary radius (cm)
-orbit_radius    = 0.022215524020824183    # planet-star distance in A.U.
-gs              = 767.304689      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
-sl_angle        = 0.955393232541696   # the zenith angle
-f_diurnal       = 0.25
+r_star          = 0.8862710924248958     # stellar radius (R_sun)
+Rp              = 633543900.0      # Planetary radius (cm)
+orbit_radius    = 1.000000002005376    # planet-star distance in A.U.
+gs              = 1191.6591199999998      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
+sl_angle        = 0.8410741665360674   # the zenith angle
+f_diurnal       = 0.375
 scat_sp         = ['H2', 'O2', 'N2']
 T_cross_sp      = []
 
@@ -70,7 +70,7 @@ update_frq  = 50    # frequency for updating dz and dzi due to change of mu
 # ====== Setting up the boundary conditions ======
 use_topflux     = False
 use_botflux     = False
-use_fix_sp_bot  = { 'H2O':1.41365911e-02, 'CO2':9.58912176e-02, 'H2':2.42011347e-02, 'CH4':5.26367966e-08, 'CO':8.58145764e-01, 'N2':7.49046953e-03, 'NH3':7.74536228e-05, 'S2':2.41720535e-07, 'SO2':1.09465104e-05, 'H2S':4.61290744e-05 } # fixed mixing ratios at the lower boundary
+use_fix_sp_bot  = { 'H2O':2.53707710e-02, 'CO2':7.21205078e-01, 'H2':7.26513554e-04, 'CO':1.65532653e-01, 'N2':2.14324802e-03, 'NH3':1.30432368e-06, 'S2':3.15480171e-03, 'SO2':8.17037713e-02, 'H2S':1.61859560e-04 } # fixed mixing ratios at the lower boundary
 diff_esc        = [] # species for diffusion-limit escape at TOA
 max_flux        = 1e13  # upper limit for the diffusion-limit fluxes
 
@@ -137,7 +137,7 @@ save_movie_rate = live_plot_frq
 y_time_freq     = 1  #  storing data for every 'y_time_freq' step
 plot_spec       = ['H2', 'H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2', 'NH3', 'SO2', 'H2S', 'S2']
 # output:
-output_humanread = True
+output_humanread = False
 use_shark        = False
 save_evolution   = False   # save the evolution of chemistry (y_time and t_time) for every save_evo_frq step
 save_evo_frq     = 10

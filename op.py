@@ -14,6 +14,7 @@ from scipy import sparse
 from scipy import interpolate
 import matplotlib.pyplot as plt
 import time, os, pickle
+import shutil
 
 #from builtins import input
 #from collections import defaultdict
@@ -2754,9 +2755,6 @@ class Output(object):
         plot_dir   =  vulcan_cfg.plot_dir
         movie_dir  =  vulcan_cfg.movie_dir
 
-        # remove old data
-        shutil.rmtree(plot_dir,  ignore_errors=True)
-        shutil.rmtree(movie_dir, ignore_errors=True)
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
