@@ -15,9 +15,8 @@ from scipy import interpolate
 import matplotlib.pyplot as plt
 import matplotlib.legend as lg
 import time, os, pickle
-import csv, ast
-# TEST numba
-# from numba import njit, jit
+import csv
+import shutil
 
 #from builtins import input
 #from collections import defaultdict
@@ -2753,22 +2752,27 @@ class Output(object):
 
     def __init__(self):
 
-        output_dir, out_name, plot_dir = vulcan_cfg.output_dir, vulcan_cfg.out_name, vulcan_cfg.plot_dir
+        output_dir = vulcan_cfg.output_dir
+        out_name   = vulcan_cfg.out_name
+        plot_dir   =  vulcan_cfg.plot_dir
+        movie_dir  =  vulcan_cfg.movie_dir
 
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
-        if not os.path.exists(plot_dir): os.makedirs(plot_dir)
+        # remove old data
+        shutil.rmtree(plot_dir,  ignore_errors=True)
+        shutil.rmtree(movie_dir, ignore_errors=True)
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
         if vulcan_cfg.use_save_movie == True:
-            if not os.path.exists(vulcan_cfg.movie_dir): os.makedirs(vulcan_cfg.movie_dir)
+            if not os.path.exists(vulcan_cfg.movie_dir):
+                os.makedirs(vulcan_cfg.movie_dir)
 
-        if os.path.isfile(output_dir+out_name):
-            # Fix Python 3.x and 2.x.
-            # try: input = raw_input
-            # except NameError: pass
-            # input("  The output file: " + str(out_name) + " already exists.\n"
-            #           "  Press enter to overwrite the existing file,\n"
-            #           "  or Ctrl-Z and Return to leave and choose a different out_name in vulcan_cfg.")
-
-            print ('Warning... the output file: ' + str(out_name) + ' already exists.\n')
+        outfile = output_dir+out_name
+        if os.path.isfile(outfile):
+            print("Warning: output file already exists. Removing.")
+            os.remove(outfile)
 
     def print_prog(self, var, para):
         indx_max = np.nanargmax(para.where_varies_most)
@@ -2918,7 +2922,12 @@ class Output(object):
         plt.show(block=0)
         plt.pause(0.001)
         if vulcan_cfg.use_save_movie == True:
-            plt.savefig( vulcan_cfg.movie_dir+str(para.pic_count)+'.png', dpi=200)
+            last_fpath = vulcan_cfg.movie_dir+"_recent.png"
+            copy_fpath = vulcan_cfg.movie_dir+str(para.pic_count)+'.png'
+
+            plt.savefig( last_fpath, dpi=200 )
+            shutil.copyfile(last_fpath, copy_fpath)
+
             para.pic_count += 1
         plt.clf()
 

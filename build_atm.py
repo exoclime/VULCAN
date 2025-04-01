@@ -164,7 +164,7 @@ class InitialAbun(object):
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
 
         elif vulcan_cfg.ini_mix == 'vulcan_ini':
-            print ("Initializing with compositions from the prvious run " + vulcan_cfg.vul_ini)
+            print ("Initializing with compositions from the previous run " + vulcan_cfg.vul_ini)
             with open(vulcan_cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle)
 
@@ -186,7 +186,11 @@ class InitialAbun(object):
                 print ("Warning! The initial profile has different layers than the current setting...")
                 raise
             for sp in species:
-                data_var.y[:,species.index(sp)] = data_atm.n_0 * table[sp]
+                try:
+                    arr = data_atm.n_0 * table[sp]
+                except:
+                    arr = np.zeros(len(data_atm.pco))
+                data_var.y[:,species.index(sp)] = arr
 
 
         elif vulcan_cfg.ini_mix == 'const_mix':
