@@ -53,12 +53,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 # import public modules
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.legend as lg
-import scipy
-import scipy.optimize as sop
-import time, timeit, sys
-import ast
+import time, sys
 
 # no arguments or not setting '-n' (no re-making chem_funs.py) option
 if len(sys.argv) < 2 or sys.argv[1] != '-n':

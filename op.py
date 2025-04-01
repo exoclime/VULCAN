@@ -13,10 +13,7 @@ import scipy
 from scipy import sparse
 from scipy import interpolate
 import matplotlib.pyplot as plt
-import matplotlib.legend as lg
 import time, os, pickle
-import csv
-import shutil
 
 #from builtins import input
 #from collections import defaultdict
