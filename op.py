@@ -13,7 +13,7 @@ import scipy
 from scipy import sparse
 from scipy import interpolate
 import matplotlib.pyplot as plt
-import time, os, pickle
+import time, os
 import shutil
 
 #from builtins import input
@@ -2842,14 +2842,15 @@ class Output(object):
                 setattr(var, key, as_nparray)
                 var_save[key] = getattr(var, key)
 
-        with open(output_file, 'wb') as outfile:
-            if vulcan_cfg.output_humanread == True: # human-readable form, less efficient
+        if vulcan_cfg.output_humanread == True:
+            # human-readable form, less efficient
+            with open(output_file, 'w') as outfile:
                 outfile.write(str({'variable': var_save, 'atm': vars(atm), 'parameter': vars(para)}))
-            else:
-                # the protocol must be <= 2 for python 2.X
-                pickle.dump( {'variable': var_save, 'atm': vars(atm), 'parameter': vars(para) }, outfile, protocol=4)
-                # how to add  'config': vars(vulcan_cfg) ?
-
+        else:
+            # pickled form, less safe
+            from pickle import dump
+            with open(output_file, 'wb') as outfile:
+                dump( {'variable': var_save, 'atm': vars(atm), 'parameter': vars(para) }, outfile, protocol=4)
 
     def plot_update(self, var, atm, para):
 
