@@ -2844,8 +2844,20 @@ class Output(object):
 
         if vulcan_cfg.output_humanread == True:
             # human-readable form, less efficient
-            with open(output_file, 'w') as outfile:
-                outfile.write(str({'variable': var_save, 'atm': vars(atm), 'parameter': vars(para)}))
+            with open(output_file+".var", 'w') as outfile:
+                for var in var_save.keys():
+                    outfile.write(f"# {var} \n")
+                    outfile.write(str(var_save[var]) + "\n")
+
+            with open(output_file+".atm", 'w') as outfile:
+                for var in vars(atm).keys():
+                    outfile.write(f"# {var} \n")
+                    outfile.write(str(vars(atm)[var]) + "\n")
+
+            with open(output_file+".par", 'w') as outfile:
+                for var in vars(para).keys():
+                    outfile.write(f"# {var} \n")
+                    outfile.write(str(vars(para)[var]) + "\n")
         else:
             # pickled form, less safe
             from pickle import dump
