@@ -2866,7 +2866,8 @@ class Output(object):
 
     def plot_update(self, var, atm, para):
 
-        images = []
+        print("Plotting mixing ratios")
+
         colors = ['b','r','c','m','y','k','orange','pink', 'grey',\
         'darkred','darkblue','salmon','chocolate','mediumspringgreen','steelblue','plum','hotpink']
 
@@ -2887,8 +2888,7 @@ class Output(object):
                 "NH3": "#675200",
             }
 
-        plt.figure('live mixing ratios')
-        plt.ion()
+        fig, ax = plt.subplots(1,1, figsize=(8,6))
         color_index = 0
         for sp in vulcan_cfg.plot_spec:
             if sp in tex_labels:
@@ -2902,42 +2902,42 @@ class Output(object):
             else:
                 color = colors[color_index]
                 color_index += 1
+
             if vulcan_cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = color, label=sp_lab)
                 if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
-                    plt.plot(atm.sat_mix[sp], atm.pco/1.e6, color = color, label=sp_lab + ' sat', ls='--')
+                    ax.plot(atm.sat_mix[sp], atm.pco/1.e6, color = color, label=sp_lab + ' sat', ls='--')
 
-                plt.gca().set_yscale('log')
-                plt.gca().invert_yaxis()
-                plt.ylabel("Pressure (bar)")
-                plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
+                ax.set_yscale('log')
+                ax.invert_yaxis()
+                ax.set_ylabel("Pressure [bar]")
+                ax.set_ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
+
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = color, label=sp_lab)
                 if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
-                    plt.plot(atm.sat_mix[sp], atm.zco[1:]/1.e5, color = color, label=sp_lab + ' sat', ls='--')
+                    ax.plot(atm.sat_mix[sp], atm.zco[1:]/1.e5, color = color, label=sp_lab + ' sat', ls='--')
 
-                plt.ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
-                plt.ylabel("Height (km)")
+                ax.set_ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
+                ax.set_ylabel("Height [km]")
 
-            images.append((line,))
+        title =  "i = %5d steps     t = %.2e seconds"%(para.count, var.t)
+        title += "\n dy/dt = %.2e"%(var.longdydt)
+        ax.set_title(title)
+        ax.set_xscale('log')
+        ax.set_xlabel("Volume mixing ratio")
+        ax.set_xlim(1.E-16, 1.2)
+        ax.legend(fontsize=10, labelspacing=0.2,
+                    loc='upper left', bbox_to_anchor=(1.0, 1.0))
 
-        plt.title(str(para.count)+' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
-        plt.gca().set_xscale('log')
-        plt.xlim(1.E-16, 1.2)
-        plt.legend(frameon=0, fontsize=10, loc=3,
-                    labelspacing=0.2)
-        plt.xlabel("Volume mixing ratio")
-        plt.show(block=0)
-        plt.pause(0.001)
         if vulcan_cfg.use_save_movie == True:
             last_fpath = vulcan_cfg.movie_dir+"_recent.png"
             copy_fpath = vulcan_cfg.movie_dir+str(para.pic_count)+'.png'
 
-            plt.savefig( last_fpath, dpi=200 )
+            fig.savefig( last_fpath, dpi=210, bbox_inches='tight')
             shutil.copyfile(last_fpath, copy_fpath)
 
             para.pic_count += 1
-        plt.clf()
 
     def plot_flux_update(self, var, atm, para):
 
@@ -2994,13 +2994,6 @@ class Output(object):
         plt.legend(frameon=0, prop={'size':14}, loc=3)
         plt.xlabel("Mixing Ratios")
         plt.savefig(plot_dir + 'mix.png')
-        if vulcan_cfg.use_live_plot == True:
-            # plotting in the same window of real-time plotting
-            plt.draw()
-        elif vulcan_cfg.use_PIL == True: # plotting in a new window with PIL package
-            plot = Image.open(plot_dir + 'mix.png')
-            plot.show()
-            plt.close()
 
     def plot_evo(self, var, atm, plot_j=-1, dn=1):
 
@@ -3075,11 +3068,12 @@ class Output(object):
         ax2.set_xlabel(r'K$_{zz}$ (cm$^2$s$^{-1}$)')
 
         plot_name = plot_dir + 'TPK.png'
-        plt.savefig(plot_name)
+        fig.savefig(plot_name)
         if vulcan_cfg.use_PIL == True:
             plot = Image.open(plot_name)
             plot.show()
             # close the matplotlib window
             plt.close()
-        else: plt.show(block = False)
+        # else:
+        #     plt.show(block = False)
 

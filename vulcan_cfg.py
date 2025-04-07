@@ -1,46 +1,46 @@
 # VULCAN CONFIGURATION FILE
 # CREATED AUTOMATICALLY BY PROTEUS
 
-atom_list               = ['H', 'O', 'C']
-network                 = 'thermo/CHO_thermo_network.txt'
+atom_list               = ['H', 'O', 'C', 'N', 'S']
+network                 = 'thermo/SNCHO_photo_network.txt'
 use_lowT_limit_rates    = False
 gibbs_text              = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder            = 'thermo/photo_cross/'
 com_file                = 'thermo/all_compose.txt'
 
-atm_base                = 'CO2'
+atm_base                = 'H2'
 rocky                   = True           # for the surface gravity
-nz                      = 41   # number of vertical layers
-P_b                     = 532558479.95544934  # pressure at the bottom (dyne/cm^2)
+nz                      = 61   # number of vertical layers
+P_b                     = 321224441.9339118  # pressure at the bottom (dyne/cm^2)
 P_t                     = 10.0  # pressure at the top (dyne/cm^2)
 atm_type                = 'file'
-atm_file                = '/Users/nichollsh/Projects/PROTEUS/output/minimal/offchem/profile.dat'
+atm_file                = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/profile.dat'
 
-sflux_file              = '/Users/nichollsh/Projects/PROTEUS/output/minimal/offchem/star.dat'
+sflux_file              = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/star.dat'
 top_BC_flux_file        = 'atm/BC_top.txt' # the file for the top boundary conditions
 bot_BC_flux_file        = 'atm/BC_bot.txt' # the file for the lower boundary conditions
 
-output_dir              = '/Users/nichollsh/Projects/PROTEUS/output/minimal/offchem/'
-plot_dir                = '/Users/nichollsh/Projects/PROTEUS/output/minimal/offchem/'
-movie_dir               = '/Users/nichollsh/Projects/PROTEUS/output/minimal/offchem//frames/'
+output_dir              = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/'
+plot_dir                = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/'
+movie_dir               = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem//frames/'
 out_name                = 'recent.vul'
 
 # ====== Setting up the elemental abundance ======
 ini_mix = 'table'
-const_mix = { 'H2O':2.10675378e-02, 'CO2':7.20617042e-01, 'H2':6.21300666e-04, 'CO':1.73931465e-01, 'N2':2.47119975e-03, 'NH3':1.04295601e-06, 'S2':2.64248924e-03, 'SO2':7.85301526e-02, 'H2S':1.17769941e-04 }
-vul_ini = '/Users/nichollsh/Projects/PROTEUS/output/minimal/offchem/vmrs.dat'
+const_mix = { 'H2O':1.34633845e-02, 'CO2':5.60403025e-03, 'H2':2.74827026e-01, 'CH4':4.88805849e-04, 'CO':7.01575338e-01, 'N2':4.85807166e-04, 'NH3':3.47581163e-03, 'S2':2.34331413e-09, 'SO2':6.09618271e-08, 'H2S':7.97332537e-05 }
+vul_ini = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/vmrs.dat'
 
 
 # ====== Setting up photochemistry ======
 use_ion         = False
-use_photo       = False
-r_star          = 0.88627078050884     # stellar radius (R_sun)
-Rp              = 633543900.0      # Planetary radius (cm)
-orbit_radius    = 1.000000002005376    # planet-star distance in A.U.
-gs              = 1191.6591199999998      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
-sl_angle        = 0.8410741665360674   # the zenith angle
-f_diurnal       = 0.375
-scat_sp         = ['H2', 'O2']
+use_photo       = True
+r_star          = 0.2768848325427627     # stellar radius (R_sun)
+Rp              = 817738393.0      # Planetary radius (cm)
+orbit_radius    = 0.048833377211965893    # planet-star distance in A.U.
+gs              = 1275.58438      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
+sl_angle        = 0.955393232541696   # the zenith angle
+f_diurnal       = 0.25
+scat_sp         = ['H2', 'O2', 'N2', 'CO2']
 T_cross_sp      = []
 
 edd             = 0.5 # the Eddington coefficient
@@ -53,15 +53,15 @@ ini_update_photo_frq    = 100
 final_update_photo_frq  = 5
 
 # ====== Mixing processes ======
-use_moldiff = False
+use_moldiff = True
 
-use_vz      = False
+use_vz      = True
 vz_prof     = 'const'  # Options: 'const' or 'file'
-const_vz    = 0 # (cm/s) Only reads when use_vz = True and vz_prof = 'const'
+const_vz    = 0.0 # (cm/s)
 
-use_Kzz     = False
-Kzz_prof    = 'Pfunc' # Options: 'const','file' or 'Pfunc' (Kzz increased with P^-0.4)
-const_Kzz   = 1.E10 # (cm^2/s) Only reads when use_Kzz = True and Kzz_prof = 'const'
+use_Kzz     = True
+Kzz_prof    = 'file' # Options: 'const','file'
+const_Kzz   = 100000.0 # Only reads when Kzz_prof = 'const'
 K_max       = 1e5        # for Kzz_prof = 'Pfunc'
 K_p_lev     = 0.1      # for Kzz_prof = 'Pfunc'
 
@@ -123,7 +123,7 @@ rtol             = 0.7 # relative tolerence for adjusting the stepsize
 post_conden_rtol = 0.1 # switched to this value after fix_species_time
 
 # ====== Setting up for output and plotting ======
-plot_TP         = False
+plot_TP         = True
 use_live_plot   = True
 use_live_flux   = False
 use_plot_end    = False
@@ -131,13 +131,13 @@ use_plot_evo    = False
 use_save_movie  = True
 use_flux_movie  = False
 plot_height     = False
-use_PIL         = True
+use_PIL         = False
 live_plot_frq   = 50
 save_movie_rate = live_plot_frq
 y_time_freq     = 1  #  storing data for every 'y_time_freq' step
-plot_spec       = ['H2',  'H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2']
+plot_spec       = ['H2', 'H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2', 'NH3', 'SO2', 'H2S', 'S2', 'S8']
 # output:
-output_humanread = True
+output_humanread = False
 use_shark        = False
 save_evolution   = False   # save the evolution of chemistry (y_time and t_time) for every save_evo_frq step
 save_evo_frq     = 10
