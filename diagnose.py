@@ -4,21 +4,11 @@ import sys
 sys.path.insert(0, '../') # including the upper level of directory for the path of modules
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.legend as lg
-import vulcan_cfg
-import os, sys
 import pickle
 
-import chem_funs, op
 from chem_funs import nr, re_wM_dict, re_dict
 
-
 vul_data = 'output/.vul'
-
-# setting the numerical solver to the desinated one in vulcan_cfg
-solver_str = vulcan_cfg.ode_solver
-solver = getattr(op, solver_str)()
 
 # the number of fastest reactions to print out
 top_num = 100

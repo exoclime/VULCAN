@@ -9,14 +9,8 @@
 import numpy as np
 import vulcan_cfg
 from vulcan_cfg import nz
-from chem_funs import ni, nr, spec_list  # number of species and reactions in the network
+from chem_funs import ni, spec_list  # number of species and reactions in the network
 
-#from numba import jitclass
-#from numba import f8 # f8: float64 = double
-
-#spec_var = [('y',f8),('ymix',f8)  ]
-
-#@jitclass(spec_var)
 class Variables(object):
     """
     store the essential variables for calculation
@@ -59,7 +53,6 @@ class Variables(object):
         self.k_fun, self.k_inf = [{} for i in range(2)]
         self.photo_sp = set()
         self.pho_rate_index, self.n_branch, self.wavelen = {}, {}, {}
-        #if vulcan_cfg.use_ion == True:
         self.ion_rate_index, self.ion_branch, self.ion_wavelen, self.ion_br_ratio = {}, {}, {}, {}
         self.charge_list, self.ion_sp = [], set() # charge_list: list of species with non-zero charge; ion_sp: species subjected to photoionisation
 
@@ -81,10 +74,12 @@ class Variables(object):
         # Define what variables to save in the output file!
         self.var_save = ['k','y','ymix','y_ini','t','dt','longdy','longdydt',\
         'atom_ini','atom_sum','atom_loss','atom_conden','aflux_change','Rf']
-        if vulcan_cfg.use_photo == True:
+        if vulcan_cfg.use_photo:
             self.var_save.extend(['nbin','bins','dbin1','dbin2','tau','sflux','aflux','cross','cross_scat','cross_J', 'J_sp','n_branch'])
-            if vulcan_cfg.T_cross_sp: self.var_save.extend(['cross_J','cross_T'])
-            if vulcan_cfg.use_ion == True: self.var_save.extend(['charge_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
+            if vulcan_cfg.T_cross_sp:
+                self.var_save.extend(['cross_J','cross_T'])
+            if vulcan_cfg.use_ion:
+                self.var_save.extend(['charge_list', 'ion_sp', 'cross_Jion','Jion_sp', 'ion_wavelen','ion_branch','ion_br_ratio'])
         # 'ion_list' stores all the non-neutral species in build.atm whereas 'ion_sp' is for the species that actually have ionisation reactions in the network
         self.var_evol_save = ['y_time','t_time']
         self.conden_re_list = []
@@ -96,16 +91,6 @@ class Variables(object):
 
         # TEST
         self.v_ratio = np.ones(nz)
-
-        ### ### ### ### ### ### ### ### ### ### ###
-        # List the names variables defined in op here!
-        ### ### ### ### ### ### ### ### ### ### ###
-
-        # Old stuff
-        # self.yconv = 1.
-        # self.yconv_prev = 1.
-        # self.y_conden = np.zeros((nz, ni))  # to store the species removed by condensation
-        # photo data initiated in read_cross in op.py
 
 class AtmData(object):
     """
@@ -149,28 +134,16 @@ class AtmData(object):
                 self.fix_sp_indx[sp] = np.arange(spec_list.index(sp), spec_list.index(sp) + ni*nz, ni)
 
         # turning of df(e) while using charge conservation. it'll be very slow if not doing this
-        if vulcan_cfg.use_ion == True: self.fix_e_indx = np.arange(spec_list.index('e'), spec_list.index('e') + ni*nz, ni)
+        if vulcan_cfg.use_ion:
+            self.fix_e_indx = np.arange(spec_list.index('e'), spec_list.index('e') + ni*nz, ni)
 
         # TEST condensation excluding non-gaseous species
         self.r_p, self.rho_p = {}, {}
-        if vulcan_cfg.use_condense == True:
+        if vulcan_cfg.use_condense:
             for sp in vulcan_cfg.r_p.keys():
                 self.r_p[sp] = vulcan_cfg.r_p[sp]
             for sp in vulcan_cfg.rho_p.keys():
                 self.rho_p[sp] = vulcan_cfg.rho_p[sp]
-
-        # self.r_p['H2O_l_s'] = 0.01 # 100 micron
-        # self.r_p['H2SO4_l'] = 1e-4 # 1 micron
-        # self.r_p['NH3_l_s'] = 5e-5 # 0.5 micron
-        # self.r_p['S8_l_s'] = 1e-4 # 1 micron
-        # self.r_p['S2_l_s'] = 1e-4 # 1 micron
-        # # particle density
-        # self.rho_p['H2O_l_s'] = 0.9 # ice
-        # self.rho_p['NH3_l_s'] = 0.7 # estimated
-        # self.rho_p['H2SO4_l'] = 1.8302 #
-        # self.rho_p['S8_l_s'] = 2.07 #
-        # self.rho_p['S2_l_s'] = 2.0 # estimated
-
 
 class Parameters(object):
     """

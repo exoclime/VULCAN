@@ -34,10 +34,10 @@ vul_ini = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/vmrs.d
 # ====== Setting up photochemistry ======
 use_ion         = False
 use_photo       = True
-r_star          = 0.2768848331511362     # stellar radius (R_sun)
-Rp              = 817738392.9383214      # Planetary radius (cm)
-orbit_radius    = 0.0488333772    # planet-star distance in A.U.
-gs              = 1275.5843837856369      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
+r_star          = 0.2768848325427627     # stellar radius (R_sun)
+Rp              = 817738393.0      # Planetary radius (cm)
+orbit_radius    = 0.048833377211965893    # planet-star distance in A.U.
+gs              = 1275.58438      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
 sl_angle        = 0.955393232541696   # the zenith angle
 f_diurnal       = 0.25
 scat_sp         = ['H2', 'O2', 'CO2']

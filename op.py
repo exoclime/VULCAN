@@ -505,21 +505,29 @@ class ReadRate(object):
         # reading in cross sections into dictionaries
         for n, sp in enumerate(absp_sp):
 
-            if vulcan_cfg.use_ion == True:
-                try: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
-                except: print ('\nMissing the cross section from ' + sp); raise
+            if vulcan_cfg.use_ion:
+                try:
+                    cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                except:
+                    print ('\nMissing the cross section from ' + sp); raise
                 if sp in ion_sp:
-                    try: ion_ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
-                    except: print ('\nMissing the ion branching ratio from ' + sp); raise
+                    try:
+                        ion_ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                    except:
+                        print ('\nMissing the ion branching ratio from ' + sp); raise
             else:
-                try: cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
-                except: print ('\nMissing the cross section from ' + sp); raise
+                try:
+                    cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                except:
+                    print ('\nMissing the cross section from ' + sp); raise
 
             # reading in the branching ratios
             # for i in range(1,var.n_branch[sp]+1): # branch index should start from 1
             if sp in photo_sp: # excluding ion_sp
-                try: ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
-                except: print ('\nMissing the branching ratio from ' + sp); raise
+                try:
+                    ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                except:
+                    print ('\nMissing the branching ratio from ' + sp); raise
 
             # reading in temperature dependent cross sections
             if sp in vulcan_cfg.T_cross_sp:
@@ -531,9 +539,10 @@ class ReadRate(object):
                         T_list.append(int(temp) )
                         var.cross_T_sp_list[sp] = T_list
                 for tt in T_list:
-                    if vulcan_cfg.use_ion == True: # usually the T-dependent cross sections are only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
+                    if vulcan_cfg.use_ion: # usually the T-dependent cross sections are only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
                         cross_T_raw[(sp, tt)] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
-                    else: cross_T_raw[(sp, tt)] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                    else:
+                        cross_T_raw[(sp, tt)] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
                 # room-T cross section
                 cross_T_raw[(sp, 300)] = cross_raw[sp]
                 var.cross_T_sp_list[sp].append(300)
@@ -601,7 +610,8 @@ class ReadRate(object):
         var.cross_J_T = dict([((sp,i), np.zeros((nz, var.nbin) )) for sp in vulcan_cfg.T_cross_sp for i in range(1,var.n_branch[sp]+1) ])
 
         #read cross of ionisation
-        if vulcan_cfg.use_ion == True: var.cross_Jion = dict([((sp,i), np.zeros(var.nbin)) for sp in ion_sp for i in range(1,var.ion_branch[sp]+1)])
+        if vulcan_cfg.use_ion:
+            var.cross_Jion = dict([((sp,i), np.zeros(var.nbin)) for sp in ion_sp for i in range(1,var.ion_branch[sp]+1)])
 
         for sp in photo_sp: # photodissociation only; photoionization takes a separate branch ratio file
             # for values outside the boundary => fill_value = 0
@@ -733,7 +743,7 @@ class ReadRate(object):
                                         var.cross_J_T[(sp,i)][lev, n] = inter_cross_J_highT(ld) * inter_ratio[i](ld) # same inter_ratio[i](ld) as the standard one above
 
 
-        if vulcan_cfg.use_ion == True:
+        if vulcan_cfg.use_ion:
             for sp in ion_sp:
                 if sp not in photo_sp:
                     inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
@@ -784,9 +794,10 @@ class Integration(object):
         self.use_settling = vulcan_cfg.use_settling
 
         # including photoionisation
-        if vulcan_cfg.use_photo == True: self.update_photo_frq = vulcan_cfg.ini_update_photo_frq
+        if vulcan_cfg.use_photo:
+            self.update_photo_frq = vulcan_cfg.ini_update_photo_frq
 
-        if vulcan_cfg.use_condense == True:
+        if vulcan_cfg.use_condense:
             self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
             self.condense_sp_index = [species.index(sp) for sp in vulcan_cfg.condense_sp]
 
@@ -801,17 +812,17 @@ class Integration(object):
 
             # updating tau, flux, and the photolosys rate
             # swtiching to final_update_photo_frq
-            if vulcan_cfg.use_photo == True and var.longdy < vulcan_cfg.yconv_min*10. and var.longdydt < 1.e-6:
+            if vulcan_cfg.use_photo and var.longdy < vulcan_cfg.yconv_min*10. and var.longdydt < 1.e-6:
                 self.update_photo_frq = vulcan_cfg.final_update_photo_frq
                 if para.switch_final_photo_frq == False:
                     print ('update_photo_frq changed to ' + str(vulcan_cfg.final_update_photo_frq) +'\n')
                     para.switch_final_photo_frq = True
 
-            if vulcan_cfg.use_photo == True and para.count % self.update_photo_frq == 0:
+            if vulcan_cfg.use_photo  and para.count % self.update_photo_frq == 0:
                 self.odesolver.compute_tau(var, atm)
                 self.odesolver.compute_flux(var, atm)
                 self.odesolver.compute_J(var, atm)
-                if vulcan_cfg.use_ion == True: # photoionisation rate
+                if vulcan_cfg.use_ion: # photoionisation rate
                     self.odesolver.compute_Jion(var, atm)
 
             # integrating one step
@@ -819,7 +830,7 @@ class Integration(object):
 
 
             # Condensation (needs to be after solver.one_step)
-            if vulcan_cfg.use_condense == True and var.t >= vulcan_cfg.start_conden_time and para.fix_species_start == False:
+            if vulcan_cfg.use_condense and var.t >= vulcan_cfg.start_conden_time and para.fix_species_start == False:
                 # updating the condensation rates
                 var = self.conden(var,atm)
 
@@ -839,7 +850,7 @@ class Integration(object):
                             var.fix_y[sp] = np.copy(var.y[:,species.index(sp)])
 
                             # record the cold trap levels
-                            if vulcan_cfg.fix_species_from_coldtrap_lev == True:
+                            if vulcan_cfg.fix_species_from_coldtrap_lev:
 
                                 if sp == 'H2O_l_s' or sp == 'H2SO4_l' or sp == 'NH3_l_s' or sp == 'S8_l_s': atm.conden_min_lev[sp] = nz-1 # fix condensates through the whole amtosphere
                                     # updated 2023
@@ -870,7 +881,7 @@ class Integration(object):
                 atm = self.update_phi_esc(var, atm) # updating the diffusion-limited flux
 
             # MAINTAINING HYDROSTATIC BALANCE
-            if vulcan_cfg.use_condense == True:
+            if vulcan_cfg.use_condense:
                 #var.v_ratio = np.sum(var.y[:,atm.gas_indx], axis=1) / atm.n_0
                 var.y[:,atm.gas_indx] = np.vstack(atm.n_0)*var.ymix[:,atm.gas_indx]
             else:
@@ -886,14 +897,14 @@ class Integration(object):
             # adjusting the step-size
             var = self.odesolver.step_size(var, para)
 
-            if use_print_prog == True and para.count % vulcan_cfg.print_prog_num==0:
+            if use_print_prog and para.count % vulcan_cfg.print_prog_num==0:
                 self.output.print_prog(var,para)
 
-            if vulcan_cfg.use_live_flux == True and vulcan_cfg.use_photo == True and para.count % vulcan_cfg.live_plot_frq ==0:
+            if vulcan_cfg.use_live_flux  and vulcan_cfg.use_photo  and para.count % vulcan_cfg.live_plot_frq ==0:
                 #plt.figure('flux')
                 self.output.plot_flux_update(var, atm, para)
 
-            if use_live_plot == True and para.count % vulcan_cfg.live_plot_frq ==0:
+            if use_live_plot and para.count % vulcan_cfg.live_plot_frq ==0:
                 #plt.figure('mix')
                 self.output.plot_update(var, atm, para)
 
@@ -939,7 +950,7 @@ class Integration(object):
         atm.dzi = dzi[1:]
 
         # for the molecular diffsuion
-        if vulcan_cfg.use_moldiff == True:
+        if vulcan_cfg.use_moldiff:
             Ti = 0.5*(Tco + np.roll(Tco,-1))
             atm.Ti = Ti[:-1]
             Hpi = 0.5*(Hp + np.roll(Hp,-1))
@@ -1448,11 +1459,11 @@ class ODESolver(object):
         diff = np.append(np.append(tmp0, tmp1), tmp2)
         diff = diff.reshape(nz,ni)
 
-        if vulcan_cfg.use_topflux == True:
+        if vulcan_cfg.use_topflux:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ###
             diff[-1] += atm.top_flux /dzi[-1]
-        if vulcan_cfg.use_botflux == True:
+        if vulcan_cfg.use_botflux:
             ### the deposition term needs to be included in the jacobian!!!
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
         return diff
@@ -1550,11 +1561,11 @@ class ODESolver(object):
         diff = np.append(np.append(tmp0, tmp1), tmp2)
         diff = diff.reshape(nz,ni)
 
-        if vulcan_cfg.use_topflux == True:
+        if vulcan_cfg.use_topflux:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ###
             diff[-1] += atm.top_flux /dzi[-1]
-        if vulcan_cfg.use_botflux == True:
+        if vulcan_cfg.use_botflux:
             ### the deposition term needs to be included in the jacobian!!!
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
 
