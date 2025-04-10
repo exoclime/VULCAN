@@ -650,7 +650,7 @@ def make_Gibbs(re_table, gibbs_text, ofname):
 
 def make_jac(ni, nr, ofname):
     '''
-    to make the analytical Jocobian matrix of chemdf
+    to make the analytical Jacobian matrix of chemdf
     '''
     M = Symbol('M')
     y, k = [], []
@@ -665,8 +665,7 @@ def make_jac(ni, nr, ofname):
     x = Matrix(y)
     jac = dy.jacobian(x)
 
-    jstr = '\ndef symjac(y, M, k): \n'
-    jstr += '\t nz = vulcan_cfg.nz\n'.expandtabs(3)
+    jstr = '\ndef symjac(y, M, k, nz): \n'
     jstr += '\t dfdy = np.zeros(shape=[ni*nz, ni*nz])   \n'.expandtabs(3)
     jstr += '\t indx = [] \n'.expandtabs(3)
     jstr += '\t for j in range(ni): \n'.expandtabs(3)
@@ -698,8 +697,7 @@ def make_neg_jac(ni, nr, ofname):
     x = Matrix(y)
     jac = dy.jacobian(x)
 
-    jstr = '\ndef neg_symjac(y, M, k): \n'
-    jstr += '\t nz = vulcan_cfg.nz\n'.expandtabs(3)
+    jstr = '\ndef neg_symjac(y, M, k, nz): \n'
     jstr += '\t dfdy = np.zeros(shape=[ni*nz, ni*nz])   \n'.expandtabs(3)
     jstr += '\t indx = [] \n'.expandtabs(3)
     jstr += '\t for j in range(ni): \n'.expandtabs(3)

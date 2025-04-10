@@ -3,51 +3,26 @@
 # ==============================================================================
 # This is the main file of VULCAN: the chemical kinetics code.
 # Copyright (C) 2016 Shang-Min Tsai (Shami)
-#
-# To run VULCAN simply run this file with python.
-#
 # ==============================================================================
-#     VULCAN is free software: you can redistribute it and/or modify
-#     it under the terms of the GNU General Public License as published by
-#     the Free Software Foundation, either version 3 of the License, or
-#     (at your option) any later version.
-#
-#     VULCAN is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#     GNU General Public License for more details.
-#
-#     You find a copy of the GNU General Public License in the main VULCAN
-#     directory under <GPL_license.txt>. If not, see <http://www.gnu.org/licenses/>.
-# ==============================================================================
-
-# Limiting the number of threads
-import os
-os.environ["OMP_NUM_THREADS"] = "1"
 
 # import public modules
-import numpy as np
-import time, sys
+import os
+import time
+import sys
 
 # import VULCAN modules
 import store, build_atm, op
-try:
-    import chem_funs
-except:
-    raise IOError ('\nThe module "chem_funs" does not exist.\nPlease run prepipe.py first to create the module...')
 
 # import the configuration inputs
 def main():
     import vulcan_cfg
 
-    species = chem_funs.spec_list
     ### read in the basic chemistry data
     with open(vulcan_cfg.com_file, 'r') as f:
         columns = f.readline() # reading in the first line
         num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass")
     type_list = ['int' for i in range(num_ele)]
     type_list.insert(0,'U20'); type_list.append('float')
-    compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=type_list)
 
     ### create the instances for storing the variables and parameters
     data_var = store.Variables()

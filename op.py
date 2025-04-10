@@ -16,21 +16,13 @@ import time, os
 import shutil
 
 import vulcan_cfg
-import build_atm
-import chem_funs
-from chem_funs import ni, nr  # number of species and reactions in the network
-
-from phy_const import kb, Navo, hc, ag0 # hc is used to convert to the actinic flux
-
 from vulcan_cfg import nz
 
-# imported functions
-chemdf = chem_funs.chemdf
-neg_achemjac = chem_funs.neg_symjac
-compo = build_atm.compo
-compo_row = build_atm.compo_row
-
-species = chem_funs.spec_list
+from build_atm import compo, compo_row
+from chem_funs import chemdf, ni, nr, Gibbs # number of species and reactions in the network
+from chem_funs import neg_symjac as neg_achemjac
+from chem_funs import spec_list as species
+from phy_const import kb, Navo, hc, ag0 # hc is used to convert to the actinic flux
 
 
 class ReadRate(object):
@@ -286,8 +278,8 @@ class ReadRate(object):
             if i in vulcan_cfg.remove_list:
                  var.k[i] = np.repeat(0.,nz)
             else:
-                var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
-                var.k[i] = var.k[i-1]/chem_funs.Gibbs(i-1,Tco)
+                var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/Gibbs(i-1,temp)
+                var.k[i] = var.k[i-1]/Gibbs(i-1,Tco)
 
             if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + " " + var.Rf[i-1] +' :  ' + str(np.amax(var.k[i])) )
             if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + " " + var.Rf[i-1] + ' :  ' + str(np.amax(var.k[i-1])) )
@@ -326,157 +318,6 @@ class ReadRate(object):
                 var.k[i][T_mask] = 2.49E-27 # from Moses+2005
 
         return var
-
-    # def read_rateFun(self, var):
-    #     '''
-    #     Reading in the reaction network and returning only the functions (k_fun)
-    #     Used for pathway analysis
-    #     '''
-    #
-    #     Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k_fun, kinf_fun, k_fun_new = \
-    #     var.Rf, var.Rindx, var.a, var.n, var.E, var.a_inf, var.n_inf, var.E_inf, var.k_fun, var.kinf_fun,  var.k_fun_new
-    #
-    #     i = self.i
-    #     re_tri, re_tri_k0 = self.re_tri, self.re_tri_k0
-    #     list_tri = self.list_tri
-    #
-    #     special_re = False
-    #     conden_re = False
-    #     photo_re = False
-    #     end_re = False
-    #     br_read  = False
-    #
-    #     photo_sp = []
-    #
-    #     with open(vulcan_cfg.network) as f:
-    #         for line in f.readlines():
-    #
-    #             # switch to 3-body and dissociation reations
-    #             if line.startswith("# 3-body"):
-    #                 re_tri = True
-    #
-    #             if line.startswith("# 3-body reactions without high-pressure rates"):
-    #                 re_tri_k0 = True
-    #
-    #             elif line.startswith("# special"):
-    #                 special_re = True # switch to reactions with special forms (hard coded)
-    #
-    #             elif line.startswith("# photo"):
-    #                 special_re = False # turn off reading in the special form
-    #                 photo_re = True
-    #                 var.photo_indx = i
-    #
-    #             elif line.startswith("# re_end"):
-    #                 end_re = True
-    #
-    #             elif line.startswith("# braching info start"):
-    #                 br_read = True
-    #
-    #             elif line.startswith("# braching info end"):
-    #                 br_read = False
-    #
-    #             # skip common lines and blank lines
-    #             # ========================================================================================
-    #             if not line.startswith("#") and line.strip() and special_re == False and photo_re == False and end_re == False: # if not starts
-    #
-    #                 Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
-    #                 li = line.partition(']')[-1].strip()
-    #                 columns = li.split()
-    #                 Rindx[i] = int(line.partition('[')[0].strip())
-    #
-    #                 a[i] = float(columns[0])
-    #                 n[i] = float(columns[1])
-    #                 E[i] = float(columns[2])
-    #
-    #                 # switching to trimolecular reactions (len(columns) > 3 for those with high-P limit rates)
-    #                 if re_tri == True and re_tri_k0 == False:
-    #                     a_inf[i] = float(columns[3])
-    #                     n_inf[i] = float(columns[4])
-    #                     E_inf[i] = float(columns[5])
-    #                     list_tri.append(i)
-    #
-    #                 if columns[-1].strip() == 'He': re_He = i
-    #                 elif columns[-1].strip() == 'ex1': re_CH3OH = i
-    #
-    #                 # Note: make the defaut i=i
-    #                 k_fun[i] = lambda temp, mm, i=i: a[i] *temp**n[i] * np.exp(-E[i]/temp)
-    #
-    #
-    #                 # for 3-body reactions, also calculating k_inf
-    #                 if re_tri == True and len(columns)>=6:
-    #
-    #                     kinf_fun[i] = lambda temp, i=i: a_inf[i] *temp**n_inf[i] * np.exp(-E_inf[i]/temp)
-    #                     k_fun_new[i] = lambda temp, mm, i=i: (a[i] *temp**n[i] * np.exp(-E[i]/temp))/(1 + (a[i] *temp**n[i] * np.exp(-E[i]/temp))*mm/(a_inf[i] *temp**n_inf[i] * np.exp(-E_inf[i]/temp)) )
-    #
-    #                 i += 2
-    #                 # end if not
-    #              # ========================================================================================
-    #             elif special_re == True and line.strip() and not line.startswith("#") and end_re == False:
-    #
-    #                 Rindx[i] = int(line.partition('[')[0].strip())
-    #                 Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
-    #
-    #                 if Rf[i] == 'OH + CH3 + M -> CH3OH + M':
-    #                     print ('Using special form for the reaction: ' + Rf[i])
-    #                     k_fun[i] = lambda temp, mm, i=i: 1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp)
-    #                     kinf_fun[i] = lambda temp, mm, i=i: 1.031E-10 * temp**-0.018 *np.exp(16.74/temp)
-    #                     k_fun_new[i] = lambda temp, mm, i=i: (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp))/\
-    #                     (1 + (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp)) * mm / (1.031E-10 * temp**-0.018 *np.exp(16.74/temp)) )
-    #
-    #                 i += 2
-    #
-    #             # setting photo dissociation reactions to zeros
-    #             elif photo_re == True and line.strip() and not line.startswith("#") and end_re == False:
-    #
-    #                 #k[i] = np.zeros(nz)
-    #                 Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
-    #
-    #                 # adding the photo species
-    #                 photo_sp.append(Rf[i].split()[0])
-    #
-    #                 li = line.partition(']')[-1].strip()
-    #                 columns = li.split()
-    #                 Rindx[i] = int(line.partition('[')[0].strip())
-    #                 # columns[0]: the species being dissocited; branch index: columns[1]
-    #                 pho_rate_index[(columns[0],int(columns[1]))] = Rindx[i]
-    #
-    #                 # store the number of branches
-    #                 var.n_branch[columns[0]] = int(columns[1])
-    #
-    #                 i += 2
-    #
-    #             # end_re == True
-    #             elif br_read == True and not line.startswith("#"):
-    #                 # read in the quantum yields of photolysis reactions
-    #                 sp_list = line.partition(':')
-    #                 sp = sp_list[0]
-    #                 lists = sp_list[-1]
-    #                 wavelen_yield = lists.partition(';')
-    #                 # wavelen_yield is tuple of string in wavelength seitch, ;, Q yield e.g. ('[165.]', ';', '[(1.,0),(0,1.)]')
-    #                 var.wavelen[sp] = ast.literal_eval(wavelen_yield[0].strip())
-    #                 var.br_ratio[sp] = ast.literal_eval(wavelen_yield[-1].strip())
-    #
-    #     k_fun.update(k_fun_new)
-    #
-    #     # store k_fun into data_var
-    #     var.k_fun = k_fun
-    #     var.kinf_fun = kinf_fun
-    #
-    #     return var
-    #
-    # def rev_rateFun(self, var):
-    #     '''
-    #     Revarsing only the functions of forward rates (k_fun) and the T, P values (at the examined level)
-    #     Used for pathway analysis
-    #     '''
-    #
-    #     rev_list = range(2,nr+1,2)
-    #
-    #     # reversing rates and storing into data_var
-    #     for i in rev_list:
-    #         var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/chem_funs.Gibbs(i-1,temp)
-    #
-    #     return var
 
     def make_bins_read_cross(self,var,atm):
         '''
@@ -1778,7 +1619,7 @@ class ODESolver(object):
         # c0 = 1./(r*h) where r = 1. + 1./2.**0.5
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k)
+        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1849,7 +1690,7 @@ class ODESolver(object):
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k)
+        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1901,7 +1742,7 @@ class ODESolver(object):
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k)
+        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1973,7 +1814,7 @@ class ODESolver(object):
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k)
+        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -2030,7 +1871,7 @@ class ODESolver(object):
         # c0 = 1./(r*h) where r = 1. + 1./2.**0.5
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k)
+        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -2513,11 +2354,6 @@ class Ros2(ODESolver):
         else:
             diffdf = self.diffdf_no_mol
             jac_tot = self.lhs_jac_no_mol
-
-        # now included in build_atm.py
-        # if para.count == 0 and vulcan_cfg.use_condense == True and species.index("H2O") in self.fix_sp_bot_index: # only do once at count = 0
-        #     self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))] = min(atm.sat_mix["H2O"][0],  self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))])
-        #     print ("\nThe fixed surface water is now reset by condensation and humidity to " + str(self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))]))
 
         r = 1. + 1./2.**0.5
 
