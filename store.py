@@ -7,15 +7,17 @@
 # ==============================================================================
 
 import numpy as np
-import vulcan_cfg
-from vulcan_cfg import nz
 from chem_funs import ni, spec_list  # number of species and reactions in the network
+from config import Config
 
 class Variables(object):
     """
     store the essential variables for calculation
     """
-    def __init__(self): # self means the created object instance
+    def __init__(self, vulcan_cfg:Config): # self means the created object instance
+
+        nz = vulcan_cfg.nz
+
         self.k = {}  # rate coefficients: k[1] is the rate constant of R1 reaction at every level (same shape as Tco and pco)
         self.y = np.zeros((nz, ni)) # current number density in the shape of (number of vertical levels, number of species)
         self.y_prev = np.zeros((nz, ni)) # number density at the previous step
@@ -96,7 +98,10 @@ class AtmData(object):
     """
     store the data of atmospheric structure
     """
-    def __init__(self):
+    def __init__(self, vulcan_cfg:Config):
+
+        nz = vulcan_cfg.nz
+
         self.pco = np.logspace(np.log10(vulcan_cfg.P_b),np.log10(vulcan_cfg.P_t),nz) # pressure grids
         self.pico = np.empty(nz+1) # pressure grids at the interface
         self.dz = np.zeros(nz) # height grids
@@ -149,7 +154,10 @@ class Parameters(object):
     """
     store the overall parameters for numerical method and counters
     """
-    def __init__(self):
+    def __init__(self, vulcan_cfg:Config):
+
+        nz = vulcan_cfg.nz
+
         self.nega_y = 0
         self.small_y = 0
         self.delta = 0

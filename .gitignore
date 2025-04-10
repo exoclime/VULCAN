@@ -3,7 +3,7 @@
 __pycache__
 nogit_*
 
-vulcan_cfg.py
+# vulcan_cfg.py
 chem_funs.py
 thermo/*network*.txt
 

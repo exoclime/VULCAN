@@ -1,27 +1,25 @@
 #!/usr/bin/python
 
-import sys, os
 import numpy as np
-import vulcan_cfg
 # for constructing the symbolic Jacobian matrix
 from sympy import Symbol, Matrix
 
 ofname = 'chem_funs.py'
-gibbs_text = vulcan_cfg.gibbs_text
 
+from config import Config
+from compose import COM_FILE
 
 # read the network and produce the .txt table for chemdf
 # Re-arrange the numerbers in the network
-def read_network():
-
+def read_network(vulcan_cfg:Config):
 
     Rf, Rindx = {}, {}
     i = 1
     special_re, photo_re = False, False
-    conden_re = False
     re_end = False
 
-    if vulcan_cfg.use_photo==True: ofstr = '# Chemical Network and Photolysis Reactions \n\n'
+    if vulcan_cfg.use_photo==True:
+        ofstr = '# Chemical Network and Photolysis Reactions \n\n'
     else: ofstr = '# Chemical Network without Photochemistry \n\n'
 
     photo_str = '# photochemistry \n\n'
@@ -43,14 +41,12 @@ def read_network():
             elif line.startswith("# condensation"):
                 print ('Including condensation reactions.')
                 special_re = False # switch to reactions with special forms (hard coded)
-                #conden_re = True
                 re_label = '#C'
 
             elif line.startswith("# radiative"): re_label = '#R'
 
             elif line.startswith("# photo"):
                 special_re = False # switch to photo-disscoiation reactions
-                #conden_re = False
                 photo_re = True
                 photo_re_indx = i
                 re_label = '#P'
@@ -347,7 +343,7 @@ def make_chemdf(re_table, ofname):
     chem_dict_r = {}
     spec_list = []
 
-    ofstr = "#!/usr/bin/python\n\nfrom scipy import *\nimport numpy as np\nfrom phy_const import kb, Navo\nimport vulcan_cfg\n\n"
+    ofstr = "#!/usr/bin/python\n\nimport numpy as np\nfrom phy_const import kb, Navo\n\n"
     ofstr += "'''\n## Reaction ##\n\n"
     ofstr += re_table + "\n\n"
 
@@ -715,7 +711,7 @@ def make_neg_jac(ni, nr, ofname):
 def check_conserv():
     from chem_funs import re_dict
     conserv_check = True
-    compo = np.genfromtxt(vulcan_cfg.com_file,names=True,dtype=None)
+    compo = np.genfromtxt(COM_FILE,names=True,dtype=None)
     compo_row = list(compo['species'])
     # Convert bytes to strings
     compo_row = [sp.decode("utf-8") for sp in compo_row]
@@ -797,9 +793,12 @@ def check_duplicate(nr, photo_re_indx):
 
 
 if __name__ == "__main__":
-    re_table, photo_table, photo_re_indx = read_network()
+
+    vulcan_cfg = Config()
+
+    re_table, photo_table, photo_re_indx = read_network(vulcan_cfg)
     (ni, nr, species) = make_chemdf(re_table, ofname)
-    make_Gibbs(re_table, gibbs_text, ofname)
+    make_Gibbs(re_table, vulcan_cfg.gibbs_text, ofname)
     # import the "ofname" module as chemistry for make_jac to read df
     chemistry = __import__(ofname[:-3])
     make_jac(ni, nr, ofname) # the last function that writes into chem_funs.py

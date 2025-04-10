@@ -11,32 +11,35 @@ import time
 import sys
 
 # import VULCAN modules
-import store, build_atm, op
+import store, build_atm, op, config
+from compose import COM_FILE
 
 # import the configuration inputs
 def main():
-    import vulcan_cfg
+
+    # Set config
+    vulcan_cfg = config.Config()
 
     ### read in the basic chemistry data
-    with open(vulcan_cfg.com_file, 'r') as f:
+    with open(COM_FILE, 'r') as f:
         columns = f.readline() # reading in the first line
         num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass")
     type_list = ['int' for i in range(num_ele)]
     type_list.insert(0,'U20'); type_list.append('float')
 
     ### create the instances for storing the variables and parameters
-    data_var = store.Variables()
-    data_atm = store.AtmData()
-    data_para = store.Parameters()
+    data_var = store.Variables(vulcan_cfg)
+    data_atm = store.AtmData(vulcan_cfg)
+    data_para = store.Parameters(vulcan_cfg)
 
     # record starting CPU time
     data_para.start_time = time.time()
 
     # create atmosphere object
-    make_atm = build_atm.Atm()
+    make_atm = build_atm.Atm(vulcan_cfg)
 
     # for plotting and printing
-    output = op.Output()
+    output = op.Output(vulcan_cfg)
 
     # save a copy of the config file
     output.save_cfg()
@@ -56,7 +59,7 @@ def main():
         make_atm.sp_sat(data_atm)
 
     # for reading rates
-    rate = op.ReadRate()
+    rate = op.ReadRate(vulcan_cfg)
 
     # read-in network and calculating forward rates
     data_var = rate.read_rate(data_var, data_atm)
@@ -72,7 +75,7 @@ def main():
     data_var = rate.remove_rate(data_var)
 
     # initialing y and ymix (the number density and the mixing ratio of every species)
-    ini_abun = build_atm.InitialAbun()
+    ini_abun = build_atm.InitialAbun(vulcan_cfg)
     data_var = ini_abun.ini_y(data_var, data_atm)
 
     # storing the initial total number of atmos
@@ -89,8 +92,7 @@ def main():
     # time-steping in the while loop until conv() returns True or count > count_max
 
     # setting the numerical solver to the desinated one in vulcan_cfg
-    solver_str = vulcan_cfg.ode_solver
-    solver = getattr(op, solver_str)()
+    solver = op.Ros2(vulcan_cfg)
 
     # Setting up for photo chemistry
     if vulcan_cfg.use_photo:
@@ -108,7 +110,7 @@ def main():
         data_var = rate.remove_rate(data_var)
 
     # Assgining the specific solver corresponding to different B.C.s
-    integ = op.Integration(solver, output)
+    integ = op.Integration(solver, output, vulcan_cfg)
     solver.naming_solver(data_para)
 
     # Running the integration loop
