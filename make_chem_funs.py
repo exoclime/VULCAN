@@ -4,9 +4,7 @@ import sys, os
 import numpy as np
 import vulcan_cfg
 # for constructing the symbolic Jacobian matrix
-from sympy import sin, cos, Matrix
-from sympy import Symbol
-from sympy import lambdify
+from sympy import Symbol, Matrix
 
 ofname = 'chem_funs.py'
 gibbs_text = vulcan_cfg.gibbs_text

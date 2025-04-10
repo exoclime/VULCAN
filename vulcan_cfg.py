@@ -1,8 +1,8 @@
 # VULCAN CONFIGURATION FILE
 # CREATED AUTOMATICALLY BY PROTEUS
 
-atom_list               = ['H', 'O', 'C', 'N', 'S']
-network                 = 'thermo/SNCHO_photo_network.txt'
+atom_list               = ['H', 'O', 'C']
+network                 = 'thermo/CHO_photo_network.txt'
 use_lowT_limit_rates    = False
 gibbs_text              = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder            = 'thermo/photo_cross/'
@@ -11,7 +11,7 @@ com_file                = 'thermo/all_compose.txt'
 atm_base                = 'H2'
 rocky                   = True           # for the surface gravity
 nz                      = 61   # number of vertical layers
-P_b                     = 321224441.9339118  # pressure at the bottom (dyne/cm^2)
+P_b                     = 320906663.80470425  # pressure at the bottom (dyne/cm^2)
 P_t                     = 10.0  # pressure at the top (dyne/cm^2)
 atm_type                = 'file'
 atm_file                = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/profile.dat'
@@ -23,24 +23,24 @@ bot_BC_flux_file        = 'atm/BC_bot.txt' # the file for the lower boundary con
 output_dir              = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/'
 plot_dir                = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/'
 movie_dir               = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem//frames/'
-out_name                = 'recent.vul'
+out_name                = 'vulcan.pkl'
 
 # ====== Setting up the elemental abundance ======
 ini_mix = 'table'
-const_mix = { 'H2O':1.34633845e-02, 'CO2':5.60403025e-03, 'H2':2.74827026e-01, 'CH4':4.88805849e-04, 'CO':7.01575338e-01, 'N2':4.85807166e-04, 'NH3':3.47581163e-03, 'S2':2.34331413e-09, 'SO2':6.09618271e-08, 'H2S':7.97332537e-05 }
+const_mix = { 'H2O':1.34606878e-02, 'CO2':5.60647590e-03, 'H2':2.74728526e-01, 'CH4':4.88058267e-04, 'CO':7.01674285e-01, 'N2':4.86994497e-04, 'NH3':3.47522764e-03, 'S2':2.34261857e-09, 'SO2':6.09690088e-08, 'H2S':7.96813790e-05 }
 vul_ini = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/vmrs.dat'
 
 
 # ====== Setting up photochemistry ======
 use_ion         = False
 use_photo       = True
-r_star          = 0.2768848325427627     # stellar radius (R_sun)
-Rp              = 817738393.0      # Planetary radius (cm)
-orbit_radius    = 0.048833377211965893    # planet-star distance in A.U.
-gs              = 1275.58438      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
+r_star          = 0.2768848331511362     # stellar radius (R_sun)
+Rp              = 817738392.9383214      # Planetary radius (cm)
+orbit_radius    = 0.0488333772    # planet-star distance in A.U.
+gs              = 1275.5843837856369      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
 sl_angle        = 0.955393232541696   # the zenith angle
 f_diurnal       = 0.25
-scat_sp         = ['H2', 'O2', 'N2', 'CO2']
+scat_sp         = ['H2', 'O2', 'CO2']
 T_cross_sp      = []
 
 edd             = 0.5 # the Eddington coefficient
@@ -111,8 +111,8 @@ mtol_conv       = 1.E-20
 pos_cut         = 0
 nega_cut        = -1.
 loss_eps        = 1e-1
-yconv_cri       = 0.04  # for checking steady-state
-slope_cri       = 1.e-4
+yconv_cri       = 0.05  # for checking steady-state
+slope_cri       = 0.0001  # for checking steady-state
 yconv_min       = 0.5
 flux_cri        = 0.1
 flux_atol       = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
@@ -123,19 +123,19 @@ rtol             = 0.7 # relative tolerence for adjusting the stepsize
 post_conden_rtol = 0.1 # switched to this value after fix_species_time
 
 # ====== Setting up for output and plotting ======
-plot_TP         = True
-use_live_plot   = True
+plot_TP         = False
+use_live_plot   = False
 use_live_flux   = False
 use_plot_end    = False
 use_plot_evo    = False
-use_save_movie  = True
+use_save_movie  = False
 use_flux_movie  = False
 plot_height     = False
 use_PIL         = False
 live_plot_frq   = 50
 save_movie_rate = live_plot_frq
 y_time_freq     = 1  #  storing data for every 'y_time_freq' step
-plot_spec       = ['H2', 'H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2', 'NH3', 'SO2', 'H2S', 'S2', 'S8']
+plot_spec       = ['H2',  'H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2']
 # output:
 output_humanread = False
 use_shark        = False

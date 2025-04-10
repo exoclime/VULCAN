@@ -7,7 +7,6 @@
 # ==============================================================================
 
 import numpy as np
-import scipy
 import vulcan_cfg
 from vulcan_cfg import nz
 from chem_funs import ni, nr, spec_list  # number of species and reactions in the network

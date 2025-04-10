@@ -10,22 +10,12 @@
 
 import numpy as np
 import scipy
-from scipy import sparse
 from scipy import interpolate
 import matplotlib.pyplot as plt
 import time, os
 import shutil
 
-#from builtins import input
-#from collections import defaultdict
-# TODO :test the TODO buldle
-
 import vulcan_cfg
-try: from PIL import Image
-except ImportError:
-    try: import Image
-    except: vulcan_cfg.use_PIL = False
-
 import build_atm
 import chem_funs
 from chem_funs import ni, nr  # number of species and reactions in the network
@@ -3013,10 +3003,6 @@ class Output(object):
         plt.ylim((1.E-30,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
         plt.savefig(plot_dir + 'evo.png')
-        if vulcan_cfg.use_PIL == True:
-            plot = Image.open(plot_dir + 'evo.png')
-            plot.show()
-            plt.close()
         # else: plt.show(block = False)
 
     def plot_evo_inter(self, var, atm, plot_j=-1, dn=1):
@@ -3040,10 +3026,6 @@ class Output(object):
         plt.ylim((1.E-30,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
         plt.savefig(plot_dir + 'evo.png')
-        if vulcan_cfg.use_PIL == True:
-            plot = Image.open(plot_dir + 'evo.png')
-            plot.show()
-            plt.close()
 
     def plot_TP(self, atm):
         plot_dir = vulcan_cfg.plot_dir
@@ -3069,11 +3051,4 @@ class Output(object):
 
         plot_name = plot_dir + 'TPK.png'
         fig.savefig(plot_name)
-        if vulcan_cfg.use_PIL == True:
-            plot = Image.open(plot_name)
-            plot.show()
-            # close the matplotlib window
-            plt.close()
-        # else:
-        #     plt.show(block = False)
 
