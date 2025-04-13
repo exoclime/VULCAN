@@ -1,5 +1,4 @@
-import os
-VULCAN_DIR = os.path.dirname(os.path.abspath(__file__)) + "/"
+from paths import VULCAN_DIR
 
 class Config:
     """
@@ -7,42 +6,51 @@ class Config:
     """
 
     def __init__(self):
-        self.atom_list               = ['H', 'O', 'C']
-        self.network                 = VULCAN_DIR+'thermo/CHO_photo_network.txt'
+        self.atom_list               = ['H', 'O', 'C', 'N']
+        self.network                 = VULCAN_DIR+'thermo/NCHO_photo_network.txt'
         self.use_lowT_limit_rates    = False
 
         self.atm_base                = 'H2'
-        self.rocky                   = True           # for the surface gravity
-        self.nz                      = 61   # number of vertical layers
-        self.P_b                     = 320906663.80470425  # pressure at the bottom (dyne/cm^2)
-        self.P_t                     = 10.0  # pressure at the top (dyne/cm^2)
-        self.atm_type                = 'file'
-        self.atm_file                = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/profile.dat'
+        self.rocky                   = False           # for the surface gravity
+        self.nz                      = 100   # number of vertical layers
+        self.P_b                     = 1e9 # pressure at the bottom (dyne/cm^2)
+        self.P_t                     = 1e-1  # pressure at the top (dyne/cm^2)
 
-        self.sflux_file              = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/star.dat'
+        # Set T(p) from file
+        self.atm_type                = 'file'
+        self.atm_file                = VULCAN_DIR+'atm/atm_HD189_Kzz.txt'
+
+        # Analytical T(p) parameters
+        #  T_int, T_irr, ka_L, ka_S, beta_S, beta_L (details see Heng et al. 2014)
+        self.para_anaTP              = [120., 1500., 0.1, 0.02, 1., 1.]
+
+        # Isothermal T(p)
+        self.Tiso                    = 1000.0
+
+        self.sflux_file              = VULCAN_DIR+'atm/stellar_flux/sflux-HD189_Moses11.txt'
         self.top_BC_flux_file        = VULCAN_DIR+'atm/BC_top.txt' # the file for the top boundary conditions
         self.bot_BC_flux_file        = VULCAN_DIR+'atm/BC_bot.txt' # the file for the lower boundary conditions
 
-        self.output_dir              = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/'
-        self.plot_dir                = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/'
-        self.movie_dir               = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem//frames/'
-        self.out_name                = 'vulcan.pkl'
+        self.output_dir              = VULCAN_DIR + "output/"
+        self.plot_dir                = self.output_dir + "plot/"
+        self.out_name                = 'example.pkl'
+
 
         # ====== Setting up the elemental abundance ======
-        self.ini_mix = 'table'
-        self.const_mix = { 'H2O':1.34606878e-02, 'CO2':5.60647590e-03, 'H2':2.74728526e-01, 'CH4':4.88058267e-04, 'CO':7.01674285e-01, 'N2':4.86994497e-04, 'NH3':3.47522764e-03, 'S2':2.34261857e-09, 'SO2':6.09690088e-08, 'H2S':7.96813790e-05 }
-        self.vul_ini = '/Users/nichollsh/Projects/PROTEUS/output/physical_agni/offchem/vmrs.dat'
+        self.ini_mix = 'const_mix'
+        self.const_mix = { 'H2O':3e-2, 'CO2':5e-3, 'H2':0.9, 'CH4':3e-2, 'CO':1e-3, 'N2':4e-3, 'NH3':3e-2}
+        self.vul_ini = '_unset_'
 
 
         # ====== Setting up photochemistry ======
         self.use_ion         = False
         self.use_photo       = True
-        self.r_star          = 0.2768848325427627     # stellar radius (R_sun)
-        self.Rp              = 817738393.0      # Planetary radius (cm)
-        self.orbit_radius    = 0.048833377211965893    # planet-star distance in A.U.
-        self.gs              = 1275.58438      # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
-        self.sl_angle        = 0.955393232541696   # the zenith angle
-        self.f_diurnal       = 0.25
+        self.r_star          = 0.805     # stellar radius (R_sun)
+        self.Rp              = 1.138*7.1492E9      # Planetary radius (cm)
+        self.orbit_radius    = 0.03142    # planet-star distance in A.U.
+        self.gs              = 2140.       # surface gravity (cm/s^2)  (HD189:2140  HD209:936)
+        self.sl_angle        = 58 /180.*3.14159  # the zenith angle
+        self.f_diurnal       = 1.0
         self.scat_sp         = ['H2', 'O2', 'CO2']
         self.T_cross_sp      = []
 
@@ -61,8 +69,8 @@ class Config:
         self.vz_prof     = 'const'  # Options: 'const' or 'file'
         self.const_vz    = 0.0 # (cm/s)
         self.use_Kzz     = True
-        self.Kzz_prof    = 'file' # Options: 'const','file'
-        self.const_Kzz   = 100000.0 # Only reads when Kzz_prof = 'const'
+        self.Kzz_prof    = 'Pfunc' # Options: 'const','file'
+        self.const_Kzz   = 1e10 # Only reads when Kzz_prof = 'const'
         self.K_max       = 1e5        # for Kzz_prof = 'Pfunc'
         self.K_p_lev     = 0.1      # for Kzz_prof = 'Pfunc'
         self.update_frq  = 50    # frequency for updating dz and dzi due to change of mu
@@ -71,7 +79,7 @@ class Config:
         self.use_topflux     = False
         self.use_botflux     = False
         self.use_fix_sp_bot  = {  } # fixed mixing ratios at the lower boundary
-        self.diff_esc        = [] # species for diffusion-limit escape at TOA
+        self.diff_esc        = ['H'] # species for diffusion-limit escape at TOA
         self.max_flux        = 1e13  # upper limit for the diffusion-limit fluxes
 
         # ====== Reactions to be switched off  ======
@@ -123,17 +131,15 @@ class Config:
         self.post_conden_rtol = 0.1 # switched to this value after fix_species_time
 
         # ====== Setting up for output and plotting ======
-        self.plot_TP         = False
-        self.use_live_plot   = False
+        self.plot_dpi        = 130
+        self.plot_TP         = True
+        self.use_live_plot   = True
         self.use_live_flux   = False
         self.use_plot_end    = False
         self.use_plot_evo    = False
-        self.use_save_movie  = False
         self.use_flux_movie  = False
         self.plot_height     = False
-        self.use_PIL         = False
         self.live_plot_frq   = 50
-        self.save_movie_rate = 50
         self.y_time_freq     = 1  #  storing data for every 'y_time_freq' step
         self.plot_spec       = ['H2',  'H', 'H2O', 'CH4', 'CO', 'CO2', 'C2H2']
 

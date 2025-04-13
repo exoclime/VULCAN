@@ -1,9 +1,8 @@
 *.nc
-# .DS_Store
+.DS_Store
 __pycache__
 nogit_*
 
-# vulcan_cfg.py
 chem_funs.py
 thermo/*network*.txt
 

@@ -6,7 +6,7 @@
 # ==============================================================================
 
 # Import system modules
-import importlib
+import logging
 import time
 import sys
 
@@ -18,8 +18,7 @@ from config import Config
 # import the configuration inputs
 def main(vulcan_cfg:Config):
 
-    # Reload chem_funs
-    # importlib.reload(chem_funs)
+    print("Running VULCAN")
 
     # Import modules for running VULCAN
     import store, build_atm, op
@@ -130,11 +129,12 @@ if __name__ == "__main__":
     # Make config
     vulcan_cfg = Config()
 
-    # no arguments or not setting '-n' (no re-making chem_funs.py) option
-    if len(sys.argv) < 2 or sys.argv[1] != '-n':
-        # running prepipe to construch chem_funs.py
-        print ('Making chem_funs.py ...')
+    # Remake chem_funs by default. Disabled when passing -n flag.
+    if '-n' not in sys.argv:
+        print('Making chem_funs.py ...')
         make_all(vulcan_cfg)
+    else:
+        print("Skip making chem_funs.py")
 
     # Run model
     main(vulcan_cfg)

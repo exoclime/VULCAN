@@ -2641,19 +2641,13 @@ class Output(object):
     def __init__(self, vulcan_cfg:Config):
 
         self.cfg   = vulcan_cfg
-        output_dir = self.cfg.output_dir
+        output_dir = self.cfg.output_dir + "/"
         out_name   = self.cfg.out_name
-        plot_dir   =  self.cfg.plot_dir
-        movie_dir  =  self.cfg.movie_dir
-
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        if self.cfg.use_save_movie == True:
-            if not os.path.exists(self.cfg.movie_dir):
-                os.makedirs(self.cfg.movie_dir)
+        if not os.path.exists(self.cfg.plot_dir):
+            os.makedirs(self.cfg.plot_dir)
 
         outfile = output_dir+out_name
         if os.path.isfile(outfile):
@@ -2821,14 +2815,13 @@ class Output(object):
         ax.legend(fontsize=10, labelspacing=0.2,
                     loc='upper left', bbox_to_anchor=(1.0, 1.0))
 
-        if self.cfg.use_save_movie == True:
-            last_fpath = self.cfg.movie_dir+"_recent.png"
-            copy_fpath = self.cfg.movie_dir+str(para.pic_count)+'.png'
+        last_fpath = self.cfg.plot_dir+"_recent.png"
+        copy_fpath = self.cfg.plot_dir+str(para.pic_count)+'.png'
 
-            fig.savefig( last_fpath, dpi=210, bbox_inches='tight')
-            shutil.copyfile(last_fpath, copy_fpath)
+        fig.savefig( last_fpath, dpi=self.cfg.plot_dpi, bbox_inches='tight')
+        shutil.copyfile(last_fpath, copy_fpath)
 
-            para.pic_count += 1
+        para.pic_count += 1
 
     def plot_flux_update(self, var, atm, para):
 
@@ -2854,7 +2847,8 @@ class Output(object):
         plt.ylabel("Pressure (bar)")
         plt.show(block=0)
         plt.pause(0.1)
-        if self.cfg.use_flux_movie == True: plt.savefig( 'plot/movie/flux-'+str(para.count)+'.jpg')
+        if self.cfg.use_flux_movie:
+            plt.savefig( 'plot/movie/flux-'+str(para.count)+'.jpg', dpi=self.cfg.plot_dpi)
 
         plt.clf()
 
@@ -2884,7 +2878,7 @@ class Output(object):
         plt.xlim(1.E-20, 1.)
         plt.legend(frameon=0, prop={'size':14}, loc=3)
         plt.xlabel("Mixing Ratios")
-        plt.savefig(plot_dir + 'mix.png')
+        plt.savefig(plot_dir + 'mix.png', dpi=self.cfg.plot_dpi)
 
     def plot_evo(self, var, atm, plot_j=-1, dn=1):
 
@@ -2903,8 +2897,7 @@ class Output(object):
         plt.ylabel('mixing ratios')
         plt.ylim((1.E-30,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
-        plt.savefig(plot_dir + 'evo.png')
-        # else: plt.show(block = False)
+        plt.savefig(plot_dir + 'evo.png', dpi=self.cfg.plot_dpi)
 
     def plot_evo_inter(self, var, atm, plot_j=-1, dn=1):
         '''
@@ -2926,7 +2919,7 @@ class Output(object):
         plt.ylabel('mixing ratios')
         plt.ylim((1.E-30,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
-        plt.savefig(plot_dir + 'evo.png')
+        plt.savefig(plot_dir + 'evo.png', dpi=self.cfg.plot_dpi)
 
     def plot_TP(self, atm):
         plot_dir = self.cfg.plot_dir
@@ -2950,6 +2943,5 @@ class Output(object):
         ax1.set_xlabel("Temperature (K)")
         ax2.set_xlabel(r'K$_{zz}$ (cm$^2$s$^{-1}$)')
 
-        plot_name = plot_dir + 'TPK.png'
-        fig.savefig(plot_name)
+        fig.savefig(plot_dir + 'TPK.png', dpi=self.cfg.plot_dpi)
 
