@@ -6,6 +6,9 @@ import subprocess
 import pickle
 from shutil import copyfile
 
+import logging
+log = logging.getLogger("fwl."+__name__)
+
 from phy_const import kb, Navo, r_sun, au
 from chem_funs import ni  # number of species and reactions in the network
 from chem_funs import spec_list as species
@@ -88,11 +91,11 @@ class InitialAbun(object):
 
             if self.cfg.use_solar == True:
                 new_str = f.read() # read in as a string
-                print ("Initializing with the default solar abundance.")
+                log.info("Initializing with the default solar abundance.")
 
             else: # using costomized elemental abundances
-                print ("Initializing with the customized elemental abundance:")
-                print ("{:4}".format('H') + str('1.'))
+                log.info("Initializing with the customized elemental abundance:")
+                log.info("{:4}".format('H') + str('1.'))
                 for line in f.readlines():
                         li = line.split()
                         sp = li[0].strip()
@@ -102,16 +105,15 @@ class InitialAbun(object):
                             sp_abun = getattr(self.cfg, sp+'_H')
                             fc_abun = 12. + np.log10(sp_abun)
                             line = sp + '\t' + "{0:.4f}".format(fc_abun) + '\n'
-                            print ("{:4}".format(sp) + "{0:.4E}".format(sp_abun))
+                            log.info("{:4}".format(sp) + "{0:.4E}".format(sp_abun))
 
                         elif sp in fc_list: # other elements included in fastchem but not in VULCAN
                             sol_ratio = li[1].strip()
-                            # print (sp + ":  " + str(sol_ratio))
                             if hasattr(self.cfg, 'fastchem_met_scale'): # vulcan_cfg.fastchem_met_scale exists
                                 met_scale = self.cfg.fastchem_met_scale
                             else:
                                 met_scale = 1.
-                                print ("fastchem_met_scale not specified in vulcan_cfg. Using solar metallicity for other elements not included in vulcan.")
+                                log.warning("fastchem_met_scale not specified in vulcan_cfg. Using solar metallicity for other elements not included in vulcan.")
 
                             new_ratio = float(sol_ratio) + np.log10(met_scale)
                             line = sp + '\t' + "{0:.4f}".format(new_ratio) + '\n'
@@ -153,7 +155,8 @@ class InitialAbun(object):
                 if sp in fc.dtype.names:
                     y_ini[:,species.index(sp)] = fc[sp]*gas_tot # this also changes data_var.y because the address of y array has passed to y_ini
 
-                else: print (sp + ' not included in fastchem.')
+                else:
+                    log.warning(sp + ' not included in fastchem.')
 
                 if self.cfg.use_ion == True:
                     if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
@@ -162,7 +165,7 @@ class InitialAbun(object):
             subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd=FASTCHEM_DIR+'output/')
 
         elif self.cfg.ini_mix == 'vulcan_ini':
-            print ("Initializing with compositions from the previous run " + self.cfg.vul_ini)
+            log.info("Initializing with compositions from pickle file " + self.cfg.vul_ini)
             with open(self.cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle)
 
@@ -171,7 +174,8 @@ class InitialAbun(object):
             for sp in species:
                 if sp in vul_data['variable']['species']:
                     y_ini[:,species.index(sp)] = vul_data['variable']['y'][:,vul_data['variable']['species'].index(sp)]
-                else: print (sp + " not included in the prvious run.")
+                else:
+                    log.warning(sp + " not included in the input mixing ratios file.")
 
             #if vulcan_cfg.use_ion == True: charge_list = vul_data['variable']['charge_list']
             if self.cfg.use_ion == True:
@@ -179,10 +183,10 @@ class InitialAbun(object):
                     if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
 
         elif self.cfg.ini_mix  == 'table':
+            log.info("Initializing with compositions from ASCII file " + self.cfg.vul_ini)
             table = np.genfromtxt(self.cfg.vul_ini, names=True, dtype=None, skip_header=1)
             if not len(data_atm.pco) == len(table['Pressure']):
-                print ("Warning! The initial profile has different layers than the current setting...")
-                raise
+                raise ValueError("The input profile has different layers than the current setting")
             for sp in species:
                 try:
                     arr = data_atm.n_0 * table[sp]
@@ -192,7 +196,7 @@ class InitialAbun(object):
 
 
         elif self.cfg.ini_mix == 'const_mix':
-            print ("Initializing with constant (well-mixed): " + str(self.cfg.const_mix))
+            log.info("Initializing with constant (well-mixed) abundances: " + str(self.cfg.const_mix))
             for sp in self.cfg.const_mix.keys():
                 y_ini[:,species.index(sp)] = gas_tot* self.cfg.const_mix[sp] # this also changes data_var.y
             if self.cfg.use_ion == True:
@@ -210,7 +214,7 @@ class InitialAbun(object):
                     y_ini[i,species.index('He')] = gas_tot[i] - np.sum(y_ini[i,:])
 
                 else:
-                    raise IOError ('\nInitial mixing ratios unknown. Check the setting in vulcan_cfg.py.')
+                    raise IOError('Initial mixing ratios unknown. Check the setting in vulcan_cfg.py.')
 
         if self.cfg.use_condense == True:
             for sp in self.cfg.condense_sp:
@@ -222,7 +226,7 @@ class InitialAbun(object):
                 if sp == 'H2O':
                     data_atm.sat_mix[sp] *= self.cfg.humidity
 
-                if self.cfg.use_ini_cold_trap == True:
+                if self.cfg.use_ini_cold_trap:
 
                     if  self.cfg.ini_mix != 'table' and self.cfg.ini_mix != 'vul_ini':
                         # the level where condensation starts
@@ -240,7 +244,7 @@ class InitialAbun(object):
 
                             data_atm.conden_min_lev = conden_min_lev
 
-                            print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)")
+                            log.debug( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)")
                             #data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
                             data_var.y[conden_min_lev:,species.index(sp)] = data_atm.sat_mix[sp][conden_min_lev] * data_atm.n_0[conden_min_lev:]
 
@@ -259,8 +263,7 @@ class InitialAbun(object):
         if self.cfg.use_ion == True:
             # if the charge_list is empty (no species with nonzero charges include)
             if not charge_list:
-                print ( "vulcan_cfg.use_ion = True but the network with ions is not supplied.\n" )
-                raise IOError("vulcan_cfg.use_ion = True but the network with ions is not supplied.\n")
+                raise ValueError("vulcan_cfg.use_ion = True but the network with ions is not supplied.")
             else:
                 if 'e' in charge_list: charge_list.remove('e')
                 data_var.charge_list = charge_list
@@ -348,7 +351,7 @@ class Atm(object):
                 p_file, T_file = atm_table['Pressure'], atm_table['Temp']
 
             if max(p_file) < data_atm.pco[0] or min(p_file) > data_atm.pco[-1]:
-                print ('Warning: P_b and P_t assgined in vulcan.cfg are out of range of the input.\nConstant extension is used.')
+                log.warning('P_b and P_t assgined in vulcan.cfg are out of range of the input. Constant extension is used.')
 
             PTK_fun['pT'] = interpolate.interp1d(p_file, T_file, assume_sorted = False, bounds_error=False,\
              fill_value=(T_file[np.argmin(p_file)], T_file[np.argmax(p_file)] )  )
@@ -376,25 +379,26 @@ class Atm(object):
             elif self.Kzz_prof == 'const': data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
 
         elif self.type == 'vulcan_ini':
-            print ("Initializing PT from the prvious run " + self.cfg.vul_ini)
+            log.info("Initializing PT from the prvious run " + self.cfg.vul_ini)
             with open(self.cfg.vul_ini, 'rb') as handle:
               vul_data = pickle.load(handle)
 
             data_atm.Tco = vul_data['atm']['Tco']
 
         elif self.type == 'table':
-            print ("Initializing PT from the prvious run " + self.cfg.vul_ini)
+            log.info("Initializing PT from the prvious run " + self.cfg.vul_ini)
             table = np.genfromtxt(self.cfg.vul_ini, names=True, dtype=None, skip_header=1)
             if not len(data_atm.pco) == len(table['Pressure']):
-                print ("Warning! The initial profile has different layers than the current setting...")
-                raise
+                raise ValueError("The input profile has different layers than the current setting...")
             data_atm.pco = table['Pressure']
             data_atm.Tco = table['Temp']
 
-        else: raise IOError ('\n"atm_type" cannot be recongized.\nPlease trassign it in vulcan_cfg.')
+        else:
+            raise ValueError(f'atm_type {self.type} not recongized.')
 
         # IF switches for Kzz types
-        if self.Kzz_prof == 'const': data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
+        if self.Kzz_prof == 'const':
+            data_atm.Kzz = np.repeat(self.const_Kzz,nz-1)
         elif self.Kzz_prof == 'JM16': # Kzz profiles assumed in Moses et al.2016
             data_atm.Kzz = 1e5 * (300./(data_atm.pico[1:-1]*1e-3))**0.5
             data_atm.Kzz = np.maximum(self.cfg.K_deep, data_atm.Kzz)
@@ -402,15 +406,19 @@ class Atm(object):
             data_atm.Kzz = self.cfg.K_max * (self.cfg.K_p_lev*1e6 /(data_atm.pico[1:-1]))**0.4
             data_atm.Kzz = np.maximum(self.cfg.K_max, data_atm.Kzz)
 
-        elif self.Kzz_prof == 'file': pass # already defined within atm_type = 'file
-        else: raise IOError ('\n"Kzz_prof" (the type of Kzz profile) cannot be recongized.\nPlease assign it as "file" or "const" or "JM16" in vulcan_cfg.')
+        elif self.Kzz_prof == 'file':
+            pass # already defined within atm_type = 'file
+        else:
+            raise IOError('"Kzz_prof" (the type of Kzz profile) cannot be recongized.\nPlease assign it as "file" or "const" or "JM16" in vulcan_cfg.')
 
         # IF switches for Vz types
-        if self.vz_prof == 'const': data_atm.vz = np.repeat(self.const_vz,nz-1)
+        if self.vz_prof == 'const':
+            data_atm.vz = np.repeat(self.const_vz,nz-1)
         elif self.vz_prof == 'file':
             inter_vz = interpolate.interp1d( atm_table['Pressure'], atm_table['vz'], assume_sorted = False, bounds_error=False, fill_value=0 )
             data_atm.vz =  inter_vz(data_atm.pico[1:-1])
-        else: raise IOError ('\n"vz_prof" cannot be recongized.\nPlease assign it as "file" or "const" in vulcan_cfg.')
+        else:
+            raise IOError ('"vz_prof" cannot be recongized.\nPlease assign it as "file" or "const" in vulcan_cfg.')
 
 
 
@@ -474,7 +482,6 @@ class Atm(object):
             # Find the index of pico closest to 1bar
             pref_indx = min( range(nz+1), key=lambda i: abs(np.log10(pico[i])-6.))
         else: pref_indx = 0
-        # print ("g_s starts from " + str(pico[pref_indx]/1e6) + " bar")
 
         # updating and storing mu
         data_atm = self.mean_mass(data_var, data_atm, ni)
@@ -531,7 +538,7 @@ class Atm(object):
             elif self.cfg.atm_base == 'H2':
                 na = 1.67; a = 1.936e-6; b = 2.187
             elif self.cfg.atm_base == 'CO2':
-                print ("NO CO2 viscosity yet! (using N2 instead)")
+                log.warning("NO CO2 viscosity yet! (using N2 instead)")
                 na = 1.52; a = 1.186e-5; b = 86.54
             elif self.cfg.atm_base == 'H2O':
                 na = 1.5; a = 1.6e-5; b = 0
@@ -545,7 +552,8 @@ class Atm(object):
                     rho_p = data_atm.rho_p[sp]
                     r_p = data_atm.r_p[sp]
 
-                except: print (sp + " has not been prescribed size and density!");raise
+                except:
+                    raise ValueError(sp + " has not been prescribed size and density!")
 
                 # Calculating the setteling (terminal) velocity
                 gi = 0.5*(data_atm.g + np.roll(data_atm.g,-1))
@@ -558,7 +566,7 @@ class Atm(object):
 
         # print warning when T exceeds the valid range of Gibbs free energy (NASA polynomials)
         if np.any(np.logical_or(data_atm.Tco < 200, data_atm.Tco > 6000)):
-            print('Temperatures exceed the valid range of Gibbs free energy.\n')
+            log.warning('Temperatures exceed the valid range of Gibbs free energy.\n')
 
         return data_atm
 
@@ -599,10 +607,8 @@ class Atm(object):
         sum_bin += dbin2 * np.sum(var.sflux_top[var.sflux_din12_indx:])
         sum_bin -= dbin2 *0.5*(var.sflux_top[var.sflux_din12_indx]+var.sflux_top[-1])
 
-        print ("The stellar flux is interpolated onto uniform grid of " +str(self.cfg.dbin1) + " (<" +str(self.cfg.dbin_12trans)+" nm) and "+str(self.cfg.dbin2)\
+        log.debug("The stellar flux is interpolated onto uniform grid of " +str(self.cfg.dbin1) + " (<" +str(self.cfg.dbin_12trans)+" nm) and "+str(self.cfg.dbin2)\
         + " (>="+str(self.cfg.dbin_12trans)+" nm)" + " and conserving " + "{:.2f}".format(100* sum_bin/sum_orgin)+" %" + " energy." )
-        #print (str(100* sum_old/sum_orgin)+" %" )
-
 
 
     def mol_diff(self, atm):
@@ -682,7 +688,7 @@ class Atm(object):
         '''
         # read in the const top BC
         if self.cfg.use_topflux == True:
-            print ("Using the prescribed constant top flux.")
+            log.info("Using the prescribed constant top flux.")
             with open (self.cfg.top_BC_flux_file) as f:
                 for line in f.readlines():
                     if not line.startswith("#") and line.strip():
@@ -691,7 +697,7 @@ class Atm(object):
 
         # read in the const bottom BC
         if self.cfg.use_botflux == True:
-            print ("Using the prescribed constant bottom flux.")
+            log.info("Using the prescribed constant bottom flux.")
             with open (self.cfg.bot_BC_flux_file) as f:
                 for line in f.readlines():
                     if not line.startswith("#") and line.strip():
@@ -701,7 +707,7 @@ class Atm(object):
 
         # using fixed-mixing-ratio BC
         if self.cfg.use_fix_sp_bot == True:
-            print ("Using the prescribed fixed bottom mixing ratios.")
+            log.info("Using the prescribed fixed bottom mixing ratios.")
             with open (self.cfg.bot_BC_flux_file) as f:
                 for line in f.readlines():
                     if not line.startswith("#") and line.strip():
@@ -788,8 +794,3 @@ class Atm(object):
 
                 saturate_p = 10**( (T <= 187.6)*h2s_ice_log10 + (T > 187.6)*h2s_l_log10 )
                 atm.sat_p[sp] = saturate_p * 0.001333 * 1.e6
-
-
-if __name__ == "__main__":
-    print("This module stores classes for constructing atmospheric structure \
-    and initializing its chemical composition from the desinated elemental abudance.")

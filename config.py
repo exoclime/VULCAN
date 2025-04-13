@@ -145,6 +145,5 @@ class Config:
 
         # output:
         self.output_humanread = False
-        self.use_shark        = False
         self.save_evolution   = False   # save the evolution of chemistry (y_time and t_time) for every save_evo_frq step
         self.save_evo_frq     = 10

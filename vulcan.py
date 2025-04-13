@@ -6,9 +6,17 @@
 # ==============================================================================
 
 # Import system modules
-import logging
 import time
 import sys
+
+import logging
+
+# disable matplotlib debug logging
+mpl_logger = logging.getLogger("matplotlib")
+mpl_logger.setLevel(logging.WARNING)
+
+# initialise logger for vulcan
+log = logging.getLogger("fwl."+__name__)
 
 # Import some VULCAN modules
 from paths import COM_FILE
@@ -18,7 +26,7 @@ from config import Config
 # import the configuration inputs
 def main(vulcan_cfg:Config):
 
-    print("Running VULCAN")
+    log.info("Running VULCAN")
 
     # Import modules for running VULCAN
     import store, build_atm, op
@@ -125,16 +133,22 @@ def main(vulcan_cfg:Config):
 
 if __name__ == "__main__":
     # Entry point for the script when run directly
+    print("Starting VULCAN from command line")
+
+    # Setup basic logging
+    logging.basicConfig(format='%(asctime)s - %(levelname)8s:  %(message)s',
+                            datefmt='%H:%M:%S',
+                            encoding='utf-8', level=logging.INFO)
 
     # Make config
     vulcan_cfg = Config()
 
     # Remake chem_funs by default. Disabled when passing -n flag.
     if '-n' not in sys.argv:
-        print('Making chem_funs.py ...')
+        log.debug('Making chem_funs.py ...')
         make_all(vulcan_cfg)
     else:
-        print("Skip making chem_funs.py")
+        log.debug("Skip making chem_funs.py")
 
     # Run model
     main(vulcan_cfg)

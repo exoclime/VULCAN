@@ -15,7 +15,10 @@ import matplotlib.pyplot as plt
 import time, os
 import shutil
 
-from paths import CROSS_DIR, CHEM_FUNS_FILE
+import logging
+log = logging.getLogger("fwl."+__name__)
+
+from paths import CROSS_DIR
 from build_atm import compo, compo_row
 from chem_funs import chemdf, ni, nr, Gibbs # number of species and reactions in the network
 from chem_funs import neg_symjac as neg_achemjac
@@ -176,7 +179,7 @@ class ReadRate(object):
                     Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
 
                     if Rf[i] == 'OH + CH3 + M -> CH3OH + M':
-                        print ('Using special form for the reaction: ' + Rf[i])
+                        log.debug('Using special form for the reaction: ' + Rf[i])
 
                         k[i] = 1.932E3*Tco**-9.88 *np.exp(-7544./Tco) + 5.109E-11*Tco**-6.25 *np.exp(-1433./Tco)
                         k_inf = 1.031E-10 * Tco**-0.018 *np.exp(16.74/Tco)
@@ -191,10 +194,6 @@ class ReadRate(object):
                         kinf_fun[i] = lambda temp, mm, i=i: 1.031E-10 * temp**-0.018 *np.exp(16.74/temp)
                         k_fun_new[i] = lambda temp, mm, i=i: (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp))/\
                         (1 + (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp)) * mm / (1.031E-10 * temp**-0.018 *np.exp(16.74/temp)) )
-
-                    # elif Rf[i] == 'C2H2 + M -> soot':
-                    #     print ('Using fake C2H2 -> soot: ' + Rf[i])
-                    #     k[i] = np.ones(nz) * 1e-10
 
                     i += 2
 
@@ -237,7 +236,6 @@ class ReadRate(object):
                     Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
 
                     # chekcing if it already existed in the photo species
-                    #if Rf[i].split()[0] not in photo_sp: print (str(Rf[i].split()[0]) + ' not present in the photo disccoiation but only in ionization!')
                     ion_sp.append(Rf[i].split()[0])
 
                     li = line.partition(']')[-1].strip()
@@ -278,8 +276,8 @@ class ReadRate(object):
         Tco = atm.Tco.copy()
 
         # reversing rates and storing into data_var
-        print ('Reverse rates from R1 to R' + str(var.stop_rev_indx-2))
-        print ('Rates greater than 1e-6:')
+        log.debug('Reverse rates from R1 to R' + str(var.stop_rev_indx-2))
+        log.debug('Rates greater than 1e-6:')
         for i in rev_list:
             if i in self.cfg.remove_list:
                  var.k[i] = np.repeat(0.,nz)
@@ -287,8 +285,10 @@ class ReadRate(object):
                 var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/Gibbs(i-1,temp)
                 var.k[i] = var.k[i-1]/Gibbs(i-1,Tco)
 
-            if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + " " + var.Rf[i-1] +' :  ' + str(np.amax(var.k[i])) )
-            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + " " + var.Rf[i-1] + ' :  ' + str(np.amax(var.k[i-1])) )
+            if np.any(var.k[i] > 1.e-6):
+                log.debug('R' + str(i) + " " + var.Rf[i-1] +' :  ' + str(np.amax(var.k[i])) )
+            if np.any(var.k[i-1] > 1.e-6):
+                log.debug('R' + str(i-1) + " " + var.Rf[i-1] + ' :  ' + str(np.amax(var.k[i-1])) )
 
         return var
 
@@ -309,20 +309,20 @@ class ReadRate(object):
                 T_mask = atm.Tco <= 277.5
                 k0 = 6e-29; kinf = 2.06E-10 *atm.Tco**-0.4 # from Moses+2005
                 lowT_lim = k0 / (1. + k0*atm.M/kinf)
-                print ("using the low temperature limit for CH3 + H + M -> CH4 + M")
-                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (lowT_lim[T_mask])
+                log.debug("using the low temperature limit for CH3 + H + M -> CH4 + M")
+                log.debug("capping "); log.debug(var.k[i][T_mask]); log.debug("at "); log.debug(lowT_lim[T_mask])
                 var.k[i][T_mask] =  lowT_lim[T_mask]
 
             elif var.Rf[i] == 'H + C2H4 + M -> C2H5 + M':
                 T_mask = atm.Tco <= 300
-                print ("using the low temperature limit for H + C2H4 + M -> C2H5 + M")
-                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (3.7E-30)
+                log.debug("using the low temperature limit for H + C2H4 + M -> C2H5 + M")
+                log.debug("capping "); log.debug(var.k[i][T_mask]); log.debug("at "); log.debug(3.7E-30)
                 var.k[i][T_mask] = 3.7E-30 # from Moses+2005
 
             elif var.Rf[i] == 'H + C2H5 + M -> C2H6 + M':
                 T_mask = atm.Tco <= 200
-                print ("using the low temperature limit for H + C2H5 + M -> C2H6 + M")
-                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (2.49E-27)
+                log.debug("using the low temperature limit for H + C2H5 + M -> C2H6 + M")
+                log.debug("capping "); log.debug(var.k[i][T_mask]); log.debug("at "); log.debug(2.49E-27)
                 var.k[i][T_mask] = 2.49E-27 # from Moses+2005
 
         return var
@@ -359,17 +359,17 @@ class ReadRate(object):
                 try:
                     cross_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
                 except:
-                    print ('\nMissing the cross section from ' + sp); raise
+                    raise RuntimeError('Missing the cross section from ' + sp)
                 if sp in ion_sp:
                     try:
                         ion_ratio_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
                     except:
-                        print ('\nMissing the ion branching ratio from ' + sp); raise
+                        raise RuntimeError('Missing the ion branching ratio from ' + sp)
             else:
                 try:
                     cross_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
                 except:
-                    print ('\nMissing the cross section from ' + sp); raise
+                   raise RuntimeError('Missing the cross section from ' + sp)
 
             # reading in the branching ratios
             # for i in range(1,var.n_branch[sp]+1): # branch index should start from 1
@@ -377,7 +377,7 @@ class ReadRate(object):
                 try:
                     ratio_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
                 except:
-                    print ('\nMissing the branching ratio from ' + sp); raise
+                    raise RuntimeError('Missing the branching ratio from ' + sp)
 
             # reading in temperature dependent cross sections
             if sp in self.cfg.T_cross_sp:
@@ -385,7 +385,9 @@ class ReadRate(object):
                 for temp_file in os.listdir("thermo/photo_cross/" + sp + "/"):
                     if temp_file.startswith(sp) and temp_file.endswith("K.csv"):
                         temp = temp_file
-                        temp = temp.replace(sp,''); temp = temp.replace('_cross_',''); temp = temp.replace('K.csv','')
+                        temp = temp.replace(sp,'')
+                        temp = temp.replace('_cross_','')
+                        temp = temp.replace('K.csv','')
                         T_list.append(int(temp) )
                         var.cross_T_sp_list[sp] = T_list
                 for tt in T_list:
@@ -398,14 +400,16 @@ class ReadRate(object):
                 var.cross_T_sp_list[sp].append(300)
 
             if cross_raw[sp]['cross'][0] == 0 or cross_raw[sp]['cross'][-1] ==0:
-                raise IOError ('\n Please remove the zeros in the cross file of ' + sp)
+                raise IOError('Please remove the zeros in the cross file of ' + sp)
 
             if n==0: # the first species
                 bin_min = cross_raw[sp]['lambda'][0]
                 bin_max = cross_raw[sp]['lambda'][-1]
                 # photolysis threshold
-                try: diss_max = threshold[sp]
-                except: print (sp + " not in threshol.txt"); raise
+                try:
+                    diss_max = threshold[sp]
+                except:
+                    raise RuntimeError(sp + " not in threshol.txt")
 
             else:
                 sp_min, sp_max = cross_raw[sp]['lambda'][0], cross_raw[sp]['lambda'][-1]
@@ -414,14 +418,15 @@ class ReadRate(object):
                 try:
                     if threshold[sp] > diss_max:
                         diss_max = threshold[sp]
-                except: print (sp + " not in threshol.txt"); raise
+                except:
+                    raise RuntimeError(sp + " not in threshol.txt")
 
         # constraining the bin_min and bin_max by the default values defined in store.py
         bin_min = max(bin_min, var.def_bin_min)
         bin_max = min(bin_max, var.def_bin_max, diss_max)
-        print ("Input stellar spectrum from " + "{:.1f}".format(var.def_bin_min) + " to " + "{:.1f}".format(var.def_bin_max) )
-        print ("Photodissociation threshold: " + "{:.1f}".format(diss_max) )
-        print ("Using wavelength bins from " + "{:.1f}".format(bin_min) + " to " +  str(bin_max) )
+        log.info("Input stellar spectrum from " + "{:.1f}".format(var.def_bin_min) + " to " + "{:.1f}".format(var.def_bin_max) )
+        log.info("Photodissociation threshold: " + "{:.1f}".format(diss_max) )
+        log.info("Using wavelength bins from " + "{:.1f}".format(bin_min) + " to " +  str(bin_max) )
 
         var.dbin1 = self.cfg.dbin1
         var.dbin2 = self.cfg.dbin2
@@ -473,7 +478,8 @@ class ReadRate(object):
                 br_key = 'br_ratio_' + str(i)
                 try:
                     inter_ratio[i] = interpolate.interp1d(ratio_raw[sp]['lambda'], ratio_raw[sp][br_key], bounds_error=False, fill_value=(ratio_raw[sp][br_key][0],ratio_raw[sp][br_key][-1]))
-                except: print("The branches in the network file does not match the branchong ratio file for " + str(sp))
+                except:
+                    log.error("The branches in the network file does not match the branchong ratio file for " + str(sp))
 
             # using a loop instead of an array because it's easier to handle the branching ratios
             for n, ld in enumerate(bins):
@@ -605,7 +611,8 @@ class ReadRate(object):
                     br_key = 'br_ratio_' + str(i)
                     try:
                         ion_inter_ratio[i] = interpolate.interp1d(ion_ratio_raw[sp]['lambda'], ion_ratio_raw[sp][br_key], bounds_error=False, fill_value=(ion_ratio_raw[sp][br_key][0],ion_ratio_raw[sp][br_key][-1]))
-                    except: print("The ionic branches in the network file does not match the branchong ratio file for " + str(sp))
+                    except:
+                        log.error("The ionic branches in the network file does not match the branchong ratio file for " + str(sp))
 
                 for n, ld in enumerate(bins):
                     # for species noe appeared in photodissociation but only in photoionization, like H
@@ -667,7 +674,7 @@ class Integration(object):
             if self.cfg.use_photo and var.longdy < self.cfg.yconv_min*10. and var.longdydt < 1.e-6:
                 self.update_photo_frq = self.cfg.final_update_photo_frq
                 if para.switch_final_photo_frq == False:
-                    print ('update_photo_frq changed to ' + str(self.cfg.final_update_photo_frq) +'\n')
+                    log.debug('update_photo_frq changed to ' + str(self.cfg.final_update_photo_frq) +'\n')
                     para.switch_final_photo_frq = True
 
             if self.cfg.use_photo  and para.count % self.update_photo_frq == 0:
@@ -692,9 +699,9 @@ class Integration(object):
 
                         para.fix_species_start = True
                         self.cfg.rtol = self.cfg.post_conden_rtol
-                        print ("rtol changed to " + str(self.cfg.rtol) + " after fixing the condensaed species.")
+                        log.debug("rtol changed to " + str(self.cfg.rtol) + " after fixing the condensed species.")
                         atm.vs *= 0
-                        print ("Turn off the settling velocity of all species")
+                        log.debug("Turn off the settling velocity of all species")
                         # updated 2023
 
                         var.fix_y = {}
@@ -714,9 +721,9 @@ class Integration(object):
                                         min_sat = np.amin(atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
                                         conden_min_lev = np.where(atm.sat_mix[sp] == min_sat)[0][0]
                                         atm.conden_min_lev[sp] = conden_min_lev
-                                        print (sp + " is now fixed from " + "{:.2f}".format(atm.pco[atm.conden_min_lev[sp]]/1e6) + " bar." )
+                                        log.debug(sp + " is now fixed from " + "{:.2f}".format(atm.pco[atm.conden_min_lev[sp]]/1e6) + " bar." )
                                     else:
-                                        print (sp + " not condensed.")
+                                        log.debug(sp + " not condensed.")
                                         atm.conden_min_lev[sp] = 0
 
                     else: pass # do nothing after fix_species has started
@@ -824,10 +831,6 @@ class Integration(object):
             atm.top_flux[species.index(sp)] = - atm.Dzz[-1,species.index(sp)]*var.y[-1,species.index(sp)]*( 1./atm.Hp[-1] -atm.ms[species.index(sp)]* atm.g[-1]/(Navo*kb*atm.Tco[-1])     )
             atm.top_flux[species.index(sp)] = max(atm.top_flux[species.index(sp)], self.cfg.max_flux*(-1))
 
-            # print ("Escape flux of " + sp + "{:>10.2e}".format(atm.top_flux[species.index(sp)]))
-            # print ("diffusion-limite value: " + "{:>10.2e}".format(- atm.Dzz[-1,species.index(sp)]*var.y[-1,species.index(sp)]*( 1./atm.Hp[-1] -atm.ms[species.index(sp)]* atm.g[-1]/(Navo*kb*atm.Tco[-1])     )) )
-            #print ("Test  " + sp + "{:>10.2e}".format(atm.Dzz[-1,species.index(sp)] *var.y[-1,species.index(sp)] /atm.Hp[-1]) )
-
         return atm
 
 
@@ -867,8 +870,6 @@ class Integration(object):
         indx = max(para.count-self.cfg.conv_step, indx)
 
         # TEST
-        if para.count %100==0: print ("conv_indx: "  + str(indx))
-
         longdy = np.abs((y_time[count-1] - y_time[indx])/np.vstack(atm.n_0))
         longdy[ymix < mtol_conv] = 0
         longdy[y < atol] = 0
@@ -899,20 +900,20 @@ class Integration(object):
         To check the convergence criteria and stop the integration
         '''
         if var.t > self.cfg.trun_min and para.count > self.cfg.count_min and self.conv(var, para, atm):
-            print ('Integration successful with ' + str(para.count) + ' steps and long dy, long dydt = ' + str(var.longdy) + ' ,' + str(var.longdydt) + '\nActinic flux change: ' + '{:.2E}'.format(var.aflux_change))
+            log.info('Integration successful with ' + str(para.count) + ' steps and long dy, long dydt = ' + str(var.longdy) + ' ,' + str(var.longdydt) + '\nActinic flux change: ' + '{:.2E}'.format(var.aflux_change))
             self.output.print_end_msg(var, para)
             para.end_case = 1
             return True
         elif var.t > self.cfg.runtime:
-            print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
-            print ('Integration not completed...\nMaximal allowed runtime exceeded ('+ \
-            str (self.cfg.runtime) + ' sec)!')
+            log.warning("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
+            log.warning('Integration not completed...')
+            log.warning('Maximal allowed runtime exceeded ('+ str (self.cfg.runtime) + ' sec)!')
             para.end_case = 2
             return True
         elif para.count > self.cfg.count_max:
-            print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
-            print ('Integration not completed...\nMaximal allowed steps exceeded (' + \
-            str (self.cfg.count_max) + ')!')
+            log.warning("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
+            log.warning('Integration not completed...')
+            log.warning('Maximal allowed steps exceeded (' + str (self.cfg.count_max) + ')!')
             para.end_case = 3
             return True
 
@@ -1151,8 +1152,6 @@ class Integration(object):
 
         var.y = var.ymix * np.vstack( np.sum(var.y[:,atm.gas_indx], axis=1) )
 
-        #print ("relax conden...")
-
         return var
 
     def h2o_conden_evap_relax(self, var, atm):
@@ -1228,13 +1227,6 @@ class Integration(object):
         var.ymix[conden_indx,species.index('NH3_l_s')] += (var.ymix[conden_indx,species.index('NH3')] - y_conden[conden_indx])
         var.ymix[conden_indx,species.index('NH3')] = y_conden[conden_indx]
         # store the saturated parts (only relax where ymix > ysat)
-
-
-        # print ("Condex Indx:")
-        # print (conden_indx)
-        # print ("evap index:")
-        # print (evap_indx)
-        # print (ice_loss[evap_indx]/atm.n_0[evap_indx] /var.ymix[evap_indx,species.index('NH3_l_s')])
 
         var.ymix[evap_indx,species.index('NH3')] += ice_loss[evap_indx]/atm.n_0[evap_indx]
         # instaneous evaporation
@@ -1809,7 +1801,6 @@ class ODESolver(object):
             dfdy[j_indx[-1], j_indx[-1]] -= diff_lim # negative
 
         # Fix bottom BC
-        #print (dfdy[:, j_indx[0]])
         dfdy[:, j_indx[0]] = 0.
 
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
@@ -2032,7 +2023,7 @@ class ODESolver(object):
             var.dt = self.cfg.dt_min
             var.y[var.y<0] = 0. # clipping of negative values
 
-            print ('Keep producing negative values! Clipping negative solutions and moving on!')
+            log.warning('Keep producing negative values! Clipping negative solutions and moving on!')
             return True
 
         return False
@@ -2052,19 +2043,19 @@ class ODESolver(object):
     def print_nega(self, data_var, data_para):
 
         nega_i = np.where(data_var.y<0)
-        print ('Negative y at time ' + str("{:.2e}".format(data_var.t)) + ' and step: ' + str(data_para.count) )
-        print ('Negative values:' + str(data_var.y[data_var.y<0]) )
-        print ('from levels: ' + str(nega_i[0]) )
-        print ('species: ' + str([species[_] for _ in nega_i[1]]) )
-        print ('dt= ' + str(data_var.dt))
-        print ('...reset dt to dt*0.2...')
-        print ('------------------------------------------------------------------')
+        log.warning('Negative y at time ' + str("{:.2e}".format(data_var.t)) + ' and step: ' + str(data_para.count) )
+        log.warning('Negative values:' + str(data_var.y[data_var.y<0]) )
+        log.warning('from levels: ' + str(nega_i[0]) )
+        log.warning('species: ' + str([species[s] for s in nega_i[1]]) )
+        log.warning('dt= ' + str(data_var.dt))
+        log.warning('...reset dt to dt*0.2...')
+        log.warning('------------------------------------------------------------------')
 
     def print_lossBig(self, para):
 
-        print ('Element conservation is violated too large')
-        print ('at step: ' + str(para.count))
-        print ('------------------------------------------------------------------')
+        log.warning('Element conservation is violated too large')
+        log.warning('at step: ' + str(para.count))
+        log.warning('------------------------------------------------------------------')
 
     def thomas_vec(a, b, c, d):
         '''
@@ -2213,40 +2204,11 @@ class ODESolver(object):
             var.dflux_u[j] = 1./chi[j-1]*(phi[j-1]*var.dflux_u[j-1] - xi[j-1]*var.dflux_d[j] + i_u[j-1]/mu_ang )
 
 
-        #print ("time passed...")
-        #print (timeit.default_timer() - start_time)
-
-        # old
-        # # the average intensity (not flux!) of the direct beam
-#         ave_int = 0.5*( var.sflux[:-1] + var.sflux[1:])
-#         tot_int = (ave_int + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1]) )/edd
-#         # devided by the Eddington coefficient to recover the intensity
-
-
         # the average flux from the direct beam
         # !!! WITHOUT multiplied by the cos zenith angle (flux per unit area perpendicular to the direction of propagationat) !!!
         ave_dir_flux = 0.5*( var.sflux[:-1] + var.sflux[1:])
         # devided by the Eddington coefficient to recover the total intensity (integrated over all directions)
         tot_flux = ave_dir_flux + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1])/edd
-
-        # For debugging
-        #var.ave_int = ave_int
-        # var.ll = ll
-        # var.chi=chi
-        # var.phi=phi
-        # var.xi = xi
-        # var.i_u = i_u
-        # var.i_d = i_d
-        # var.w0 = w0
-        # var.tot_abs = tot_abs
-        # var.tot_scat = tot_scat
-        # var.tran = tran
-        # var.delta_tau = delta_tau
-        # For debugging
-
-        # if np.any(tot_flux< -1.e-20):
-        #      print (tot_flux[tot_flux<-1.e-20])
-        #      raise IOError ('\nNegative diffusive flux! ')
 
         # store the previous actinic flux into prev_aflux
         var.prev_aflux = np.copy(var.aflux)
@@ -2254,18 +2216,6 @@ class ODESolver(object):
         var.aflux = tot_flux / (hc/var.bins)
         # the change of the actinic flux
         var.aflux_change = np.nanmax( np.abs(var.aflux-var.prev_aflux)[var.aflux>self.cfg.flux_atol]/var.aflux[var.aflux>self.cfg.flux_atol] )
-
-        #print ('aflux change: ' + '{:.4E}'.format(var.aflux_change) )
-
-
-
-    # def compute_cross_JT(self, var, atm):
-    #     '''
-    #     computing T-dependent dissociation cross section based on Tco and stored in the 2D nz*nbins array
-    #     only call once at the start
-    #     '''
-
-
 
     def compute_J(self, var, atm): # the vectorized version
         '''
@@ -2470,18 +2420,12 @@ class Ros2(ODESolver):
 
                     delta[:,species.index(sp)] = 0
 
-            # Recorde the condensing levels TEST 2022 # do we need this?
-            # for sp in ['H2O']:
-            #     conden_status = sol[:,species.index(sp)] >= atm.n_0 * atm.sat_mix[sp]*0.99
-            #     atm.conden_status = conden_status
-            # Recorde the condensing levels TEST 2022
-
         if self.cfg.use_print_delta == True and para.count % self.cfg.print_prog_num==0:
             max_indx = np.nanargmax(delta/sol, axis=1)
             max_lev_indx = np.nanargmax(delta/sol)
-            print ('Largest delta (truncation error) from nz = ' + str(int(max_lev_indx/ni) ) )
-            print ( np.array(species)[max_indx] )
-            print ('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) )
+            log.info('Largest delta (truncation error) from nz = ' + str(int(max_lev_indx/ni) ) )
+            log.info( np.array(species)[max_indx] )
+            log.info('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) )
 
         delta = np.amax( delta[sol>0]/sol[sol>0] )
 
@@ -2568,7 +2512,7 @@ class Ros2(ODESolver):
         para.delta = delta
 
         # use charge balance to obtain the number density of electrons (such that [ions] = [e])
-        if self.cfg.use_ion == True:
+        if self.cfg.use_ion:
             # clear e
             var.y[:,species.index('e')] = 0
             # set e such that the net chare is zero
@@ -2579,15 +2523,10 @@ class Ros2(ODESolver):
 
 
     def naming_solver(self, para):
-
-        # if self.cfg.use_fix_all_bot == True:
-        #     if self.cfg.use_moldiff == True: print ('Use fixed bottom BC and molecular diffusion.')
-        #     else: print ('Use fixed bottom BC and No molecular diffusion.')
-        #     para.solver_str = 'solver_fix_all_bot'
-
-        #else:
-        if self.cfg.use_moldiff == True: print ('Include molecular diffusion.')
-        else: print ('No molecular diffusion.')
+        if self.cfg.use_moldiff:
+            log.info('Include molecular diffusion.')
+        else:
+            log.info('No molecular diffusion.')
         para.solver_str = 'solver'
 
 
@@ -2651,41 +2590,38 @@ class Output(object):
 
         outfile = output_dir+out_name
         if os.path.isfile(outfile):
-            print("Warning: output file already exists. Removing.")
+            log.warning("Output file already exists. Removing.")
             os.remove(outfile)
 
     def print_prog(self, var, para):
         indx_max = np.nanargmax(para.where_varies_most)
-        print ('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(self.cfg.count_max) )
-        print ('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )
-        print ('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
-        print ('------------------------------------------------------------------------' )
+        log.info('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(self.cfg.count_max) )
+        log.info('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )
+        log.info('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
+        log.info('------------------------------------------------------------------------' )
 
 
     def print_end_msg(self, var, para ):
-        print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
-        print (self.cfg.out_name[:-4] + ' has successfully run to steady-state with ' + str(para.count) + ' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
-        print ('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
+        log.info("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
+        log.info(self.cfg.out_name[:-4] + ' has successfully run to steady-state with ' + str(para.count) + ' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
+        log.info('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
 
-        print ('total atom loss:')
-        for atom in self.cfg.atom_list: print (atom + ': ' + str(var.atom_loss[atom]) + ' ')
+        log.info('Total atom loss:')
+        for atom in self.cfg.atom_list:
+            log.info(atom + ': ' + str(var.atom_loss[atom]) + ' ')
 
-        print ('negative solution counter:')
-        print (para.nega_count)
-        print ('loss rejected counter:')
-        print (para.loss_count)
-        print ('delta rejected counter:')
-        print (para.delta_count)
-        if self.cfg.use_shark == True: print ("It's a long journey to this shark planet. Don't stop bleeding.")
-        print ('------ Live long and prosper \\V/ ------')
+        log.info('negative solution counter: ' + str(para.nega_count))
+        log.info('loss rejected counter: ' + str(para.loss_count))
+        log.info('delta rejected counter: ' + str(para.delta_count))
+        log.info('------ Live long and prosper \\V/ ------')
 
 
 
     def save_cfg(self):
         output_dir, out_name = self.cfg.output_dir, self.cfg.out_name
         if not os.path.exists(output_dir):
-            print ('The output directory assigned in vulcan_cfg does not exist.')
-            print( 'Directory ' , output_dir,  " created.")
+            log.debug('The output directory assigned in vulcan_cfg does not exist.')
+            log.debug(f'Directory {output_dir} created.')
             os.mkdir(output_dir)
 
         # # copy the self.cfg.py file
@@ -2698,8 +2634,8 @@ class Output(object):
         output_file = output_dir + out_name
 
         if not os.path.exists(output_dir):
-            print ('The output directory assigned in vulcan_cfg.py does not exist.')
-            print( 'Directory ' , output_dir,  " created.")
+            log.debug('The output directory assigned in vulcan_cfg.py does not exist.')
+            log.debug(f'Directory {output_dir} created.')
             os.mkdir(output_dir)
 
         # convert lists into numpy arrays
@@ -2751,7 +2687,7 @@ class Output(object):
 
     def plot_update(self, var, atm, para):
 
-        print("Plotting mixing ratios")
+        log.debug("Plotting mixing ratios")
 
         colors = ['b','r','c','m','y','k','orange','pink', 'grey',\
         'darkred','darkblue','salmon','chocolate','mediumspringgreen','steelblue','plum','hotpink']

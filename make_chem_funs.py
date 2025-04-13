@@ -4,6 +4,9 @@ import numpy as np
 import importlib
 from sympy import Symbol, Matrix # for constructing the symbolic Jacobian matrix
 
+import logging
+log = logging.getLogger("fwl."+__name__)
+
 from config import Config
 from paths import COM_FILE, GIBBS_FILE, CHEM_FUNS_FILE
 
@@ -39,7 +42,7 @@ def read_network(vulcan_cfg:Config):
                 re_label = '#S'
 
             elif line.startswith("# condensation"):
-                print ('Including condensation reactions.')
+                log.info('Including condensation reactions.')
                 special_re = False # switch to reactions with special forms (hard coded)
                 re_label = '#C'
 
@@ -422,7 +425,7 @@ def make_chemdf(re_table, ofname):
     ost += '\t return np.array(rate_str[sp]) \n\n'.expandtabs(3)
     ofstr += ost
 
-    print(f"Writing ofstr to {ofname}")
+    log.debug(f"Writing ofstr to {ofname}")
     with open(ofname, "w") as of:
         of.write(ofstr)
 
@@ -721,7 +724,6 @@ def check_conserv(nr):
     compo_row = list(compo['species'])
     # Convert bytes to strings
     compo_row = [sp.decode("utf-8") for sp in compo_row]
-    #print (compo_row)
     num_atoms = len(compo.dtype.names) - 2 # dtype.names returns the column names and -2 is for 'species' and 'mass'
 
     for re in range(1,nr+1,2):
@@ -736,13 +738,13 @@ def check_conserv(nr):
             prod_atoms += np.array(list(compo[compo_row.index(sp)])[1:num_atoms+1])
 
         if not np.all(reac_atoms == prod_atoms):
-            print ('Re ' + str(re) + ' not conserving element!')
+            log.warning('Re ' + str(re) + ' not conserving element!')
             conserv_check = False
 
-    if conserv_check == True:
-        print ('Elements conserved in the network.')
+    if conserv_check:
+        log.info('Elements conserved in the network.')
     else:
-        raise IOError ('\nElements are not conserved in the reaction. Check the network!\n')
+        raise RuntimeError('Elements are not conserved in the reaction. Check the network!')
 
 def check_duplicate(nr, photo_re_indx):
     from chem_funs import re_wM_dict
@@ -759,10 +761,10 @@ def check_duplicate(nr, photo_re_indx):
                     dup_check = True
                     if {re,re_oth} not in dup_list:
                         dup_list.append({re,re_oth})
-                        print ('Re' + str(re) + ' and '+ 'Re' + str(re_oth) +   ' are duplicates!')
+                        log.warning('Re' + str(re) + ' and '+ 'Re' + str(re_oth) +   ' are duplicates!')
 
     if not dup_list:
-        print ('No duplicates in the network.')
+        log.info('No duplicates in the network.')
 
 # Main function
 def make_all(vulcan_cfg:Config):
@@ -772,7 +774,7 @@ def make_all(vulcan_cfg:Config):
     make_Gibbs(re_table, GIBBS_FILE, CHEM_FUNS_FILE)
 
     # import the "ofname" module as chemistry for make_jac to read df
-    chem_funs = __import__(CHEM_FUNS_FILE.split("/")[-1].split(".")[0])
+    chem_funs = importlib.import_module(CHEM_FUNS_FILE.split("/")[-1].split(".")[0])
 
     # the last function that writes into chem_funs.py
     make_jac(ni, nr, CHEM_FUNS_FILE, chem_funs)
