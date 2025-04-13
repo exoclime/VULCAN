@@ -1,0 +1,5 @@
+fastchem_vulcan/obj/*.o
+fastchem_vulcan/obj/*.d
+fastchem_vulcan/input/element_abundances_vulcan.dat
+fastchem_vulcan/fastchem
+fastchem_vulcan/output/
