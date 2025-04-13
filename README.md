@@ -32,7 +32,7 @@ You should see the default model starts running with real-time plotting.
 This will take about 10-15 minutes to complete depending on your comuputer.
 
 Now you may want to try a different T-P input, changing the elemental abundances or
-vertical mixing. All these settings are set in ```config.py```. For example, find and edit
+vertical mixing. All these settings are prescreibed in ```vulcan_cfg.py```. For example, find and edit
 ```python
 const_Kzz = 1.E7
 ```
@@ -41,8 +41,6 @@ and
 C_H = 6.0618E-4
 ```
 for a weaker vertical mixing (K<sub>zz</sub>) and carbon rich (C/O=1) run. Set use_live_plot = False if you wish to switch off the real-time plotting (why whould you though?). More detailed instruction can be found in the following sections. Have fun!
-
-The object in this `config.py` file can be edited at runtime and passed around as a variable.
 
 ## Repository structure
 
@@ -61,9 +59,9 @@ The object in this `config.py` file can be edited at runtime and passed around a
 `phy_const.py`: physical constants
 `store.py`: modules to store all the variables
 `vulcan.py`: the top-level main script of VULCAN
-`config.py`: the configuration file for VULCAN
+`vulcan_cfg.py`: the configuration file for VULCAN
 
-Typically ```config.py``` is the only file you need to edit for each specific run. If you want to look inside or modify the code, `store.py` is where almost all classes and variables are declared.
+Typically ```vulcan_cfg.py``` is the only file you need to edit for each specific run. If you want to look inside or modify the code, `store.py` is where almost all classes and variables are declared.
 
 ## Configuration File
 <strong>All the settings and parameters, e.g. the atmospheric parameters, the elemental abundance etc, are prescribed in ```vulcan_cfg.py```</strong>. Typically this is the only file you need to edit for each specific run. A useful cheatsheet describing what every parameter does can be found in ```vulcan_cfg_readme.txt```. The configuration files used for the model validation in [Tsai et al. 2021](https://arxiv.org/abs/2108.01790) are also provided in the cfg_examples folder.
@@ -78,7 +76,7 @@ The thermodynamics data and cross sections are stored in /thermo/NASA9 and /ther
 If constant fluxes for certain species are used, the files are also placed in /atm, in the format of species, flux (cm-2 s-1), and deposite velocity (cm s-1).
 
 ## Editing or Using a different chemical network
-VULCAN is developed in a flexible way that the chemical network is _not_ hard coded. Instead, ```make_chem_funs.py``` generates all the required funtions from the input chemical network (e.g. ```NCHO_photo_network.txt```) into ```chem_funs.py```.
+VULCAN is developed in a flexible way that the chemical network is _not_ hard coded. Instead, ```make_chem_funs.py``` generates all the required funtions from the input chemical network (e.g. ```NCHO_photo_netowrk.txt```) into ```chem_funs.py```.
 You can edit the default netowrk, to remove or add reactions, to change rate constats, etc. You can also use a different chemical network, as long as it is in the same format as the defalut ones. That is, the reactions should be writen in the form of [ A + B -> C + D ], including the square brackets.
 By default, ```make_chem_funs.py``` is always called prior to the main code to produce ```chem_funs.py``` based on the new chemical network . This step (which takes a few seconds) can be skiped by adding the agument ```-n```while running vulcan in the command line:
 ```
