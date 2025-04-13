@@ -10,8 +10,6 @@ class Config:
         self.atom_list               = ['H', 'O', 'C']
         self.network                 = VULCAN_DIR+'thermo/CHO_photo_network.txt'
         self.use_lowT_limit_rates    = False
-        self.gibbs_text              = VULCAN_DIR+'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
-        self.cross_folder            = VULCAN_DIR+'thermo/photo_cross/'
 
         self.atm_base                = 'H2'
         self.rocky                   = True           # for the surface gravity

@@ -1,24 +1,28 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ==============================================================================
 # This is the main file of VULCAN: the chemical kinetics code.
 # Copyright (C) 2016 Shang-Min Tsai (Shami)
 # ==============================================================================
 
-# import public modules
-import os
+# Import system modules
+import importlib
 import time
 import sys
 
-# import VULCAN modules
-import store, build_atm, op, config
-from compose import COM_FILE
+# Import some VULCAN modules
+from paths import COM_FILE
+from make_chem_funs import make_all
+from config import Config
 
 # import the configuration inputs
-def main():
+def main(vulcan_cfg:Config):
 
-    # Set config
-    vulcan_cfg = config.Config()
+    # Reload chem_funs
+    # importlib.reload(chem_funs)
+
+    # Import modules for running VULCAN
+    import store, build_atm, op
 
     ### read in the basic chemistry data
     with open(COM_FILE, 'r') as f:
@@ -123,12 +127,14 @@ def main():
 if __name__ == "__main__":
     # Entry point for the script when run directly
 
+    # Make config
+    vulcan_cfg = Config()
+
     # no arguments or not setting '-n' (no re-making chem_funs.py) option
     if len(sys.argv) < 2 or sys.argv[1] != '-n':
         # running prepipe to construch chem_funs.py
         print ('Making chem_funs.py ...')
-        python_executable = sys.executable
-        os.system(python_executable + ' make_chem_funs.py')
+        make_all(vulcan_cfg)
 
     # Run model
-    main()
+    main(vulcan_cfg)

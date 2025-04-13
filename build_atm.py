@@ -9,7 +9,7 @@ from shutil import copyfile
 from phy_const import kb, Navo, r_sun, au
 from chem_funs import ni  # number of species and reactions in the network
 from chem_funs import spec_list as species
-from compose import COM_FILE
+from paths import COM_FILE
 from config import Config
 
 ### read in the basic chemistry data
