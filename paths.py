@@ -1,7 +1,7 @@
 import os
 
-# Path to package folder
-VULCAN_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'  # VULCAN/src/vulcan
+# Path to VULCAN folder
+VULCAN_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 # Path to FastChem folder (custom version packaged with VULCAN)
 FASTCHEM_DIR = os.path.join(VULCAN_DIR, 'fastchem_vulcan') + '/'
@@ -11,7 +11,6 @@ COM_FILE = os.path.join(VULCAN_DIR,'thermo','all_compose.txt')
 
 # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 GIBBS_FILE = os.path.join(VULCAN_DIR,'thermo','gibbs_text.txt')
-NASA9_DIR  = os.path.join(VULCAN_DIR,'thermo','NASA9') + '/'
 
 # Photochemistry cross-sections
 CROSS_DIR = os.path.join(VULCAN_DIR,'thermo','photo_cross') + '/'

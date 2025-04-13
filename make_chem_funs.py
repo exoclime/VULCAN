@@ -5,7 +5,7 @@ import importlib
 from sympy import Symbol, Matrix # for constructing the symbolic Jacobian matrix
 
 from config import Config
-from paths import COM_FILE, GIBBS_FILE, CHEM_FUNS_FILE, NASA9_DIR
+from paths import COM_FILE, GIBBS_FILE, CHEM_FUNS_FILE
 
 # read the network and produce the .txt table for chemdf
 # Re-arrange the numerbers in the network
@@ -431,7 +431,7 @@ def make_chemdf(re_table, ofname):
 
 
 
-def make_Gibbs(re_table, ofname):
+def make_Gibbs(re_table, gibbs_text, ofname):
     '''
     Calculating the equilibrium constants (K_eq) from the Gibbs free energy to reverse the reaction rates.
     To DO: combine the repetitive parts of make_chemdf and make_Gibbs into one finction
@@ -632,16 +632,6 @@ def make_Gibbs(re_table, ofname):
             rate_exp = rate_exp[0:-1]  # Delete the last '*'
             rate_dict[j+1] = rate_exp
 
-    gstr += "\n\n"
-    gstr += "# the data of 'H2CO' is from Brucat's 2015\n"
-    gstr += "# C2H NASA 9 new from Brucat\n"
-    gstr += "nasa9 = {}\n"
-    gstr += "for i in [ _ for _ in spec_list]:\n"
-    gstr += f"    nasa9[i] = np.loadtxt('{NASA9_DIR}' + str(i) + '.txt')\n"
-    gstr += "    nasa9[i] = nasa9[i].flatten()\n"
-    gstr += "    nasa9[i,'low'] = nasa9[i][0:10]\n"
-    gstr += "    nasa9[i,'high'] = nasa9[i][10:20]\n"
-    gstr += "\n\n"
 
     with open(GIBBS_FILE, 'r') as g:
         for line in g:
@@ -779,7 +769,7 @@ def make_all(vulcan_cfg:Config):
 
     re_table, photo_table, photo_re_indx = read_network(vulcan_cfg)
     ni, nr, species = make_chemdf(re_table, CHEM_FUNS_FILE)
-    make_Gibbs(re_table, CHEM_FUNS_FILE)
+    make_Gibbs(re_table, GIBBS_FILE, CHEM_FUNS_FILE)
 
     # import the "ofname" module as chemistry for make_jac to read df
     chem_funs = __import__(CHEM_FUNS_FILE.split("/")[-1].split(".")[0])
