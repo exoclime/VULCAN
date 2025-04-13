@@ -3,6 +3,9 @@ import os
 # Path to VULCAN folder
 VULCAN_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 
+# Path to FastChem folder (custom version packaged with VULCAN)
+FASTCHEM_DIR = os.path.join(VULCAN_DIR, 'fastchem_vulcan') + '/'
+
 # Composition and gas properties
 COM_FILE = os.path.join(VULCAN_DIR,'thermo','all_compose.txt')
 
@@ -10,7 +13,7 @@ COM_FILE = os.path.join(VULCAN_DIR,'thermo','all_compose.txt')
 GIBBS_FILE = os.path.join(VULCAN_DIR,'thermo','gibbs_text.txt')
 
 # Photochemistry cross-sections
-CROSS_FOLDER = os.path.join(VULCAN_DIR,'thermo','photo_cross') + '/'
+CROSS_DIR = os.path.join(VULCAN_DIR,'thermo','photo_cross') + '/'
 
 # Symbolic chemical functions
 CHEM_FUNS_FILE = os.path.join(VULCAN_DIR,'chem_funs.py')

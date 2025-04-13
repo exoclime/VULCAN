@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import time, os
 import shutil
 
-from paths import CROSS_FOLDER, CHEM_FUNS_FILE
+from paths import CROSS_DIR, CHEM_FUNS_FILE
 from build_atm import compo, compo_row
 from chem_funs import chemdf, ni, nr, Gibbs # number of species and reactions in the network
 from chem_funs import neg_symjac as neg_achemjac
@@ -345,8 +345,8 @@ class ReadRate(object):
         cross_T_raw = {}
 
         # In the end, we do not need photons beyond the longest-wavelength threshold from all species (different from absorption)
-        sp_label = np.genfromtxt(CROSS_FOLDER+'thresholds.txt',dtype=str, usecols=0) # taking the first column as labels
-        lmd_data = np.genfromtxt(CROSS_FOLDER+'thresholds.txt', skip_header = 1)[:,1] # discarding the fist column
+        sp_label = np.genfromtxt(CROSS_DIR+'thresholds.txt',dtype=str, usecols=0) # taking the first column as labels
+        lmd_data = np.genfromtxt(CROSS_DIR+'thresholds.txt', skip_header = 1)[:,1] # discarding the fist column
 
         # for setting up the wavelength coverage
         threshold = {label: row for label, row in zip(sp_label, lmd_data) if label in species} # only include the species in the current network
@@ -357,17 +357,17 @@ class ReadRate(object):
 
             if self.cfg.use_ion:
                 try:
-                    cross_raw[sp] = np.genfromtxt(CROSS_FOLDER+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                    cross_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
                 except:
                     print ('\nMissing the cross section from ' + sp); raise
                 if sp in ion_sp:
                     try:
-                        ion_ratio_raw[sp] = np.genfromtxt(CROSS_FOLDER+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                        ion_ratio_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
                     except:
                         print ('\nMissing the ion branching ratio from ' + sp); raise
             else:
                 try:
-                    cross_raw[sp] = np.genfromtxt(CROSS_FOLDER+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                    cross_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
                 except:
                     print ('\nMissing the cross section from ' + sp); raise
 
@@ -375,7 +375,7 @@ class ReadRate(object):
             # for i in range(1,var.n_branch[sp]+1): # branch index should start from 1
             if sp in photo_sp: # excluding ion_sp
                 try:
-                    ratio_raw[sp] = np.genfromtxt(CROSS_FOLDER+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                    ratio_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
                 except:
                     print ('\nMissing the branching ratio from ' + sp); raise
 
@@ -390,9 +390,9 @@ class ReadRate(object):
                         var.cross_T_sp_list[sp] = T_list
                 for tt in T_list:
                     if self.cfg.use_ion: # usually the T-dependent cross sections are only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
-                        cross_T_raw[(sp, tt)] = np.genfromtxt(CROSS_FOLDER+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                        cross_T_raw[(sp, tt)] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
                     else:
-                        cross_T_raw[(sp, tt)] = np.genfromtxt(CROSS_FOLDER+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                        cross_T_raw[(sp, tt)] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
                 # room-T cross section
                 cross_T_raw[(sp, 300)] = cross_raw[sp]
                 var.cross_T_sp_list[sp].append(300)
@@ -616,7 +616,7 @@ class ReadRate(object):
 
         # reading in cross sections of Rayleigh Scattering
         for sp in self.cfg.scat_sp:
-            scat_raw[sp] = np.genfromtxt(CROSS_FOLDER + 'rayleigh/' + sp+'_scat.txt',dtype=float,\
+            scat_raw[sp] = np.genfromtxt(CROSS_DIR + 'rayleigh/' + sp+'_scat.txt',dtype=float,\
             skip_header=1, names = ['lambda','cross'])
 
             # for values outside the boundary => fill_value = 0

@@ -9,7 +9,7 @@ from shutil import copyfile
 from phy_const import kb, Navo, r_sun, au
 from chem_funs import ni  # number of species and reactions in the network
 from chem_funs import spec_list as species
-from paths import COM_FILE
+from paths import COM_FILE, FASTCHEM_DIR
 from config import Config
 
 ### read in the basic chemistry data
@@ -71,12 +71,13 @@ class InitialAbun(object):
     def ini_fc(self, data_var, data_atm):
         # reading-in the default elemental abundances from Lodders 2009
         # depending on including ion or not (whether there is e- in the fastchem elemental abundance dat)
-        tmp_str = ""
-        solar_ele = 'fastchem_vulcan/input/solar_element_abundances.dat'
+        solar_ele = FASTCHEM_DIR+'input/solar_element_abundances.dat'
         if self.cfg.use_ion == True:
-            copyfile('fastchem_vulcan/input/parameters_ion.dat', 'fastchem_vulcan/input/parameters.dat')
+            copyfile(FASTCHEM_DIR+'input/parameters_ion.dat',
+                     FASTCHEM_DIR+'input/parameters.dat')
         else:
-            copyfile('fastchem_vulcan/input/parameters_wo_ion.dat', 'fastchem_vulcan/input/parameters.dat')
+            copyfile(FASTCHEM_DIR+'input/parameters_wo_ion.dat',
+                     FASTCHEM_DIR+'input/parameters.dat')
 
         with open(solar_ele ,'r') as f:
             new_str = ""
@@ -118,18 +119,21 @@ class InitialAbun(object):
                         new_str += line
 
             # make the new elemental abundance file
-            with open('fastchem_vulcan/input/element_abundances_vulcan.dat', 'w') as f: f.write(new_str)
+            with open(FASTCHEM_DIR+'input/element_abundances_vulcan.dat', 'w') as f:
+                f.write(new_str)
 
         # write a T-P text file for fast_chem
-        with open('fastchem_vulcan/input/vulcan_TP/vulcan_TP.dat' ,'w') as f:
+        with open(FASTCHEM_DIR+'input/vulcan_TP/vulcan_TP.dat' ,'w') as f:
             ost = '#p (bar)    T (K)\n'
             for n, p in enumerate(data_atm.pco): # p in bar in fast_chem
                 ost +=  '{:.3e}'.format(p/1.e6) + '\t' + '{:.1f}'.format(data_atm.Tco[n])  + '\n'
             ost = ost[:-1]
             f.write(ost)
 
-        try: subprocess.check_call(["./fastchem input/config.input"], shell=True, cwd='fastchem_vulcan/') # check_call instead of call can catch the error
-        except: print ('\n FastChem cannot run properly. Try compile it by running make under /fastchem_vulcan\n'); raise
+        try:
+            subprocess.check_call(["./fastchem input/config.input"], shell=True, cwd=FASTCHEM_DIR) # check_call instead of call can catch the error
+        except:
+            raise RuntimeError('FastChem cannot run properly. Try compiling it by running `make` inside {FASTCHEM_DIR}')
 
     def ini_y(self, data_var, data_atm):
         # initial mixing ratios of the molecules
@@ -144,7 +148,7 @@ class InitialAbun(object):
         if self.cfg.ini_mix == 'EQ':
 
             self.ini_fc(data_var, data_atm)
-            fc = np.genfromtxt('fastchem_vulcan/output/vulcan_EQ.dat', names=True, dtype=None, skip_header=0)
+            fc = np.genfromtxt(FASTCHEM_DIR+'output/vulcan_EQ.dat', names=True, dtype=None, skip_header=0)
             for sp in species:
                 if sp in fc.dtype.names:
                     y_ini[:,species.index(sp)] = fc[sp]*gas_tot # this also changes data_var.y because the address of y array has passed to y_ini
@@ -155,7 +159,7 @@ class InitialAbun(object):
                     if compo[compo_row.index(sp)]['e'] != 0: charge_list.append(sp)
 
             # remove the fc output
-            subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd='fastchem_vulcan/output/')
+            subprocess.call(["rm vulcan_EQ.dat"], shell=True, cwd=FASTCHEM_DIR+'output/')
 
         elif self.cfg.ini_mix == 'vulcan_ini':
             print ("Initializing with compositions from the previous run " + self.cfg.vul_ini)
