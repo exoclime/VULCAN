@@ -425,7 +425,7 @@ class ReadRate(object):
         bin_min = max(bin_min, var.def_bin_min)
         bin_max = min(bin_max, var.def_bin_max, diss_max)
         log.info("Input stellar spectrum from " + "{:.1f}".format(var.def_bin_min) + " to " + "{:.1f}".format(var.def_bin_max) )
-        log.info("Photodissociation threshold: " + "{:.1f}".format(diss_max) )
+        log.debug("Photodissociation threshold: " + "{:.1f}".format(diss_max) )
         log.info("Using wavelength bins from " + "{:.1f}".format(bin_min) + " to " +  str(bin_max) )
 
         var.dbin1 = self.cfg.dbin1
@@ -2754,6 +2754,7 @@ class Output(object):
         last_fpath = self.cfg.plot_dir+"_recent.png"
         copy_fpath = self.cfg.plot_dir+str(para.pic_count)+'.png'
 
+        print(f"Plotting to {last_fpath}")
         fig.savefig( last_fpath, dpi=self.cfg.plot_dpi, bbox_inches='tight')
         shutil.copyfile(last_fpath, copy_fpath)
 

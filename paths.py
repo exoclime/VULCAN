@@ -6,6 +6,9 @@ VULCAN_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 # Path to FastChem folder (custom version packaged with VULCAN)
 FASTCHEM_DIR = os.path.join(VULCAN_DIR, 'fastchem_vulcan') + '/'
 
+# Thermodynamic and chemistry data
+THERMO_DIR = os.path.join(VULCAN_DIR,'thermo',)
+
 # Composition and gas properties
 COM_FILE = os.path.join(VULCAN_DIR,'thermo','all_compose.txt')
 

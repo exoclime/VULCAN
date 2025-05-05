@@ -8,7 +8,7 @@ import logging
 log = logging.getLogger("fwl."+__name__)
 
 from config import Config
-from paths import COM_FILE, GIBBS_FILE, CHEM_FUNS_FILE
+from paths import COM_FILE, GIBBS_FILE, CHEM_FUNS_FILE, THERMO_DIR
 
 # read the network and produce the .txt table for chemdf
 # Re-arrange the numerbers in the network
@@ -42,7 +42,7 @@ def read_network(vulcan_cfg:Config):
                 re_label = '#S'
 
             elif line.startswith("# condensation"):
-                log.info('Including condensation reactions.')
+                log.debug('Including condensation reactions.')
                 special_re = False # switch to reactions with special forms (hard coded)
                 re_label = '#C'
 
@@ -640,6 +640,17 @@ def make_Gibbs(re_table, gibbs_text, ofname):
         for line in g:
             gstr += line
 
+    # the data of 'H2CO' is from Brucat's 2015
+    #C2H NASA 9 new from Brucat
+    gstr += "\n\n"
+    gstr += "nasa9 = {} \n"
+    gstr += "for i in [ _ for _ in spec_list]: \n"
+    gstr += f"    nasa9[i] = np.loadtxt('{THERMO_DIR}/NASA9/' + str(i) + '.txt') \n"
+    gstr += "    nasa9[i] = nasa9[i].flatten() \n"
+    gstr += "    nasa9[i,'low'] = nasa9[i][0:10] \n"
+    gstr += "    nasa9[i,'high'] = nasa9[i][10:20] \n"
+
+
     gstr += '\n\n'
     gstr += '# Gibbs free energy:\n'
     gstr += 'def Gibbs(i,T):\n'
@@ -723,7 +734,7 @@ def check_conserv(nr):
     compo = np.genfromtxt(COM_FILE,names=True,dtype=None)
     compo_row = list(compo['species'])
     # Convert bytes to strings
-    compo_row = [sp.decode("utf-8") for sp in compo_row]
+    compo_row = [str(sp) for sp in compo_row]
     num_atoms = len(compo.dtype.names) - 2 # dtype.names returns the column names and -2 is for 'species' and 'mass'
 
     for re in range(1,nr+1,2):

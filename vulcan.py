@@ -19,7 +19,7 @@ mpl_logger.setLevel(logging.WARNING)
 log = logging.getLogger("fwl."+__name__)
 
 # Import some VULCAN modules
-from paths import COM_FILE
+import paths
 from make_chem_funs import make_all
 from config import Config
 
@@ -32,7 +32,7 @@ def main(vulcan_cfg:Config):
     import store, build_atm, op
 
     ### read in the basic chemistry data
-    with open(COM_FILE, 'r') as f:
+    with open(paths.COM_FILE, 'r') as f:
         columns = f.readline() # reading in the first line
         num_ele = len(columns.split())-2 # number of elements (-2 for removing "species" and "mass")
     type_list = ['int' for i in range(num_ele)]
@@ -103,6 +103,7 @@ def main(vulcan_cfg:Config):
     # time-steping in the while loop until conv() returns True or count > count_max
 
     # setting the numerical solver to the desinated one in vulcan_cfg
+    print("Call solver...")
     solver = op.Ros2(vulcan_cfg)
 
     # Setting up for photo chemistry
