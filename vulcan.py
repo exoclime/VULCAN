@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
-# ==============================================================================
-# This is the main file of VULCAN: the chemical kinetics code.
-# Copyright (C) 2016 Shang-Min Tsai (Shami)
-# ==============================================================================
+__version__ = "25.05.05"
 
 # Import system modules
 import time
 import sys
-
 import logging
 
 # disable matplotlib debug logging
@@ -103,7 +99,6 @@ def main(vulcan_cfg:Config):
     # time-steping in the while loop until conv() returns True or count > count_max
 
     # setting the numerical solver to the desinated one in vulcan_cfg
-    print("Call solver...")
     solver = op.Ros2(vulcan_cfg)
 
     # Setting up for photo chemistry

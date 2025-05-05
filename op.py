@@ -674,7 +674,7 @@ class Integration(object):
             if self.cfg.use_photo and var.longdy < self.cfg.yconv_min*10. and var.longdydt < 1.e-6:
                 self.update_photo_frq = self.cfg.final_update_photo_frq
                 if para.switch_final_photo_frq == False:
-                    log.debug('update_photo_frq changed to ' + str(self.cfg.final_update_photo_frq) +'\n')
+                    log.debug('update_photo_frq changed to ' + str(self.cfg.final_update_photo_frq))
                     para.switch_final_photo_frq = True
 
             if self.cfg.use_photo  and para.count % self.update_photo_frq == 0:
@@ -900,7 +900,9 @@ class Integration(object):
         To check the convergence criteria and stop the integration
         '''
         if var.t > self.cfg.trun_min and para.count > self.cfg.count_min and self.conv(var, para, atm):
-            log.info('Integration successful with ' + str(para.count) + ' steps and long dy, long dydt = ' + str(var.longdy) + ' ,' + str(var.longdydt) + '\nActinic flux change: ' + '{:.2E}'.format(var.aflux_change))
+            log.info('Integration successful with ' + str(para.count) + ' steps')
+            log.info('long dy, long dydt = ' + str(var.longdy) + ', ' + str(var.longdydt))
+            log.debug('Actinic flux change: ' + '{:.2E}'.format(var.aflux_change))
             self.output.print_end_msg(var, para)
             para.end_case = 1
             return True
@@ -2602,17 +2604,13 @@ class Output(object):
 
 
     def print_end_msg(self, var, para ):
-        log.info("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
-        log.info(self.cfg.out_name[:-4] + ' has successfully run to steady-state with ' + str(para.count) + ' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
-        log.info('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
-
         log.info('Total atom loss:')
         for atom in self.cfg.atom_list:
             log.info(atom + ': ' + str(var.atom_loss[atom]) + ' ')
 
-        log.info('negative solution counter: ' + str(para.nega_count))
-        log.info('loss rejected counter: ' + str(para.loss_count))
-        log.info('delta rejected counter: ' + str(para.delta_count))
+        log.debug('negative solution counter: ' + str(para.nega_count))
+        log.debug('loss rejected counter: ' + str(para.loss_count))
+        log.debug('delta rejected counter: ' + str(para.delta_count))
         log.info('------ Live long and prosper \\V/ ------')
 
 
