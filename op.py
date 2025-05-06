@@ -15,13 +15,16 @@ import matplotlib.pyplot as plt
 import time, os
 import shutil
 
-import vulcan_cfg
-from vulcan_cfg import nz
+import logging
+log = logging.getLogger("fwl."+__name__)
 
+from paths import CROSS_DIR
 from build_atm import compo, compo_row
 from chem_funs import chemdf, ni, nr, Gibbs # number of species and reactions in the network
 from chem_funs import neg_symjac as neg_achemjac
+from chem_funs import symjac as achemjac
 from chem_funs import spec_list as species
+from config import Config
 from phy_const import kb, Navo, hc, ag0 # hc is used to convert to the actinic flux
 
 
@@ -31,8 +34,9 @@ class ReadRate(object):
     to read in rate constants from the network file and compute the reaction rates for the corresponding Tco and pco
     """
 
-    def __init__(self):
+    def __init__(self, vulcan_cfg:Config):
 
+        self.cfg = vulcan_cfg
         self.i = 1
         # flag of trimolecular reaction
         self.re_tri, self.re_tri_k0 = False, False
@@ -40,6 +44,8 @@ class ReadRate(object):
 
 
     def read_rate(self, var, atm):
+
+        nz = self.cfg.nz
 
         Rf, Rindx, a, n, E, a_inf, n_inf, E_inf, k, k_fun, k_inf, kinf_fun, k_fun_new, pho_rate_index = \
         var.Rf, var.Rindx, var.a, var.n, var.E, var.a_inf, var.n_inf, var.E_inf, var.k, var.k_fun, var.k_inf, var.kinf_fun, var.k_fun_new,\
@@ -65,7 +71,7 @@ class ReadRate(object):
         photo_sp = []
         ion_sp = []
 
-        with open(vulcan_cfg.network) as f:
+        with open(self.cfg.network) as f:
             all_lines = f.readlines()
             for line_indx, line in enumerate(all_lines):
 
@@ -173,7 +179,7 @@ class ReadRate(object):
                     Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
 
                     if Rf[i] == 'OH + CH3 + M -> CH3OH + M':
-                        print ('Using special form for the reaction: ' + Rf[i])
+                        log.debug('Using special form for the reaction: ' + Rf[i])
 
                         k[i] = 1.932E3*Tco**-9.88 *np.exp(-7544./Tco) + 5.109E-11*Tco**-6.25 *np.exp(-1433./Tco)
                         k_inf = 1.031E-10 * Tco**-0.018 *np.exp(16.74/Tco)
@@ -188,10 +194,6 @@ class ReadRate(object):
                         kinf_fun[i] = lambda temp, mm, i=i: 1.031E-10 * temp**-0.018 *np.exp(16.74/temp)
                         k_fun_new[i] = lambda temp, mm, i=i: (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp))/\
                         (1 + (1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp)) * mm / (1.031E-10 * temp**-0.018 *np.exp(16.74/temp)) )
-
-                    # elif Rf[i] == 'C2H2 + M -> soot':
-                    #     print ('Using fake C2H2 -> soot: ' + Rf[i])
-                    #     k[i] = np.ones(nz) * 1e-10
 
                     i += 2
 
@@ -234,7 +236,6 @@ class ReadRate(object):
                     Rf[i] = line.partition('[')[-1].rpartition(']')[0].strip()
 
                     # chekcing if it already existed in the photo species
-                    #if Rf[i].split()[0] not in photo_sp: print (str(Rf[i].split()[0]) + ' not present in the photo disccoiation but only in ionization!')
                     ion_sp.append(Rf[i].split()[0])
 
                     li = line.partition(']')[-1].strip()
@@ -257,12 +258,15 @@ class ReadRate(object):
         var.kinf_fun = kinf_fun
 
         var.photo_sp = set(photo_sp)
-        if vulcan_cfg.use_ion == True: var.ion_sp = set(ion_sp)
+        if self.cfg.use_ion:
+            var.ion_sp = set(ion_sp)
 
         return var
 
 
     def rev_rate(self, var, atm):
+
+        nz = self.cfg.nz
 
         rev_list = range(2,  var.stop_rev_indx, 2)
         # setting the rest reversal zeros
@@ -272,24 +276,28 @@ class ReadRate(object):
         Tco = atm.Tco.copy()
 
         # reversing rates and storing into data_var
-        print ('Reverse rates from R1 to R' + str(var.stop_rev_indx-2))
-        print ('Rates greater than 1e-6:')
+        log.debug('Reverse rates from R1 to R' + str(var.stop_rev_indx-2))
+        log.debug('Rates greater than 1e-6:')
         for i in rev_list:
-            if i in vulcan_cfg.remove_list:
+            if i in self.cfg.remove_list:
                  var.k[i] = np.repeat(0.,nz)
             else:
                 var.k_fun[i] = lambda temp, mm, i=i: var.k_fun[i-1](temp, mm)/Gibbs(i-1,temp)
                 var.k[i] = var.k[i-1]/Gibbs(i-1,Tco)
 
-            if np.any(var.k[i] > 1.e-6): print ('R' + str(i) + " " + var.Rf[i-1] +' :  ' + str(np.amax(var.k[i])) )
-            if np.any(var.k[i-1] > 1.e-6): print ('R' + str(i-1) + " " + var.Rf[i-1] + ' :  ' + str(np.amax(var.k[i-1])) )
+            if np.any(var.k[i] > 1.e-6):
+                log.debug('R' + str(i) + " " + var.Rf[i-1] +' :  ' + str(np.amax(var.k[i])) )
+            if np.any(var.k[i-1] > 1.e-6):
+                log.debug('R' + str(i-1) + " " + var.Rf[i-1] + ' :  ' + str(np.amax(var.k[i-1])) )
 
         return var
 
 
     def remove_rate(self, var):
 
-        for i in vulcan_cfg.remove_list:
+        nz = self.cfg.nz
+
+        for i in self.cfg.remove_list:
             var.k[i] = np.repeat(0.,nz)
             var.k_fun[i] = lambda temp, mm, i=i: np.repeat(0.,nz)
 
@@ -301,20 +309,20 @@ class ReadRate(object):
                 T_mask = atm.Tco <= 277.5
                 k0 = 6e-29; kinf = 2.06E-10 *atm.Tco**-0.4 # from Moses+2005
                 lowT_lim = k0 / (1. + k0*atm.M/kinf)
-                print ("using the low temperature limit for CH3 + H + M -> CH4 + M")
-                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (lowT_lim[T_mask])
+                log.debug("using the low temperature limit for CH3 + H + M -> CH4 + M")
+                log.debug("capping "); log.debug(var.k[i][T_mask]); log.debug("at "); log.debug(lowT_lim[T_mask])
                 var.k[i][T_mask] =  lowT_lim[T_mask]
 
             elif var.Rf[i] == 'H + C2H4 + M -> C2H5 + M':
                 T_mask = atm.Tco <= 300
-                print ("using the low temperature limit for H + C2H4 + M -> C2H5 + M")
-                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (3.7E-30)
+                log.debug("using the low temperature limit for H + C2H4 + M -> C2H5 + M")
+                log.debug("capping "); log.debug(var.k[i][T_mask]); log.debug("at "); log.debug(3.7E-30)
                 var.k[i][T_mask] = 3.7E-30 # from Moses+2005
 
             elif var.Rf[i] == 'H + C2H5 + M -> C2H6 + M':
                 T_mask = atm.Tco <= 200
-                print ("using the low temperature limit for H + C2H5 + M -> C2H6 + M")
-                print ("capping "); print (var.k[i][T_mask]); print ("at "); print (2.49E-27)
+                log.debug("using the low temperature limit for H + C2H5 + M -> C2H6 + M")
+                log.debug("capping "); log.debug(var.k[i][T_mask]); log.debug("at "); log.debug(2.49E-27)
                 var.k[i][T_mask] = 2.49E-27 # from Moses+2005
 
         return var
@@ -330,14 +338,15 @@ class ReadRate(object):
         ion_sp = list(var.ion_sp)
         absp_sp = photo_sp + ion_sp
         sp0 = photo_sp[0]
+        nz = self.cfg.nz
 
         cross_raw, scat_raw = {}, {}
         ratio_raw, ion_ratio_raw = {}, {}
         cross_T_raw = {}
 
         # In the end, we do not need photons beyond the longest-wavelength threshold from all species (different from absorption)
-        sp_label = np.genfromtxt(vulcan_cfg.cross_folder+'thresholds.txt',dtype=str, usecols=0) # taking the first column as labels
-        lmd_data = np.genfromtxt(vulcan_cfg.cross_folder+'thresholds.txt', skip_header = 1)[:,1] # discarding the fist column
+        sp_label = np.genfromtxt(CROSS_DIR+'thresholds.txt',dtype=str, usecols=0) # taking the first column as labels
+        lmd_data = np.genfromtxt(CROSS_DIR+'thresholds.txt', skip_header = 1)[:,1] # discarding the fist column
 
         # for setting up the wavelength coverage
         threshold = {label: row for label, row in zip(sp_label, lmd_data) if label in species} # only include the species in the current network
@@ -346,57 +355,61 @@ class ReadRate(object):
         # reading in cross sections into dictionaries
         for n, sp in enumerate(absp_sp):
 
-            if vulcan_cfg.use_ion:
+            if self.cfg.use_ion:
                 try:
-                    cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                    cross_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
                 except:
-                    print ('\nMissing the cross section from ' + sp); raise
+                    raise RuntimeError('Missing the cross section from ' + sp)
                 if sp in ion_sp:
                     try:
-                        ion_ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                        ion_ratio_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_ion_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
                     except:
-                        print ('\nMissing the ion branching ratio from ' + sp); raise
+                        raise RuntimeError('Missing the ion branching ratio from ' + sp)
             else:
                 try:
-                    cross_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                    cross_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
                 except:
-                    print ('\nMissing the cross section from ' + sp); raise
+                   raise RuntimeError('Missing the cross section from ' + sp)
 
             # reading in the branching ratios
             # for i in range(1,var.n_branch[sp]+1): # branch index should start from 1
             if sp in photo_sp: # excluding ion_sp
                 try:
-                    ratio_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
+                    ratio_raw[sp] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_branch.csv',dtype=float,delimiter=',',skip_header=1, names = True)
                 except:
-                    print ('\nMissing the branching ratio from ' + sp); raise
+                    raise RuntimeError('Missing the branching ratio from ' + sp)
 
             # reading in temperature dependent cross sections
-            if sp in vulcan_cfg.T_cross_sp:
+            if sp in self.cfg.T_cross_sp:
                 T_list = []
                 for temp_file in os.listdir("thermo/photo_cross/" + sp + "/"):
                     if temp_file.startswith(sp) and temp_file.endswith("K.csv"):
                         temp = temp_file
-                        temp = temp.replace(sp,''); temp = temp.replace('_cross_',''); temp = temp.replace('K.csv','')
+                        temp = temp.replace(sp,'')
+                        temp = temp.replace('_cross_','')
+                        temp = temp.replace('K.csv','')
                         T_list.append(int(temp) )
                         var.cross_T_sp_list[sp] = T_list
                 for tt in T_list:
-                    if vulcan_cfg.use_ion: # usually the T-dependent cross sections are only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
-                        cross_T_raw[(sp, tt)] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
+                    if self.cfg.use_ion: # usually the T-dependent cross sections are only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
+                        cross_T_raw[(sp, tt)] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso','ion'])
                     else:
-                        cross_T_raw[(sp, tt)] = np.genfromtxt(vulcan_cfg.cross_folder+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
+                        cross_T_raw[(sp, tt)] = np.genfromtxt(CROSS_DIR+sp+'/'+sp+'_cross_'+str(tt)+'K.csv',dtype=float,delimiter=',',skip_header=1, names = ['lambda','cross','disso'])
                 # room-T cross section
                 cross_T_raw[(sp, 300)] = cross_raw[sp]
                 var.cross_T_sp_list[sp].append(300)
 
             if cross_raw[sp]['cross'][0] == 0 or cross_raw[sp]['cross'][-1] ==0:
-                raise IOError ('\n Please remove the zeros in the cross file of ' + sp)
+                raise IOError('Please remove the zeros in the cross file of ' + sp)
 
             if n==0: # the first species
                 bin_min = cross_raw[sp]['lambda'][0]
                 bin_max = cross_raw[sp]['lambda'][-1]
                 # photolysis threshold
-                try: diss_max = threshold[sp]
-                except: print (sp + " not in threshol.txt"); raise
+                try:
+                    diss_max = threshold[sp]
+                except:
+                    raise RuntimeError(sp + " not in threshol.txt")
 
             else:
                 sp_min, sp_max = cross_raw[sp]['lambda'][0], cross_raw[sp]['lambda'][-1]
@@ -405,19 +418,20 @@ class ReadRate(object):
                 try:
                     if threshold[sp] > diss_max:
                         diss_max = threshold[sp]
-                except: print (sp + " not in threshol.txt"); raise
+                except:
+                    raise RuntimeError(sp + " not in threshol.txt")
 
         # constraining the bin_min and bin_max by the default values defined in store.py
         bin_min = max(bin_min, var.def_bin_min)
         bin_max = min(bin_max, var.def_bin_max, diss_max)
-        print ("Input stellar spectrum from " + "{:.1f}".format(var.def_bin_min) + " to " + "{:.1f}".format(var.def_bin_max) )
-        print ("Photodissociation threshold: " + "{:.1f}".format(diss_max) )
-        print ("Using wavelength bins from " + "{:.1f}".format(bin_min) + " to " +  str(bin_max) )
+        log.info("Input stellar spectrum from " + "{:.1f}".format(var.def_bin_min) + " to " + "{:.1f}".format(var.def_bin_max) )
+        log.debug("Photodissociation threshold: " + "{:.1f}".format(diss_max) )
+        log.info("Using wavelength bins from " + "{:.1f}".format(bin_min) + " to " +  str(bin_max) )
 
-        var.dbin1 = vulcan_cfg.dbin1
-        var.dbin2 = vulcan_cfg.dbin2
-        if vulcan_cfg.dbin_12trans >= bin_min and vulcan_cfg.dbin_12trans <= bin_max:
-            bins = np.concatenate(( np.arange(bin_min,vulcan_cfg.dbin_12trans, var.dbin1), np.arange(vulcan_cfg.dbin_12trans,bin_max, var.dbin2) ))
+        var.dbin1 = self.cfg.dbin1
+        var.dbin2 = self.cfg.dbin2
+        if self.cfg.dbin_12trans >= bin_min and self.cfg.dbin_12trans <= bin_max:
+            bins = np.concatenate(( np.arange(bin_min,self.cfg.dbin_12trans, var.dbin1), np.arange(self.cfg.dbin_12trans,bin_max, var.dbin2) ))
         else: bins = np.arange(bin_min,bin_max, var.dbin1)
         var.bins = bins
         var.nbin = len(bins)
@@ -444,14 +458,14 @@ class ReadRate(object):
 
         # read cross of disscoiation
         var.cross_J = dict([((sp,i), np.zeros(var.nbin)) for sp in photo_sp for i in range(1,var.n_branch[sp]+1)])
-        var.cross_scat = dict([(sp, np.zeros(var.nbin)) for sp in vulcan_cfg.scat_sp])
+        var.cross_scat = dict([(sp, np.zeros(var.nbin)) for sp in self.cfg.scat_sp])
 
         # for temperature-dependent cross sections
-        var.cross_T = dict([(sp, np.zeros((nz, var.nbin) )) for sp in vulcan_cfg.T_cross_sp ])
-        var.cross_J_T = dict([((sp,i), np.zeros((nz, var.nbin) )) for sp in vulcan_cfg.T_cross_sp for i in range(1,var.n_branch[sp]+1) ])
+        var.cross_T = dict([(sp, np.zeros((nz, var.nbin) )) for sp in self.cfg.T_cross_sp ])
+        var.cross_J_T = dict([((sp,i), np.zeros((nz, var.nbin) )) for sp in self.cfg.T_cross_sp for i in range(1,var.n_branch[sp]+1) ])
 
         #read cross of ionisation
-        if vulcan_cfg.use_ion:
+        if self.cfg.use_ion:
             var.cross_Jion = dict([((sp,i), np.zeros(var.nbin)) for sp in ion_sp for i in range(1,var.ion_branch[sp]+1)])
 
         for sp in photo_sp: # photodissociation only; photoionization takes a separate branch ratio file
@@ -464,7 +478,8 @@ class ReadRate(object):
                 br_key = 'br_ratio_' + str(i)
                 try:
                     inter_ratio[i] = interpolate.interp1d(ratio_raw[sp]['lambda'], ratio_raw[sp][br_key], bounds_error=False, fill_value=(ratio_raw[sp][br_key][0],ratio_raw[sp][br_key][-1]))
-                except: print("The branches in the network file does not match the branchong ratio file for " + str(sp))
+                except:
+                    log.error("The branches in the network file does not match the branchong ratio file for " + str(sp))
 
             # using a loop instead of an array because it's easier to handle the branching ratios
             for n, ld in enumerate(bins):
@@ -476,7 +491,7 @@ class ReadRate(object):
 
             # make var.cross_T[(sp,i)] and var.cross_J_T[(sp,i)] here in 2D array: nz * bins (same shape as tau)
             # T-dependent cross sections are usually only measured in the photodissociation-relavent wavelengths so cross_tot = cross_diss
-            if sp in vulcan_cfg.T_cross_sp:
+            if sp in self.cfg.T_cross_sp:
 
                 # T list of species sp that have T-depedent cross sections (inclduing 300 K for inter_cross)
                 T_list = np.array(var.cross_T_sp_list[sp])
@@ -584,7 +599,7 @@ class ReadRate(object):
                                         var.cross_J_T[(sp,i)][lev, n] = inter_cross_J_highT(ld) * inter_ratio[i](ld) # same inter_ratio[i](ld) as the standard one above
 
 
-        if vulcan_cfg.use_ion:
+        if self.cfg.use_ion:
             for sp in ion_sp:
                 if sp not in photo_sp:
                     inter_cross = interpolate.interp1d(cross_raw[sp]['lambda'], cross_raw[sp]['cross'], bounds_error=False, fill_value=0)
@@ -596,18 +611,19 @@ class ReadRate(object):
                     br_key = 'br_ratio_' + str(i)
                     try:
                         ion_inter_ratio[i] = interpolate.interp1d(ion_ratio_raw[sp]['lambda'], ion_ratio_raw[sp][br_key], bounds_error=False, fill_value=(ion_ratio_raw[sp][br_key][0],ion_ratio_raw[sp][br_key][-1]))
-                    except: print("The ionic branches in the network file does not match the branchong ratio file for " + str(sp))
+                    except:
+                        log.error("The ionic branches in the network file does not match the branchong ratio file for " + str(sp))
 
                 for n, ld in enumerate(bins):
                     # for species noe appeared in photodissociation but only in photoionization, like H
                     if sp not in photo_sp: var.cross[sp][n] = inter_cross(ld)
                     for i in range(1,var.ion_branch[sp]+1):
                         var.cross_Jion[(sp,i)][n] = inter_cross_Jion(ld) * ion_inter_ratio[i](ld)
-        # end of if vulcan_cfg.use_ion == True:
+        # end of if self.cfg.use_ion == True:
 
         # reading in cross sections of Rayleigh Scattering
-        for sp in vulcan_cfg.scat_sp:
-            scat_raw[sp] = np.genfromtxt(vulcan_cfg.cross_folder + 'rayleigh/' + sp+'_scat.txt',dtype=float,\
+        for sp in self.cfg.scat_sp:
+            scat_raw[sp] = np.genfromtxt(CROSS_DIR + 'rayleigh/' + sp+'_scat.txt',dtype=float,\
             skip_header=1, names = ['lambda','cross'])
 
             # for values outside the boundary => fill_value = 0
@@ -624,28 +640,30 @@ class Integration(object):
     #or class incorporating the esential numerical operations?
     """
 
-    def __init__(self, odesolver, output):
+    def __init__(self, odesolver, output, vulcan_cfg:Config):
 
-        self.mtol = vulcan_cfg.mtol
-        self.atol = vulcan_cfg.atol
+        self.cfg = vulcan_cfg
+        self.mtol = self.cfg.mtol
+        self.atol = self.cfg.atol
         self.output = output
 
         self.odesolver = odesolver
-        self.non_gas_sp = vulcan_cfg.non_gas_sp
-        self.use_settling = vulcan_cfg.use_settling
+        self.non_gas_sp = self.cfg.non_gas_sp
+        self.use_settling = self.cfg.use_settling
 
         # including photoionisation
-        if vulcan_cfg.use_photo:
-            self.update_photo_frq = vulcan_cfg.ini_update_photo_frq
+        if self.cfg.use_photo:
+            self.update_photo_frq = self.cfg.ini_update_photo_frq
 
-        if vulcan_cfg.use_condense:
+        if self.cfg.use_condense:
             self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
-            self.condense_sp_index = [species.index(sp) for sp in vulcan_cfg.condense_sp]
+            self.condense_sp_index = [species.index(sp) for sp in self.cfg.condense_sp]
 
 
     def __call__(self, var, atm, para, make_atm):
 
-        use_print_prog, use_live_plot = vulcan_cfg.use_print_prog, vulcan_cfg.use_live_plot
+        use_print_prog, use_live_plot = self.cfg.use_print_prog, self.cfg.use_live_plot
+        nz = self.cfg.nz
 
         while not self.stop(var, para, atm): # Looping until the stop condition is satisfied
 
@@ -653,17 +671,17 @@ class Integration(object):
 
             # updating tau, flux, and the photolosys rate
             # swtiching to final_update_photo_frq
-            if vulcan_cfg.use_photo and var.longdy < vulcan_cfg.yconv_min*10. and var.longdydt < 1.e-6:
-                self.update_photo_frq = vulcan_cfg.final_update_photo_frq
+            if self.cfg.use_photo and var.longdy < self.cfg.yconv_min*10. and var.longdydt < 1.e-6:
+                self.update_photo_frq = self.cfg.final_update_photo_frq
                 if para.switch_final_photo_frq == False:
-                    print ('update_photo_frq changed to ' + str(vulcan_cfg.final_update_photo_frq) +'\n')
+                    log.debug('update_photo_frq changed to ' + str(self.cfg.final_update_photo_frq))
                     para.switch_final_photo_frq = True
 
-            if vulcan_cfg.use_photo  and para.count % self.update_photo_frq == 0:
+            if self.cfg.use_photo  and para.count % self.update_photo_frq == 0:
                 self.odesolver.compute_tau(var, atm)
                 self.odesolver.compute_flux(var, atm)
                 self.odesolver.compute_J(var, atm)
-                if vulcan_cfg.use_ion: # photoionisation rate
+                if self.cfg.use_ion: # photoionisation rate
                     self.odesolver.compute_Jion(var, atm)
 
             # integrating one step
@@ -671,27 +689,27 @@ class Integration(object):
 
 
             # Condensation (needs to be after solver.one_step)
-            if vulcan_cfg.use_condense and var.t >= vulcan_cfg.start_conden_time and para.fix_species_start == False:
+            if self.cfg.use_condense and var.t >= self.cfg.start_conden_time and para.fix_species_start == False:
                 # updating the condensation rates
                 var = self.conden(var,atm)
 
-                if vulcan_cfg.fix_species and var.t > vulcan_cfg.stop_conden_time:
+                if self.cfg.fix_species and var.t > self.cfg.stop_conden_time:
 
                     if para.fix_species_start == False: # switch to run for the first time
 
                         para.fix_species_start = True
-                        vulcan_cfg.rtol = vulcan_cfg.post_conden_rtol
-                        print ("rtol changed to " + str(vulcan_cfg.rtol) + " after fixing the condensaed species.")
+                        self.cfg.rtol = self.cfg.post_conden_rtol
+                        log.debug("rtol changed to " + str(self.cfg.rtol) + " after fixing the condensed species.")
                         atm.vs *= 0
-                        print ("Turn off the settling velocity of all species")
+                        log.debug("Turn off the settling velocity of all species")
                         # updated 2023
 
                         var.fix_y = {}
-                        for sp in vulcan_cfg.fix_species:
+                        for sp in self.cfg.fix_species:
                             var.fix_y[sp] = np.copy(var.y[:,species.index(sp)])
 
                             # record the cold trap levels
-                            if vulcan_cfg.fix_species_from_coldtrap_lev:
+                            if self.cfg.fix_species_from_coldtrap_lev:
 
                                 if sp == 'H2O_l_s' or sp == 'H2SO4_l' or sp == 'NH3_l_s' or sp == 'S8_l_s': atm.conden_min_lev[sp] = nz-1 # fix condensates through the whole amtosphere
                                     # updated 2023
@@ -703,26 +721,26 @@ class Integration(object):
                                         min_sat = np.amin(atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
                                         conden_min_lev = np.where(atm.sat_mix[sp] == min_sat)[0][0]
                                         atm.conden_min_lev[sp] = conden_min_lev
-                                        print (sp + " is now fixed from " + "{:.2f}".format(atm.pco[atm.conden_min_lev[sp]]/1e6) + " bar." )
+                                        log.debug(sp + " is now fixed from " + "{:.2f}".format(atm.pco[atm.conden_min_lev[sp]]/1e6) + " bar." )
                                     else:
-                                        print (sp + " not condensed.")
+                                        log.debug(sp + " not condensed.")
                                         atm.conden_min_lev[sp] = 0
 
                     else: pass # do nothing after fix_species has started
 
                 # this is inside the fix_species_start == False loop
-                if vulcan_cfg.use_relax:
-                    if 'H2O' in vulcan_cfg.use_relax:
+                if self.cfg.use_relax:
+                    if 'H2O' in self.cfg.use_relax:
                         var = self.h2o_conden_evap_relax(var,atm)
-                    if 'NH3' in vulcan_cfg.use_relax:
+                    if 'NH3' in self.cfg.use_relax:
                         var = self.nh3_conden_evap_relax(var,atm)
 
-            if para.count % vulcan_cfg.update_frq == 0: # updating mu and dz (dzi) due to diffusion
+            if para.count % self.cfg.update_frq == 0: # updating mu and dz (dzi) due to diffusion
                 atm = self.update_mu_dz(var, atm, make_atm)
                 atm = self.update_phi_esc(var, atm) # updating the diffusion-limited flux
 
             # MAINTAINING HYDROSTATIC BALANCE
-            if vulcan_cfg.use_condense:
+            if self.cfg.use_condense:
                 #var.v_ratio = np.sum(var.y[:,atm.gas_indx], axis=1) / atm.n_0
                 var.y[:,atm.gas_indx] = np.vstack(atm.n_0)*var.ymix[:,atm.gas_indx]
             else:
@@ -736,16 +754,20 @@ class Integration(object):
             var, para = self.save_step(var, para)
 
             # adjusting the step-size
-            var = self.odesolver.step_size(var, para)
+            var = self.odesolver.step_size(var, para,
+                                           dt_var_min=self.cfg.dt_var_min,
+                                           dt_var_max=self.cfg.dt_var_max,
+                                           dt_min=self.cfg.dt_min,
+                                           dt_max=self.cfg.dt_max)
 
-            if use_print_prog and para.count % vulcan_cfg.print_prog_num==0:
+            if use_print_prog and para.count % self.cfg.print_prog_num==0:
                 self.output.print_prog(var,para)
 
-            if vulcan_cfg.use_live_flux  and vulcan_cfg.use_photo  and para.count % vulcan_cfg.live_plot_frq ==0:
+            if self.cfg.use_live_flux  and self.cfg.use_photo  and para.count % self.cfg.live_plot_frq ==0:
                 #plt.figure('flux')
                 self.output.plot_flux_update(var, atm, para)
 
-            if use_live_plot and para.count % vulcan_cfg.live_plot_frq ==0:
+            if use_live_plot and para.count % self.cfg.live_plot_frq ==0:
                 #plt.figure('mix')
                 self.output.plot_update(var, atm, para)
 
@@ -766,13 +788,14 @@ class Integration(object):
         # calculating mu (mean molecular weight)
         atm = make_atm.mean_mass(var, atm, ni)
         Hp = atm.Hp
+        nz = self.cfg.nz
 
         for i in range(pref_indx,nz):
             if i == pref_indx:
                 atm.g[i] = atm.gs
                 Hp[i] = kb*Tco[i]/(atm.mu[i]/Navo*atm.gs)
             else:
-                atm.g[i] = atm.gs * (vulcan_cfg.Rp/(vulcan_cfg.Rp+ atm.zco[i]))**2
+                atm.g[i] = atm.gs * (self.cfg.Rp/(self.cfg.Rp+ atm.zco[i]))**2
                 Hp[i] = kb*Tco[i]/(atm.mu[i]/Navo*atm.g[i])
             atm.dz[i] = Hp[i] * np.log(pico[i]/pico[i+1]) # pico[i+1] has a lower P than pico[i] (higer height)
             atm.zco[i+1] = atm.zco[i] + atm.dz[i] # zco is set zero at 1bar for gas giants
@@ -780,7 +803,7 @@ class Integration(object):
         # for pref_indx != zero
         if not pref_indx == 0:
             for i in range(pref_indx-1,-1,-1):
-                atm.g[i] = atm.gs * (vulcan_cfg.Rp/(vulcan_cfg.Rp + atm.zco[i+1]))**2
+                atm.g[i] = atm.gs * (self.cfg.Rp/(self.cfg.Rp + atm.zco[i+1]))**2
                 Hp[i] = kb*Tco[i]/(atm.mu[i]/Navo*atm.g[i])
                 atm.dz[i] = Hp[i] * np.log(pico[i]/pico[i+1])
                 atm.zco[i] = atm.zco[i+1] - atm.dz[i] # from i+1 propogating down to i
@@ -791,7 +814,7 @@ class Integration(object):
         atm.dzi = dzi[1:]
 
         # for the molecular diffsuion
-        if vulcan_cfg.use_moldiff:
+        if self.cfg.use_moldiff:
             Ti = 0.5*(Tco + np.roll(Tco,-1))
             atm.Ti = Ti[:-1]
             Hpi = 0.5*(Hp + np.roll(Hp,-1))
@@ -802,15 +825,11 @@ class Integration(object):
     def update_phi_esc(self, var, atm): # updating diffusion-mimited escape
 
         # Diffusion limited escape
-        for sp in vulcan_cfg.diff_esc:
+        for sp in self.cfg.diff_esc:
 
             #atm.top_flux[species.index(sp)] = - atm.Dzz[-1,species.index(sp)] *var.y[-1,species.index(sp)] /atm.Hp[-1]
             atm.top_flux[species.index(sp)] = - atm.Dzz[-1,species.index(sp)]*var.y[-1,species.index(sp)]*( 1./atm.Hp[-1] -atm.ms[species.index(sp)]* atm.g[-1]/(Navo*kb*atm.Tco[-1])     )
-            atm.top_flux[species.index(sp)] = max(atm.top_flux[species.index(sp)], vulcan_cfg.max_flux*(-1))
-
-            # print ("Escape flux of " + sp + "{:>10.2e}".format(atm.top_flux[species.index(sp)]))
-            # print ("diffusion-limite value: " + "{:>10.2e}".format(- atm.Dzz[-1,species.index(sp)]*var.y[-1,species.index(sp)]*( 1./atm.Hp[-1] -atm.ms[species.index(sp)]* atm.g[-1]/(Navo*kb*atm.Tco[-1])     )) )
-            #print ("Test  " + sp + "{:>10.2e}".format(atm.Dzz[-1,species.index(sp)] *var.y[-1,species.index(sp)] /atm.Hp[-1]) )
+            atm.top_flux[species.index(sp)] = max(atm.top_flux[species.index(sp)], self.cfg.max_flux*(-1))
 
         return atm
 
@@ -822,8 +841,8 @@ class Integration(object):
             return var
         y, ymix, y_prev = var.y, var.ymix, var.y_prev
         dy =  np.abs(y - y_prev)
-        dy[ymix < vulcan_cfg.mtol] = 0
-        dy[y < vulcan_cfg.atol] = 0
+        dy[ymix < self.cfg.mtol] = 0
+        dy[y < self.cfg.atol] = 0
         dy = np.amax( dy[y>0]/y[y>0] )
 
         var.dy, var.dydt = dy, dy/var.dt
@@ -836,7 +855,7 @@ class Integration(object):
         funtion returns TRUE if the convergence condition is satisfied
         '''
         st_factor, mtol_conv, atol, yconv_cri, slope_cri, yconv_min =\
-         vulcan_cfg.st_factor, vulcan_cfg.mtol_conv, vulcan_cfg.atol, vulcan_cfg.yconv_cri, vulcan_cfg.slope_cri, vulcan_cfg.yconv_min
+         self.cfg.st_factor, self.cfg.mtol_conv, self.cfg.atol, self.cfg.yconv_cri, self.cfg.slope_cri, self.cfg.yconv_min
         y, ymix, y_time, t_time = var.y.copy(), var.ymix.copy(), var.y_time, var.t_time
         count = para.count
 
@@ -847,21 +866,19 @@ class Integration(object):
         indx = np.abs(t_time-var.t*st_factor).argmin()
         if indx == para.count-1: indx-=1  #Important!! For dt larger than half of the runtime (count-1 is the last one)
 
-        # Don't check more than vulcan_cfg.conv_step (1000) steps back
-        indx = max(para.count-vulcan_cfg.conv_step, indx)
+        # Don't check more than self.cfg.conv_step (1000) steps back
+        indx = max(para.count-self.cfg.conv_step, indx)
 
         # TEST
-        if para.count %100==0: print ("conv_indx: "  + str(indx))
-
         longdy = np.abs((y_time[count-1] - y_time[indx])/np.vstack(atm.n_0))
         longdy[ymix < mtol_conv] = 0
         longdy[y < atol] = 0
 
         # to get rid off non-convergent species, e.g. HC3N without sinks
-        if 'conver_ignore' in dir(vulcan_cfg):
-            for sp in vulcan_cfg.conver_ignore: longdy[:,species.index(sp)] = 0 # added 2023
+        if 'conver_ignore' in dir(self.cfg):
+            for sp in self.cfg.conver_ignore: longdy[:,species.index(sp)] = 0 # added 2023
 
-        if vulcan_cfg.use_condense == True:
+        if self.cfg.use_condense == True:
             longdy[:,self.non_gas_sp_index] = 0
 
         with np.errstate(divide='ignore',invalid='ignore'): # ignoring nan when devided by zero
@@ -873,7 +890,7 @@ class Integration(object):
         # store longdy and longdydt
         var.longdy, var.longdydt = longdy, longdydt
 
-        if (longdy < yconv_cri and longdydt < slope_cri or longdy < yconv_min and longdydt < slope_min) and var.aflux_change<vulcan_cfg.flux_cri:
+        if (longdy < yconv_cri and longdydt < slope_cri or longdy < yconv_min and longdydt < slope_min) and var.aflux_change<self.cfg.flux_cri:
             return True
 
         return False
@@ -882,21 +899,23 @@ class Integration(object):
         '''
         To check the convergence criteria and stop the integration
         '''
-        if var.t > vulcan_cfg.trun_min and para.count > vulcan_cfg.count_min and self.conv(var, para, atm):
-            print ('Integration successful with ' + str(para.count) + ' steps and long dy, long dydt = ' + str(var.longdy) + ' ,' + str(var.longdydt) + '\nActinic flux change: ' + '{:.2E}'.format(var.aflux_change))
+        if var.t > self.cfg.trun_min and para.count > self.cfg.count_min and self.conv(var, para, atm):
+            log.info('Integration successful with ' + str(para.count) + ' steps')
+            log.info('long dy, long dydt = ' + str(var.longdy) + ', ' + str(var.longdydt))
+            log.debug('Actinic flux change: ' + '{:.2E}'.format(var.aflux_change))
             self.output.print_end_msg(var, para)
             para.end_case = 1
             return True
-        elif var.t > vulcan_cfg.runtime:
-            print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
-            print ('Integration not completed...\nMaximal allowed runtime exceeded ('+ \
-            str (vulcan_cfg.runtime) + ' sec)!')
+        elif var.t > self.cfg.runtime:
+            log.warning("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
+            log.warning('Integration not completed...')
+            log.warning('Maximal allowed runtime exceeded ('+ str (self.cfg.runtime) + ' sec)!')
             para.end_case = 2
             return True
-        elif para.count > vulcan_cfg.count_max:
-            print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
-            print ('Integration not completed...\nMaximal allowed steps exceeded (' + \
-            str (vulcan_cfg.count_max) + ')!')
+        elif para.count > self.cfg.count_max:
+            log.warning("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
+            log.warning('Integration not completed...')
+            log.warning('Maximal allowed steps exceeded (' + str (self.cfg.count_max) + ')!')
             para.end_case = 3
             return True
 
@@ -931,10 +950,13 @@ class Integration(object):
         So I scaled down the evaporation rate by n_mol.
         n_s / n_mol should also be used for plotting.
         '''
+
+        nz = self.cfg.nz
+
         for re in var.conden_re_list:
-            if var.Rf[re] == 'H2O -> H2O_l_s' and 'H2O' in vulcan_cfg.condense_sp:
+            if var.Rf[re] == 'H2O -> H2O_l_s' and 'H2O' in self.cfg.condense_sp:
                 # using realxation for water condensation
-                if vulcan_cfg.use_relax:
+                if self.cfg.use_relax:
                     var.k[re] = np.repeat(0.,nz)
                     var.k[re+1] = np.repeat(0.,nz)
                 else:
@@ -942,7 +964,7 @@ class Integration(object):
                     rho_p = atm.rho_p['H2O_l_s']
                     r_p = atm.r_p['H2O_l_s']
                     # relative humidity
-                    sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity
+                    sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * self.cfg.humidity
 
                     # this is based on the kinetic regime
                     rate_c = m/(4*rho_p)*(8*kb*atm.Tco/np.pi/m)**0.5 *(var.y[:,species.index('H2O')]-sat_humidity)/r_p
@@ -964,9 +986,9 @@ class Integration(object):
                     var.k[re+1] = np.abs(var.k[re+1])
 
 
-            elif var.Rf[re] == 'NH3 -> NH3_l' and 'NH3' in vulcan_cfg.condense_sp:
+            elif var.Rf[re] == 'NH3 -> NH3_l' and 'NH3' in self.cfg.condense_sp:
                 # using realxation for water condensation
-                if vulcan_cfg.use_relax:
+                if self.cfg.use_relax:
                     var.k[re] = np.repeat(0.,nz)
                     var.k[re+1] = np.repeat(0.,nz)
                 else:
@@ -992,7 +1014,7 @@ class Integration(object):
                     var.k[re+1] = np.minimum(var.k[re+1], 0)
                     var.k[re+1] = np.abs(var.k[re+1])
 
-            elif var.Rf[re] == 'H2SO4 -> H2SO4_l' and 'H2SO4' in vulcan_cfg.condense_sp:
+            elif var.Rf[re] == 'H2SO4 -> H2SO4_l' and 'H2SO4' in self.cfg.condense_sp:
                 m = 98.022/Navo
                 rho_p = atm.rho_p['H2SO4_l']
                 r_p = atm.r_p['H2SO4_l']
@@ -1015,7 +1037,7 @@ class Integration(object):
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
 
-            elif var.Rf[re] == 'S2 -> S2_l_s' and 'S2' in vulcan_cfg.condense_sp:
+            elif var.Rf[re] == 'S2 -> S2_l_s' and 'S2' in self.cfg.condense_sp:
                 m = 45.019/Navo
                 rho_p = atm.rho_p['S2_l_s']
                 r_p = atm.r_p['S2_l_s']
@@ -1036,7 +1058,7 @@ class Integration(object):
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
 
-            elif var.Rf[re] == 'S4 -> S4_l_s' and 'S4' in vulcan_cfg.condense_sp:
+            elif var.Rf[re] == 'S4 -> S4_l_s' and 'S4' in self.cfg.condense_sp:
                 m = 32.06*4/Navo
                 rho_p = atm.rho_p['S4_l_s']
                 r_p = atm.r_p['S4_l_s']
@@ -1048,7 +1070,7 @@ class Integration(object):
                 # how many gas molecules are contained in one particle with the assumed size r_p
                 n_mol = 4./3*np.pi*r_p**3 *rho_p /m
 
-                # acc_ratio = var.y[:,species.index('S4_l_s')]/n_mol /vulcan_cfg.n_ccn # accomdation ratio: 0 all ccn available 1=no more free ccn
+                # acc_ratio = var.y[:,species.index('S4_l_s')]/n_mol /self.cfg.n_ccn # accomdation ratio: 0 all ccn available 1=no more free ccn
                 # lim_factor = 1-acc_ratio
                 # lim_factor[lim_factor<0] = 0
 
@@ -1061,7 +1083,7 @@ class Integration(object):
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
 
-            elif var.Rf[re] == 'S8 -> S8_l_s' and 'S8' in vulcan_cfg.condense_sp:
+            elif var.Rf[re] == 'S8 -> S8_l_s' and 'S8' in self.cfg.condense_sp:
                 m = 360.152/Navo
                 rho_p = atm.rho_p['S8_l_s']
                 r_p = atm.r_p['S8_l_s']
@@ -1082,7 +1104,7 @@ class Integration(object):
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
 
-            elif var.Rf[re] == 'C -> C_s' and 'C' in vulcan_cfg.condense_sp:
+            elif var.Rf[re] == 'C -> C_s' and 'C' in self.cfg.condense_sp:
                 m = 12.011/Navo
                 rho_p = atm.rho_p['C_s']
                 r_p = atm.r_p['C_s']
@@ -1103,14 +1125,6 @@ class Integration(object):
                 var.k[re+1] = np.minimum(var.k[re+1], 0)
                 var.k[re+1] = np.abs(var.k[re+1])
 
-
-        # for sp in vulcan_cfg.condense_sp:
-#             atm.sat_mix[sp] = atm.sat_p[sp]/atm.pco
-#             pre_conden = np.copy(var.y[:,species.index(sp)])
-#             var.y[:,species.index(sp)] = np.minimum(atm.n_0 * atm.sat_mix[sp], var.y[:,species.index(sp)])
-#             # storing the removed species
-#             var.y_conden[:,species.index(sp)] += np.abs(pre_conden - var.y[:,species.index(sp)])
-
         return var
 
     def h2o_conden_relax(self, var, atm):
@@ -1118,7 +1132,7 @@ class Integration(object):
         rho_p = 0.95 # mix of water and ice
         r_p = atm.r_p['H2O_l_s']
         # relative humidity
-        sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity
+        sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * self.cfg.humidity
 
         # new approach: contiuum regime DM/rho c
         Dg = np.insert(atm.Dzz[:,species.index('H2O')], 0, atm.Dzz[0,species.index('H2O')])
@@ -1140,8 +1154,6 @@ class Integration(object):
 
         var.y = var.ymix * np.vstack( np.sum(var.y[:,atm.gas_indx], axis=1) )
 
-        #print ("relax conden...")
-
         return var
 
     def h2o_conden_evap_relax(self, var, atm):
@@ -1149,7 +1161,7 @@ class Integration(object):
         rho_p = atm.rho_p['H2O_l_s'] # mix of water and ice
         r_p = atm.r_p['H2O_l_s']
         # relative humidity
-        sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * vulcan_cfg.humidity
+        sat_humidity = atm.sat_p['H2O']/kb/atm.Tco * self.cfg.humidity
 
         # new approach: contiuum regime DM/rho c
         Dg = np.insert(atm.Dzz[:,species.index('H2O')], 0, atm.Dzz[0,species.index('H2O')])
@@ -1218,13 +1230,6 @@ class Integration(object):
         var.ymix[conden_indx,species.index('NH3')] = y_conden[conden_indx]
         # store the saturated parts (only relax where ymix > ysat)
 
-
-        # print ("Condex Indx:")
-        # print (conden_indx)
-        # print ("evap index:")
-        # print (evap_indx)
-        # print (ice_loss[evap_indx]/atm.n_0[evap_indx] /var.ymix[evap_indx,species.index('NH3_l_s')])
-
         var.ymix[evap_indx,species.index('NH3')] += ice_loss[evap_indx]/atm.n_0[evap_indx]
         # instaneous evaporation
         var.ymix[evap_indx,species.index('NH3_l_s')] -= ice_loss[evap_indx]/atm.n_0[evap_indx]
@@ -1238,27 +1243,31 @@ class Integration(object):
 
 class ODESolver(object):
 
-    def __init__(self): # do I always need to update var, atm, para ?
+    def __init__(self, vulcan_cfg:Config): # do I always need to update var, atm, para ?
 
-        self.mtol = vulcan_cfg.mtol
-        self.atol = vulcan_cfg.atol
-        self.non_gas_sp = vulcan_cfg.non_gas_sp
+        self.cfg = vulcan_cfg
+        self.mtol = self.cfg.mtol
+        self.atol = self.cfg.atol
+        self.non_gas_sp = self.cfg.non_gas_sp
 
-        if vulcan_cfg.use_condense == True:
+        if self.cfg.use_condense == True:
             self.non_gas_sp_index = [species.index(sp) for sp in self.non_gas_sp]
-            self.condense_sp_index = [species.index(sp) for sp in vulcan_cfg.condense_sp]
+            self.condense_sp_index = [species.index(sp) for sp in self.cfg.condense_sp]
 
-        self.fix_sp_bot_index = [species.index(sp) for sp in vulcan_cfg.use_fix_sp_bot.keys()]
-        self.fix_sp_bot_mix = np.array([vulcan_cfg.use_fix_sp_bot[sp] for sp in vulcan_cfg.use_fix_sp_bot.keys()])
+        self.fix_sp_bot_index = [species.index(sp) for sp in self.cfg.use_fix_sp_bot.keys()]
+        self.fix_sp_bot_mix = np.array([self.cfg.use_fix_sp_bot[sp] for sp in self.cfg.use_fix_sp_bot.keys()])
 
     def diffdf_no_mol(self, y, atm):
         """
         function of eddy diffusion without molecular diffusion, with zero-flux boundary conditions and non-uniform grids (dzi)
         in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
         """
+
+        nz = self.cfg.nz
+
         y = y.copy()
         # TEST excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST excluding non-gaseous species
@@ -1300,11 +1309,11 @@ class ODESolver(object):
         diff = np.append(np.append(tmp0, tmp1), tmp2)
         diff = diff.reshape(nz,ni)
 
-        if vulcan_cfg.use_topflux:
+        if self.cfg.use_topflux:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ###
             diff[-1] += atm.top_flux /dzi[-1]
-        if vulcan_cfg.use_botflux:
+        if self.cfg.use_botflux:
             ### the deposition term needs to be included in the jacobian!!!
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
         return diff
@@ -1315,10 +1324,12 @@ class ODESolver(object):
         in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
         """
 
+        nz = self.cfg.nz
+
         y = y.copy()
 
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
@@ -1402,11 +1413,11 @@ class ODESolver(object):
         diff = np.append(np.append(tmp0, tmp1), tmp2)
         diff = diff.reshape(nz,ni)
 
-        if vulcan_cfg.use_topflux:
+        if self.cfg.use_topflux:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ###
             diff[-1] += atm.top_flux /dzi[-1]
-        if vulcan_cfg.use_botflux:
+        if self.cfg.use_botflux:
             ### the deposition term needs to be included in the jacobian!!!
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
 
@@ -1419,10 +1430,12 @@ class ODESolver(object):
         in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
         """
 
+        nz = self.cfg.nz
+
         y = y.copy()
 
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
@@ -1508,11 +1521,11 @@ class ODESolver(object):
         diff = np.append(np.append(tmp0, tmp1), tmp2)
         diff = diff.reshape(nz,ni)
 
-        if vulcan_cfg.use_topflux == True:
+        if self.cfg.use_topflux == True:
             # Don't forget dz!!! -d phi/ dz
             ### the const flux has no contribution to the jacobian ###
             diff[-1] += atm.top_flux /dzi[-1]
-        if vulcan_cfg.use_botflux == True:
+        if self.cfg.use_botflux == True:
             ### the deposition term needs to be included in the jacobian!!!
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
 
@@ -1525,9 +1538,12 @@ class ODESolver(object):
         zero-flux BC:  1st derivitive of y is zero
         """
 
+        nz = self.cfg.nz
+
+
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
@@ -1576,7 +1592,7 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] += -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep /dzi[0]
+        if self.cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] += -1.*atm.bot_vdep /dzi[0]
 
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
         dfdy[j_indx[0], j_indx[1]] += 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
@@ -1597,9 +1613,12 @@ class ODESolver(object):
         jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion)
         zero-flux BC:  1st derivitive of y is zero
         """
+
+        nz = self.cfg.nz
+
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.use_condense == True:
+        if self.cfg.use_condense == True:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
             #ysum = np.sum(y, axis=1)
         else: ysum = np.sum(y, axis=1)
@@ -1619,7 +1638,7 @@ class ODESolver(object):
         # c0 = 1./(r*h) where r = 1. + 1./2.**0.5
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
+        dfdy = neg_achemjac(y, atm.M, var.k, self.cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1647,11 +1666,11 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+        if self.cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
         # diffusion-limited escape
-        if vulcan_cfg.diff_esc: # not empty list
+        if self.cfg.diff_esc: # not empty list
             diff_lim = np.zeros(ni)
-            for sp in vulcan_cfg.diff_esc:
+            for sp in self.cfg.diff_esc:
                 if y[-1,species.index(sp)] > 0:
                     diff_lim[species.index(sp)] += atm.top_flux[species.index(sp)] /y[-1,species.index(sp)]
             dfdy[j_indx[-1], j_indx[-1]] -= diff_lim # negative
@@ -1676,9 +1695,12 @@ class ODESolver(object):
         jacobian matrix for dn/dt + dphi/dz = P - L (WITHOUT molecular diffusion)
         zero-flux BC:  1st derivitive of y is zero
         """
+
+        nz = self.cfg.nz
+
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
@@ -1690,7 +1712,7 @@ class ODESolver(object):
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
+        dfdy = neg_achemjac(y, atm.M, var.k, self.cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1707,7 +1729,7 @@ class ODESolver(object):
 
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+        if self.cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
 
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
 
@@ -1722,9 +1744,12 @@ class ODESolver(object):
         jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion)
         Fixed all species BC: all species at bottom (y[0]) remains fixed
         """
+
+        nz = self.cfg.nz
+
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
@@ -1742,7 +1767,7 @@ class ODESolver(object):
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
+        dfdy = neg_achemjac(y, atm.M, var.k, self.cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1767,18 +1792,17 @@ class ODESolver(object):
             -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
 
         # deposition velocity (off with fixed all BC)
-        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+        # if self.cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
 
         # diffusion-limited escape
-        if vulcan_cfg.diff_esc: # not empty list
+        if self.cfg.diff_esc: # not empty list
             diff_lim = np.zeros(ni)
-            for sp in vulcan_cfg.diff_esc:
+            for sp in self.cfg.diff_esc:
                 if y[-1,species.index(sp)] > 0:
                     diff_lim[species.index(sp)] += atm.top_flux[species.index(sp)] /y[-1,species.index(sp)]
             dfdy[j_indx[-1], j_indx[-1]] -= diff_lim # negative
 
         # Fix bottom BC
-        #print (dfdy[:, j_indx[0]])
         dfdy[:, j_indx[0]] = 0.
 
         dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
@@ -1800,9 +1824,12 @@ class ODESolver(object):
         jacobian matrix for dn/dt + dphi/dz = P - L (WITHOUT molecular diffusion)
         Fixed all species BC: all species at bottom (y[0]) remains fixed
         """
+
+        nz = self.cfg.nz
+
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
@@ -1814,7 +1841,7 @@ class ODESolver(object):
 
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
+        dfdy = neg_achemjac(y, atm.M, var.k, self.cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1831,7 +1858,7 @@ class ODESolver(object):
 
         #dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
         # deposition velocity (off with fixed all BC)
-        # if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+        # if self.cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
 
         # Fix bottom BC
         dfdy[:, j_indx[0]] = 0.
@@ -1849,9 +1876,12 @@ class ODESolver(object):
         jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion and gravitation settling for particles)
         zero-flux BC:  1st derivitive of y is zero
         """
+
+        nz = self.cfg.nz
+
         y = var.y.copy()
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             ysum = np.sum(y[:,atm.gas_indx], axis=1)
         else: ysum = np.sum(y, axis=1)
         # TEST condensation excluding non-gaseous species
@@ -1871,7 +1901,7 @@ class ODESolver(object):
         # c0 = 1./(r*h) where r = 1. + 1./2.**0.5
         r = 1. + 1./2.**0.5
         c0 = 1./(r*var.dt)
-        dfdy = neg_achemjac(y, atm.M, var.k, vulcan_cfg.nz)
+        dfdy = neg_achemjac(y, atm.M, var.k, self.cfg.nz)
         np.fill_diagonal(dfdy, c0 + np.diag(dfdy))
         j_indx = []
 
@@ -1899,12 +1929,12 @@ class ODESolver(object):
         dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
         +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]
         # deposition velocity
-        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+        if self.cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
 
         # diffusion-limited escape
-        if vulcan_cfg.diff_esc: # not empty list
+        if self.cfg.diff_esc: # not empty list
             diff_lim = np.zeros(ni)
-            for sp in vulcan_cfg.diff_esc:
+            for sp in self.cfg.diff_esc:
                 if y[-1,species.index(sp)] > 0:
                     diff_lim[species.index(sp)] += atm.top_flux[species.index(sp)] /y[-1,species.index(sp)]
             dfdy[j_indx[-1], j_indx[-1]] -= diff_lim # negative
@@ -1924,7 +1954,7 @@ class ODESolver(object):
 
 
 
-    def clip(self, var, para, atm, pos_cut = vulcan_cfg.pos_cut, nega_cut = vulcan_cfg.nega_cut):
+    def clip(self, var, para, atm, pos_cut=0, nega_cut=-1):
         '''
         function to clip samll and negative values
         and to calculate the particle loss
@@ -1942,7 +1972,7 @@ class ODESolver(object):
 
         # store y and ymix
         # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             var.y, var.ymix = y, var.y/np.vstack(np.sum(var.y[:,atm.gas_indx],axis=1))
         else: var.y, var.ymix = y, y/np.vstack(np.sum(y,axis=1))
         # TEST condensation excluding non-gaseous species
@@ -1952,7 +1982,7 @@ class ODESolver(object):
     def loss(self, data_var):
 
         y = data_var.y
-        atom_list = vulcan_cfg.atom_list
+        atom_list = self.cfg.atom_list
 
         # changed atom_tot to dictionary atom_sum
         atom_sum = data_var.atom_sum
@@ -1965,42 +1995,42 @@ class ODESolver(object):
 
         return data_var
 
-    def step_ok(self, var, para, loss_eps = vulcan_cfg.loss_eps, rtol = vulcan_cfg.rtol):
+    def step_ok(self, var, para, loss_eps=1e-1, rtol=0.6):
         if np.all(var.y>=0) and np.amax( np.abs( np.fromiter(var.atom_loss.values(),float) - np.fromiter(var.atom_loss_prev.values(),float) ) )<loss_eps and para.delta<=rtol:
             return True
         else:
             return False
 
-    def step_reject(self, var, para, loss_eps = vulcan_cfg.loss_eps, rtol = vulcan_cfg.rtol):
+    def step_reject(self, var, para, loss_eps=1e-1, rtol=0.6):
 
         if para.delta > rtol: # truncation error larger than the tolerence value
             para.delta_count += 1
 
         elif np.any(var.y < 0):
             para.nega_count += 1
-            if vulcan_cfg.use_print_prog == True:
+            if self.cfg.use_print_prog == True:
                 self.print_nega(var,para) # print the info for the negative solutions (where y < 0)
             # print input: y, t, count, dt
 
 
         else: # meaning np.amax( np.abs( np.abs(y_loss) - np.abs(loss_prev) ) )<loss_eps
             para.loss_count +=1
-            if vulcan_cfg.use_print_prog == True:
+            if self.cfg.use_print_prog == True:
                 self.print_lossBig(para)
 
+        # reset y and dt to the values at previous step
+        var = self.reset_y(var, dt_reduc=self.cfg.dt_var_min)
 
-        var = self.reset_y(var) # reset y and dt to the values at previous step
-
-        if var.dt < vulcan_cfg.dt_min:
-            var.dt = vulcan_cfg.dt_min
+        if var.dt < self.cfg.dt_min:
+            var.dt = self.cfg.dt_min
             var.y[var.y<0] = 0. # clipping of negative values
 
-            print ('Keep producing negative values! Clipping negative solutions and moving on!')
+            log.warning('Keep producing negative values! Clipping negative solutions and moving on!')
             return True
 
         return False
 
-    def reset_y(self, var, dt_reduc = vulcan_cfg.dt_var_min):
+    def reset_y(self, var, dt_reduc=0.5):
         '''
         reset y and reduce dt by dt_reduc
         '''
@@ -2008,26 +2038,26 @@ class ODESolver(object):
         # reset and store y and dt
         var.y = var.y_prev
         var.dt *= dt_reduc
-        # var.dt = np.maximum(var.dt, vulcan_cfg.dt_min)
+        # var.dt = np.maximum(var.dt, self.cfg.dt_min)
 
         return var
 
     def print_nega(self, data_var, data_para):
 
         nega_i = np.where(data_var.y<0)
-        print ('Negative y at time ' + str("{:.2e}".format(data_var.t)) + ' and step: ' + str(data_para.count) )
-        print ('Negative values:' + str(data_var.y[data_var.y<0]) )
-        print ('from levels: ' + str(nega_i[0]) )
-        print ('species: ' + str([species[_] for _ in nega_i[1]]) )
-        print ('dt= ' + str(data_var.dt))
-        print ('...reset dt to dt*0.2...')
-        print ('------------------------------------------------------------------')
+        log.warning('Negative y at time ' + str("{:.2e}".format(data_var.t)) + ' and step: ' + str(data_para.count) )
+        log.warning('Negative values:' + str(data_var.y[data_var.y<0]) )
+        log.warning('from levels: ' + str(nega_i[0]) )
+        log.warning('species: ' + str([species[s] for s in nega_i[1]]) )
+        log.warning('dt= ' + str(data_var.dt))
+        log.warning('...reset dt to dt*0.2...')
+        log.warning('------------------------------------------------------------------')
 
     def print_lossBig(self, para):
 
-        print ('Element conservation is violated too large')
-        print ('at step: ' + str(para.count))
-        print ('------------------------------------------------------------------')
+        log.warning('Element conservation is violated too large')
+        log.warning('at step: ' + str(para.count))
+        log.warning('------------------------------------------------------------------')
 
     def thomas_vec(a, b, c, d):
         '''
@@ -2055,9 +2085,10 @@ class ODESolver(object):
 
         return x
 
-    #@njit
     def compute_tau(self, var, atm):
         ''' compute the optical depth '''
+
+        nz = self.cfg.nz
 
         # reset to zero
         var.tau.fill(0)
@@ -2067,12 +2098,12 @@ class ODESolver(object):
         for j in range(nz-1,-1,-1):
             for sp in absp_sp:
                 # summing over all T-dependentphoto species
-                if sp in vulcan_cfg.T_cross_sp:
+                if sp in self.cfg.T_cross_sp:
                     var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross_T[sp][j]  # 1-D shape of nbins from the j level
                 else: # summing over all T-independent photo species
                     var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross[sp] # only the j-th laye
 
-            for sp in vulcan_cfg.scat_sp: # scat_sp are not necessary photo_sp, e.g. He
+            for sp in self.cfg.scat_sp: # scat_sp are not necessary photo_sp, e.g. He
                 var.tau[j] += var.y[j,species.index(sp)] * atm.dz[j] * var.cross_scat[sp]
             # adding the layer above at the end of species loop
             var.tau[j] += var.tau[j+1]
@@ -2088,8 +2119,10 @@ class ODESolver(object):
         # My cos[sl_angle] is always 0<=mu<=1
         # Converting my mu to Matej's mu (e.g. 45 deg -> 135 deg)
 
-        mu_ang = -1.*np.cos(vulcan_cfg.sl_angle)
-        edd = vulcan_cfg.edd
+        nz = self.cfg.nz
+
+        mu_ang = -1.*np.cos(self.cfg.sl_angle)
+        edd = self.cfg.edd
         tau = var.tau
 
         # delta_tau (length nz) is used in the transmission function
@@ -2102,7 +2135,7 @@ class ODESolver(object):
         tot_abs, tot_scat = np.zeros((nz, nbins)), np.zeros((nz, nbins))
         for sp in var.photo_sp:
             tot_abs += np.vstack(var.ymix[:,species.index(sp)])*var.cross[sp] # nz * nbins
-        for sp in vulcan_cfg.scat_sp:
+        for sp in self.cfg.scat_sp:
             tot_scat += np.vstack(var.ymix[:,species.index(sp)])*var.cross_scat[sp]
 
         total = tot_abs + tot_scat
@@ -2118,9 +2151,9 @@ class ODESolver(object):
 
         # sflux: the direct beam; dflux: diffusive flux
         ''' Beer's law for the intensity'''
-        var.sflux = var.sflux_top *  np.exp(-1.*tau/np.cos(vulcan_cfg.sl_angle) )
+        var.sflux = var.sflux_top *  np.exp(-1.*tau/np.cos(self.cfg.sl_angle) )
         # converting the intensity to flux for the raditive transfer calculation
-        dir_flux = var.sflux * np.cos(vulcan_cfg.sl_angle) # need to convert to diffuse flux in the RT definition so it can covert back to total intensity with eps
+        dir_flux = var.sflux * np.cos(self.cfg.sl_angle) # need to convert to diffuse flux in the RT definition so it can covert back to total intensity with eps
 
         # scattering
         # the transmission function (length nz)
@@ -2173,65 +2206,25 @@ class ODESolver(object):
             var.dflux_u[j] = 1./chi[j-1]*(phi[j-1]*var.dflux_u[j-1] - xi[j-1]*var.dflux_d[j] + i_u[j-1]/mu_ang )
 
 
-        #print ("time passed...")
-        #print (timeit.default_timer() - start_time)
-
-        # old
-        # # the average intensity (not flux!) of the direct beam
-#         ave_int = 0.5*( var.sflux[:-1] + var.sflux[1:])
-#         tot_int = (ave_int + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1]) )/edd
-#         # devided by the Eddington coefficient to recover the intensity
-
-
         # the average flux from the direct beam
         # !!! WITHOUT multiplied by the cos zenith angle (flux per unit area perpendicular to the direction of propagationat) !!!
         ave_dir_flux = 0.5*( var.sflux[:-1] + var.sflux[1:])
         # devided by the Eddington coefficient to recover the total intensity (integrated over all directions)
         tot_flux = ave_dir_flux + 0.5*(var.dflux_u[:-1] + var.dflux_u[1:] + var.dflux_d[1:] + var.dflux_d[:-1])/edd
 
-        # For debugging
-        #var.ave_int = ave_int
-        # var.ll = ll
-        # var.chi=chi
-        # var.phi=phi
-        # var.xi = xi
-        # var.i_u = i_u
-        # var.i_d = i_d
-        # var.w0 = w0
-        # var.tot_abs = tot_abs
-        # var.tot_scat = tot_scat
-        # var.tran = tran
-        # var.delta_tau = delta_tau
-        # For debugging
-
-        # if np.any(tot_flux< -1.e-20):
-        #      print (tot_flux[tot_flux<-1.e-20])
-        #      raise IOError ('\nNegative diffusive flux! ')
-
         # store the previous actinic flux into prev_aflux
         var.prev_aflux = np.copy(var.aflux)
         # converting to the actinic flux and storing the current flux
         var.aflux = tot_flux / (hc/var.bins)
         # the change of the actinic flux
-        var.aflux_change = np.nanmax( np.abs(var.aflux-var.prev_aflux)[var.aflux>vulcan_cfg.flux_atol]/var.aflux[var.aflux>vulcan_cfg.flux_atol] )
-
-        #print ('aflux change: ' + '{:.4E}'.format(var.aflux_change) )
-
-
-
-    # def compute_cross_JT(self, var, atm):
-    #     '''
-    #     computing T-dependent dissociation cross section based on Tco and stored in the 2D nz*nbins array
-    #     only call once at the start
-    #     '''
-
-
+        var.aflux_change = np.nanmax( np.abs(var.aflux-var.prev_aflux)[var.aflux>self.cfg.flux_atol]/var.aflux[var.aflux>self.cfg.flux_atol] )
 
     def compute_J(self, var, atm): # the vectorized version
         '''
         computes photodissociation/photoionization rates; including T-dependent cross sections
         '''
         flux = var.aflux
+        nz = self.cfg.nz
 
         diss_cross = var.cross_J # use the key (sp, branch index) e.g. ("H2O", 1); 1D array
         diss_cross_T = var.cross_J_T # 2D array with the shape of nz * bins
@@ -2246,7 +2239,7 @@ class ODESolver(object):
             # shape: flux (nz,nbin) cross (nbin)
 
             for nbr in range(1, n_branch[sp]+1): # axis=1 is to sum over all wavelength
-                if sp in vulcan_cfg.T_cross_sp:
+                if sp in self.cfg.T_cross_sp:
                     var.J_sp[(sp, nbr)] = np.sum( flux[:,:var.sflux_din12_indx] * diss_cross_T[(sp,nbr)][:,:var.sflux_din12_indx] * var.dbin1, axis=1)
                     var.J_sp[(sp, nbr)] -= 0.5* (flux[:,0] * diss_cross_T[(sp,nbr)][:,0] + flux[:,var.sflux_din12_indx-1] * diss_cross_T[(sp,nbr)][:,var.sflux_din12_indx-1]) * var.dbin1
                     var.J_sp[(sp, nbr)] += np.sum( flux[:,var.sflux_din12_indx:] * diss_cross_T[(sp,nbr)][:,var.sflux_din12_indx:] * var.dbin2, axis=1)
@@ -2261,8 +2254,8 @@ class ODESolver(object):
                 # summing over all branches
                 var.J_sp[(sp, 0)] += var.J_sp[(sp, nbr)]
                 # incoperating J into rate coefficients
-                if var.pho_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
-                    var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
+                if var.pho_rate_index[(sp, nbr)] not in self.cfg.remove_list:
+                    var.k[ var.pho_rate_index[(sp, nbr)]  ] = var.J_sp[(sp, nbr)] * self.cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
 
 
     def compute_Jion(self, var, atm):
@@ -2270,6 +2263,7 @@ class ODESolver(object):
         compute the photoionization rate
         haven't considered any temperature dependence yet
         '''
+        nz = self.cfg.nz
         flux = var.aflux
         ion_cross = var.cross_Jion # use the key (sp, br) e.g. ("H2O", 1)
 
@@ -2295,8 +2289,8 @@ class ODESolver(object):
 
                 var.Jion_sp[(sp, 0)] += var.Jion_sp[(sp, nbr)]
                 # incoperating J into rate coefficients
-                if var.ion_rate_index[(sp, nbr)] not in vulcan_cfg.remove_list:
-                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)] * vulcan_cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
+                if var.ion_rate_index[(sp, nbr)] not in self.cfg.remove_list:
+                    var.k[ var.ion_rate_index[(sp, nbr)]  ] = var.Jion_sp[(sp, nbr)] * self.cfg.f_diurnal # f_diurnal = 0.5 for Earth; = 1 for tidally-loced planets
                 # end of the loop: for sp in var.photo_sp:
 
 
@@ -2304,9 +2298,9 @@ class Ros2(ODESolver):
     '''
     class inheritance from ODEsolver for 2nd order Rosenbrock solver
     '''
-    def __init__(self):
+    def __init__(self, vulcan_cfg:Config):
         #ODESolver.__init__(self)
-        super().__init__()
+        super().__init__(vulcan_cfg)
 
 
     def store_bandM(self, a, nb, nn):
@@ -2342,13 +2336,14 @@ class Ros2(ODESolver):
         with switches to include the molecular diffusion or not
         """
 
+        nz = self.cfg.nz
         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
 
-        if vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == False:
+        if self.cfg.use_moldiff == True and self.cfg.use_settling == False:
             diffdf = self.diffdf
             jac_tot = self.lhs_jac_tot
-        elif vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == True:
+        elif self.cfg.use_moldiff == True and self.cfg.use_settling == True:
             diffdf = self.diffdf_settling
             jac_tot = self.lhs_jac_settling
         else:
@@ -2361,9 +2356,9 @@ class Ros2(ODESolver):
         lhs = jac_tot(var, atm)
 
         # Fixed species including only below the cold trap # TEST 2022
-        if vulcan_cfg.use_condense == True and para.fix_species_start == True:
-            for sp in vulcan_cfg.fix_species:
-                if vulcan_cfg.fix_species_from_coldtrap_lev == False: # if Ptop is not specified, fix the whole column # TEST2022
+        if self.cfg.use_condense == True and para.fix_species_start == True:
+            for sp in self.cfg.fix_species:
+                if self.cfg.fix_species_from_coldtrap_lev == False: # if Ptop is not specified, fix the whole column # TEST2022
                     pass
                 else:
                     pfix_indx = atm.conden_min_lev[sp]
@@ -2373,7 +2368,7 @@ class Ros2(ODESolver):
                 lhs[atm.fix_sp_indx[sp],:] = 0
                 lhs[atm.fix_sp_indx[sp],atm.fix_sp_indx[sp]] = 1./(r*h)  # cuz the jacobian func is directly outputing 1./(r*h)*sparse.identity(ni*nz) - dfdy
 
-        if vulcan_cfg.use_ion == True:
+        if self.cfg.use_ion == True:
             df[atm.fix_e_indx] = 0
             lhs[atm.fix_e_indx,:] = 0
             lhs[atm.fix_e_indx,atm.fix_e_indx] = 1./(r*h)
@@ -2387,10 +2382,10 @@ class Ros2(ODESolver):
 
         # TEST condensation
         # Fixed species
-        if vulcan_cfg.use_condense == True and para.fix_species_start == True:
-            for sp in vulcan_cfg.fix_species:
+        if self.cfg.use_condense == True and para.fix_species_start == True:
+            for sp in self.cfg.fix_species:
                 df[atm.fix_sp_indx[sp]] = 0
-        if vulcan_cfg.use_ion == True:
+        if self.cfg.use_ion == True:
             df[atm.fix_e_indx] = 0
 
         rhs = df - 2./(r*h)*k1_flat
@@ -2400,7 +2395,7 @@ class Ros2(ODESolver):
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2
 
         # setting particles on the surace = 0
-        if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
+        if self.cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
 
         delta = np.abs(sol-yk2)
@@ -2408,44 +2403,38 @@ class Ros2(ODESolver):
         delta[sol < self.atol] = 0
 
         # neglecting the errors at the surface
-        if vulcan_cfg.use_botflux == True or vulcan_cfg.use_fix_sp_bot: delta[0] = 0
+        if self.cfg.use_botflux == True or self.cfg.use_fix_sp_bot: delta[0] = 0
 
         # TEST condensation 2022
-        if vulcan_cfg.use_condense == True:
+        if self.cfg.use_condense == True:
             delta[:,self.non_gas_sp_index] = 0
             delta[:,self.condense_sp_index] = 0
 
             if para.fix_species_start == True:
 
-                for sp in vulcan_cfg.fix_species:
-                    if vulcan_cfg.fix_species_from_coldtrap_lev == False: # if Ptop is not specified, fix the whole column # TEST2022
+                for sp in self.cfg.fix_species:
+                    if self.cfg.fix_species_from_coldtrap_lev == False: # if Ptop is not specified, fix the whole column # TEST2022
                         sol[:,species.index(sp)] = var.fix_y[sp].copy()
                     else:
-                        #pfix_indx = min( range(len(atm.pco)), key=lambda i: abs(atm.pco[i]- vulcan_cfg.fix_species_Ptop[0] ))
+                        #pfix_indx = min( range(len(atm.pco)), key=lambda i: abs(atm.pco[i]- self.cfg.fix_species_Ptop[0] ))
                         pfix_indx = atm.conden_min_lev[sp]
                         sol[:pfix_indx,species.index(sp)] = var.fix_y[sp].copy()[:pfix_indx]
 
                     delta[:,species.index(sp)] = 0
 
-            # Recorde the condensing levels TEST 2022 # do we need this?
-            # for sp in ['H2O']:
-            #     conden_status = sol[:,species.index(sp)] >= atm.n_0 * atm.sat_mix[sp]*0.99
-            #     atm.conden_status = conden_status
-            # Recorde the condensing levels TEST 2022
-
-        if vulcan_cfg.use_print_delta == True and para.count % vulcan_cfg.print_prog_num==0:
+        if self.cfg.use_print_delta == True and para.count % self.cfg.print_prog_num==0:
             max_indx = np.nanargmax(delta/sol, axis=1)
             max_lev_indx = np.nanargmax(delta/sol)
-            print ('Largest delta (truncation error) from nz = ' + str(int(max_lev_indx/ni) ) )
-            print ( np.array(species)[max_indx] )
-            print ('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) )
+            log.info('Largest delta (truncation error) from nz = ' + str(int(max_lev_indx/ni) ) )
+            log.info( np.array(species)[max_indx] )
+            log.info('Largest delta (truncation error) from ' + species[max_indx%ni] + " at nz = "   + str(int(max_indx/ni) ) )
 
         delta = np.amax( delta[sol>0]/sol[sol>0] )
 
         var.y = sol
 
         # # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.gas_indx],axis=1))
         else:
             var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
@@ -2454,7 +2443,7 @@ class Ros2(ODESolver):
         para.delta = delta
 
         # use charge balance to obtain the number density of electrons (such that [ions] = [e])
-        if vulcan_cfg.use_ion == True:
+        if self.cfg.use_ion == True:
             # clear e
             var.y[:,species.index('e')] = 0
             # set e such that the net chare is zero
@@ -2470,13 +2459,15 @@ class Ros2(ODESolver):
         with switches to include the molecular diffusion or not
         """
 
+        nz = self.cfg.nz
+
         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
 
         # store the fixed bottom level
         bottom = np.copy(ymix[0])
 
-        if vulcan_cfg.use_moldiff == True:
+        if self.cfg.use_moldiff == True:
             diffdf = self.diffdf
             jac_tot = self.lhs_jac_fix_all_bot
         else:
@@ -2514,7 +2505,7 @@ class Ros2(ODESolver):
         var.y = sol
 
         # # TEST condensation excluding non-gaseous species
-        if vulcan_cfg.non_gas_sp:
+        if self.cfg.non_gas_sp:
             var.ymix = var.y/np.vstack(np.sum(var.y[:,atm.gas_indx],axis=1))
         else:
             var.ymix = var.y/np.vstack(np.sum(var.y,axis=1))
@@ -2523,7 +2514,7 @@ class Ros2(ODESolver):
         para.delta = delta
 
         # use charge balance to obtain the number density of electrons (such that [ions] = [e])
-        if vulcan_cfg.use_ion == True:
+        if self.cfg.use_ion:
             # clear e
             var.y[:,species.index('e')] = 0
             # set e such that the net chare is zero
@@ -2534,15 +2525,10 @@ class Ros2(ODESolver):
 
 
     def naming_solver(self, para):
-
-        # if vulcan_cfg.use_fix_all_bot == True:
-        #     if vulcan_cfg.use_moldiff == True: print ('Use fixed bottom BC and molecular diffusion.')
-        #     else: print ('Use fixed bottom BC and No molecular diffusion.')
-        #     para.solver_str = 'solver_fix_all_bot'
-
-        #else:
-        if vulcan_cfg.use_moldiff == True: print ('Include molecular diffusion.')
-        else: print ('No molecular diffusion.')
+        if self.cfg.use_moldiff:
+            log.info('Include molecular diffusion.')
+        else:
+            log.info('No molecular diffusion.')
         para.solver_str = 'solver'
 
 
@@ -2553,20 +2539,28 @@ class Ros2(ODESolver):
            var, para =  getattr(self, para.solver_str)(var, atm, para)
 
            # clipping small negative values and also calculating atomic loss (atom_loss)
-           var , para = self.clip(var, para, atm)
+           var , para = self.clip(var, para, atm,
+                                  pos_cut=self.cfg.pos_cut,
+                                  nega_cut=self.cfg.nega_cut,)
 
-           if self.step_ok(var, para): break
-           elif self.step_reject(var, para): break # giving up and moving on
+           if self.step_ok(var, para,
+                           loss_eps=self.cfg.loss_eps,
+                           rtol=self.cfg.rtol):
+               break
+           elif self.step_reject(var, para,
+                           loss_eps=self.cfg.loss_eps,
+                           rtol=self.cfg.rtol):
+               break
 
         return var, para
 
-    def step_size(self, var, para, dt_var_min = vulcan_cfg.dt_var_min, dt_var_max = vulcan_cfg.dt_var_max, dt_min = vulcan_cfg.dt_min, dt_max = vulcan_cfg.dt_max):
+    def step_size(self, var, para, dt_var_min=2, dt_var_max=0.5, dt_min=1e-10, dt_max=1e18):
         """
         step-size control by delta(truncation error) for the Rosenbrock method
         """
         h = var.dt
         delta = para.delta
-        rtol = vulcan_cfg.rtol
+        rtol = self.cfg.rtol
 
         if delta==0: delta = 0.01*rtol
         h_factor = 0.9*(rtol/delta)**0.5 # 0.9 is simply a safety factor
@@ -2585,73 +2579,61 @@ class Ros2(ODESolver):
 
 class Output(object):
 
-    def __init__(self):
+    def __init__(self, vulcan_cfg:Config):
 
-        output_dir = vulcan_cfg.output_dir
-        out_name   = vulcan_cfg.out_name
-        plot_dir   =  vulcan_cfg.plot_dir
-        movie_dir  =  vulcan_cfg.movie_dir
-
+        self.cfg   = vulcan_cfg
+        output_dir = self.cfg.output_dir + "/"
+        out_name   = self.cfg.out_name
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        if vulcan_cfg.use_save_movie == True:
-            if not os.path.exists(vulcan_cfg.movie_dir):
-                os.makedirs(vulcan_cfg.movie_dir)
+        if not os.path.exists(self.cfg.plot_dir):
+            os.makedirs(self.cfg.plot_dir)
 
         outfile = output_dir+out_name
         if os.path.isfile(outfile):
-            print("Warning: output file already exists. Removing.")
+            log.warning("Output file already exists. Removing.")
             os.remove(outfile)
 
     def print_prog(self, var, para):
         indx_max = np.nanargmax(para.where_varies_most)
-        print ('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(vulcan_cfg.count_max) )
-        print ('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )
-        print ('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
-        print ('------------------------------------------------------------------------' )
+        log.info('Elapsed time: ' +"{:.2e}".format(var.t) + ' || Step number: ' + str(para.count) + '/' + str(self.cfg.count_max) )
+        log.info('longdy = ' + "{:.2e}".format(var.longdy) + '      || longdy/dt = ' + "{:.2e}".format(var.longdydt) + '  || dt = '+ "{:.2e}".format(var.dt) )
+        log.info('from nz = ' + str(int(indx_max/ni)) + ' and ' + species[indx_max%ni])
+        log.info('------------------------------------------------------------------------' )
 
 
     def print_end_msg(self, var, para ):
-        print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
-        print (vulcan_cfg.out_name[:-4] + ' has successfully run to steady-state with ' + str(para.count) + ' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
-        print ('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
+        log.info('Total atom loss:')
+        for atom in self.cfg.atom_list:
+            log.info(atom + ': ' + str(var.atom_loss[atom]) + ' ')
 
-        print ('total atom loss:')
-        for atom in vulcan_cfg.atom_list: print (atom + ': ' + str(var.atom_loss[atom]) + ' ')
-
-        print ('negative solution counter:')
-        print (para.nega_count)
-        print ('loss rejected counter:')
-        print (para.loss_count)
-        print ('delta rejected counter:')
-        print (para.delta_count)
-        if vulcan_cfg.use_shark == True: print ("It's a long journey to this shark planet. Don't stop bleeding.")
-        print ('------ Live long and prosper \\V/ ------')
+        log.debug('negative solution counter: ' + str(para.nega_count))
+        log.debug('loss rejected counter: ' + str(para.loss_count))
+        log.debug('delta rejected counter: ' + str(para.delta_count))
+        log.info('------ Live long and prosper \\V/ ------')
 
 
 
     def save_cfg(self):
-        output_dir, out_name = vulcan_cfg.output_dir, vulcan_cfg.out_name
+        output_dir, out_name = self.cfg.output_dir, self.cfg.out_name
         if not os.path.exists(output_dir):
-            print ('The output directory assigned in vulcan_cfg.py does not exist.')
-            print( 'Directory ' , output_dir,  " created.")
+            log.debug('The output directory assigned in vulcan_cfg does not exist.')
+            log.debug(f'Directory {output_dir} created.')
             os.mkdir(output_dir)
 
-        # copy the vulcan_cfg.py file
-        with open('vulcan_cfg.py' ,'r') as f:
-            cfg_str = f.read()
-        with open(output_dir + "cfg_" + out_name[:-3] + "txt", 'w') as f: f.write(cfg_str)
+        # # copy the self.cfg.py file
+        # with open('self.cfg.py' ,'r') as f:
+        #     cfg_str = f.read()
+        # with open(output_dir + "cfg_" + out_name[:-3] + "txt", 'w') as f: f.write(cfg_str)
 
     def save_out(self, var, atm, para):
-        output_dir, out_name = vulcan_cfg.output_dir, vulcan_cfg.out_name
+        output_dir, out_name = self.cfg.output_dir, self.cfg.out_name
         output_file = output_dir + out_name
 
         if not os.path.exists(output_dir):
-            print ('The output directory assigned in vulcan_cfg.py does not exist.')
-            print( 'Directory ' , output_dir,  " created.")
+            log.debug('The output directory assigned in vulcan_cfg.py does not exist.')
+            log.debug(f'Directory {output_dir} created.')
             os.mkdir(output_dir)
 
         # convert lists into numpy arrays
@@ -2660,9 +2642,9 @@ class Output(object):
             setattr(var, key, as_nparray)
 
         # plotting
-        if vulcan_cfg.use_plot_evo == True:
+        if self.cfg.use_plot_evo == True:
             self.plot_evo(var, atm)
-        if vulcan_cfg.use_plot_end == True:
+        if self.cfg.use_plot_end == True:
             self.plot_end(var, atm, para)
         else: plt.close()
 
@@ -2671,15 +2653,15 @@ class Output(object):
 
         for key in var.var_save:
             var_save[key] = getattr(var, key)
-        if vulcan_cfg.save_evolution == True:
+        if self.cfg.save_evolution == True:
             # slicing time-sequential data to reduce ouput filesize
-            fq = vulcan_cfg.save_evo_frq
+            fq = self.cfg.save_evo_frq
             for key in var.var_evol_save:
                 as_nparray = getattr(var, key)[::fq]
                 setattr(var, key, as_nparray)
                 var_save[key] = getattr(var, key)
 
-        if vulcan_cfg.output_humanread == True:
+        if self.cfg.output_humanread == True:
             # human-readable form, less efficient
             with open(output_file+".var", 'w') as outfile:
                 for var in var_save.keys():
@@ -2703,7 +2685,7 @@ class Output(object):
 
     def plot_update(self, var, atm, para):
 
-        print("Plotting mixing ratios")
+        log.debug("Plotting mixing ratios")
 
         colors = ['b','r','c','m','y','k','orange','pink', 'grey',\
         'darkred','darkblue','salmon','chocolate','mediumspringgreen','steelblue','plum','hotpink']
@@ -2727,7 +2709,7 @@ class Output(object):
 
         fig, ax = plt.subplots(1,1, figsize=(8,6))
         color_index = 0
-        for sp in vulcan_cfg.plot_spec:
+        for sp in self.cfg.plot_spec:
             if sp in tex_labels:
                 sp_lab = tex_labels[sp]
             else:
@@ -2740,19 +2722,19 @@ class Output(object):
                 color = colors[color_index]
                 color_index += 1
 
-            if vulcan_cfg.plot_height == False:
+            if self.cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = color, label=sp_lab)
-                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
+                if self.cfg.use_condense == True and sp in self.cfg.condense_sp:
                     ax.plot(atm.sat_mix[sp], atm.pco/1.e6, color = color, label=sp_lab + ' sat', ls='--')
 
                 ax.set_yscale('log')
                 ax.invert_yaxis()
                 ax.set_ylabel("Pressure [bar]")
-                ax.set_ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
+                ax.set_ylim((self.cfg.P_b/1.E6,self.cfg.P_t/1.E6))
 
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = color, label=sp_lab)
-                if vulcan_cfg.use_condense == True and sp in vulcan_cfg.condense_sp:
+                if self.cfg.use_condense == True and sp in self.cfg.condense_sp:
                     ax.plot(atm.sat_mix[sp], atm.zco[1:]/1.e5, color = color, label=sp_lab + ' sat', ls='--')
 
                 ax.set_ylim((atm.zco[0]/1e5,atm.zco[-1]/1e5))
@@ -2767,14 +2749,14 @@ class Output(object):
         ax.legend(fontsize=10, labelspacing=0.2,
                     loc='upper left', bbox_to_anchor=(1.0, 1.0))
 
-        if vulcan_cfg.use_save_movie == True:
-            last_fpath = vulcan_cfg.movie_dir+"_recent.png"
-            copy_fpath = vulcan_cfg.movie_dir+str(para.pic_count)+'.png'
+        last_fpath = self.cfg.plot_dir+"_recent.png"
+        copy_fpath = self.cfg.plot_dir+str(para.pic_count)+'.png'
 
-            fig.savefig( last_fpath, dpi=210, bbox_inches='tight')
-            shutil.copyfile(last_fpath, copy_fpath)
+        print(f"Plotting to {last_fpath}")
+        fig.savefig( last_fpath, dpi=self.cfg.plot_dpi, bbox_inches='tight')
+        shutil.copyfile(last_fpath, copy_fpath)
 
-            para.pic_count += 1
+        para.pic_count += 1
 
     def plot_flux_update(self, var, atm, para):
 
@@ -2800,25 +2782,26 @@ class Output(object):
         plt.ylabel("Pressure (bar)")
         plt.show(block=0)
         plt.pause(0.1)
-        if vulcan_cfg.use_flux_movie == True: plt.savefig( 'plot/movie/flux-'+str(para.count)+'.jpg')
+        if self.cfg.use_flux_movie:
+            plt.savefig( 'plot/movie/flux-'+str(para.count)+'.jpg', dpi=self.cfg.plot_dpi)
 
         plt.clf()
 
     def plot_end(self, var, atm, para):
 
-        plot_dir = vulcan_cfg.plot_dir
+        plot_dir = self.cfg.plot_dir
         colors = ['b','g','r','c','m','y','k','orange','pink', 'grey',\
         'darkred','darkblue','salmon','chocolate','mediumspringgreen','steelblue','plum','hotpink']
 
         plt.figure('live mixing ratios')
         color_index = 0
-        for sp in vulcan_cfg.plot_spec:
-            if vulcan_cfg.plot_height == False:
+        for sp in self.cfg.plot_spec:
+            if self.cfg.plot_height == False:
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = colors[color_index], label=sp)
                 plt.gca().set_yscale('log')
                 plt.gca().invert_yaxis()
                 plt.ylabel("Pressure (bar)")
-                plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
+                plt.ylim((self.cfg.P_b/1.E6,self.cfg.P_t/1.E6))
             else: # plotting with height
                 line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = colors[color_index], label=sp)
                 plt.ylim((atm.zco[0]/1e5,atm.zco[0]/1e5))
@@ -2830,17 +2813,17 @@ class Output(object):
         plt.xlim(1.E-20, 1.)
         plt.legend(frameon=0, prop={'size':14}, loc=3)
         plt.xlabel("Mixing Ratios")
-        plt.savefig(plot_dir + 'mix.png')
+        plt.savefig(plot_dir + 'mix.png', dpi=self.cfg.plot_dpi)
 
     def plot_evo(self, var, atm, plot_j=-1, dn=1):
 
-        plot_spec = vulcan_cfg.plot_spec
-        plot_dir = vulcan_cfg.plot_dir
+        plot_spec = self.cfg.plot_spec
+        plot_dir = self.cfg.plot_dir
         plt.figure('evolution')
 
         ymix_time = np.array(var.y_time/atm.n_0[:,np.newaxis])
 
-        for i,sp in enumerate(vulcan_cfg.plot_spec):
+        for i,sp in enumerate(self.cfg.plot_spec):
             plt.plot(var.t_time[::dn], ymix_time[::dn,plot_j,species.index(sp)],c = plt.cm.rainbow(float(i)/len(plot_spec)),label=sp)
 
         plt.gca().set_xscale('log')
@@ -2849,8 +2832,7 @@ class Output(object):
         plt.ylabel('mixing ratios')
         plt.ylim((1.E-30,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
-        plt.savefig(plot_dir + 'evo.png')
-        # else: plt.show(block = False)
+        plt.savefig(plot_dir + 'evo.png', dpi=self.cfg.plot_dpi)
 
     def plot_evo_inter(self, var, atm, plot_j=-1, dn=1):
         '''
@@ -2859,11 +2841,11 @@ class Output(object):
         var.t_time = np.array(var.t_time)
         ymix_time = np.array(var.y_time/atm.n_0[:,np.newaxis])
 
-        plot_spec = vulcan_cfg.plot_spec
-        plot_dir = vulcan_cfg.plot_dir
+        plot_spec = self.cfg.plot_spec
+        plot_dir = self.cfg.plot_dir
         plt.figure('evolution')
 
-        for i,sp in enumerate(vulcan_cfg.plot_spec):
+        for i,sp in enumerate(self.cfg.plot_spec):
             plt.plot(var.t_time[::dn], ymix_time[::dn,plot_j,species.index(sp)],c = plt.cm.rainbow(float(i)/len(plot_spec)),label=sp)
 
         plt.gca().set_xscale('log')
@@ -2872,19 +2854,19 @@ class Output(object):
         plt.ylabel('mixing ratios')
         plt.ylim((1.E-30,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
-        plt.savefig(plot_dir + 'evo.png')
+        plt.savefig(plot_dir + 'evo.png', dpi=self.cfg.plot_dpi)
 
     def plot_TP(self, atm):
-        plot_dir = vulcan_cfg.plot_dir
+        plot_dir = self.cfg.plot_dir
         #plt.figure('TPK')
         fig, ax1 = plt.subplots()
         ax2 = ax1.twiny() # ax1 and ax2 share y-axis
 
-        if vulcan_cfg.plot_height == False:
+        if self.cfg.plot_height == False:
             ax1.semilogy( atm.Tco, atm.pco/1.e6, c='black')
             ax2.loglog( atm.Kzz, atm.pico[1:-1]/1.e6, c='k', ls='--')
             plt.gca().invert_yaxis()
-            plt.ylim((vulcan_cfg.P_b/1.E6,vulcan_cfg.P_t/1.E6))
+            plt.ylim((self.cfg.P_b/1.E6,self.cfg.P_t/1.E6))
             ax1.set_ylabel("Pressure (bar)")
 
         else: # plotting with height
@@ -2896,6 +2878,5 @@ class Output(object):
         ax1.set_xlabel("Temperature (K)")
         ax2.set_xlabel(r'K$_{zz}$ (cm$^2$s$^{-1}$)')
 
-        plot_name = plot_dir + 'TPK.png'
-        fig.savefig(plot_name)
+        fig.savefig(plot_dir + 'TPK.png', dpi=self.cfg.plot_dpi)
 
