@@ -731,10 +731,11 @@ def make_neg_jac(ni, nr, ofname, chemistry):
 def check_conserv(nr):
     from chem_funs import re_dict
     conserv_check = True
-    compo = np.genfromtxt(COM_FILE,names=True,encoding=None)
+    compo = np.genfromtxt(COM_FILE,names=True,dtype=None)
     compo_row = list(compo['species'])
     # Convert bytes to strings
     compo_row = [str(sp) for sp in compo_row]
+    log.debug("compo_row: %42s ..."%str(compo_row))
     num_atoms = len(compo.dtype.names) - 2 # dtype.names returns the column names and -2 is for 'species' and 'mass'
 
     for re in range(1,nr+1,2):
