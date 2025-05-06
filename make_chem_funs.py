@@ -730,13 +730,24 @@ def make_neg_jac(ni, nr, ofname, chemistry):
 
 def check_conserv(nr):
     from chem_funs import re_dict
+
     conserv_check = True
     compo = np.genfromtxt(COM_FILE,names=True,dtype=None)
-    compo_row = list(compo['species'])
+    compo_row_raw = list(compo['species'])
+
     # Convert bytes to strings
-    compo_row = [str(sp) for sp in compo_row]
-    log.debug("compo_row: %42s ..."%str(compo_row))
-    num_atoms = len(compo.dtype.names) - 2 # dtype.names returns the column names and -2 is for 'species' and 'mass'
+    # Behaviour differs between Python and SciPy versions. Uses Try/Catch to mitigate.
+    compo_row = []
+    for sp in compo_row_raw:
+        try:
+            sp = sp.decode()
+        except (UnicodeDecodeError, AttributeError):
+            pass
+        compo_row.append(str(sp))
+    log.debug("compo_row: "+str(compo_row)[1:60] + "...")
+
+    # dtype.names returns the column names and -2 is for 'species' and 'mass'
+    num_atoms = len(compo.dtype.names) - 2
 
     for re in range(1,nr+1,2):
 

@@ -121,6 +121,7 @@ def main(vulcan_cfg:Config):
     solver.naming_solver(data_para)
 
     # Running the integration loop
+    log.info("Starting VULCAN integration...")
     integ(data_var, data_atm, data_para, make_atm)
 
     # Save result to disk
