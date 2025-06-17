@@ -217,13 +217,27 @@ class InitialAbun(object):
                 # fixed 2022
                 data_atm.sat_mix[sp] = np.minimum(1., data_atm.sat_mix[sp])
                 
-                if sp == 'H2O': data_atm.sat_mix[sp] *= vulcan_cfg.humidity
-                
+                if sp == 'H2O': # some special treatment for H2O oceans
+                    data_atm.sat_mix[sp] *= vulcan_cfg.humidity
+                    if vulcan_cfg.use_sat_surfaceH2O == True: # 2023 added for eccentric Earth
+                         vulcan_cfg.use_fix_sp_bot[sp] = data_atm.sat_mix[sp][0] * vulcan_cfg.humidity
+                         print ("\nThe fixed surface water is now reset by condensation and humidity to " + str(vulcan_cfg.use_fix_sp_bot[sp]))
+                         
+                         # extending the water sat. from the surface. shami added 2024 
+                         data_var.ymix[:,species.index('H2O')] = data_atm.sat_mix[sp][0]
+                         data_var.y[:,species.index('H2O')] = data_var.ymix[:,species.index('H2O')]*data_atm.n_0
+                         
                 if vulcan_cfg.use_ini_cold_trap == True:
                     
-                    if  vulcan_cfg.ini_mix != 'table' and vulcan_cfg.ini_mix != 'vul_ini':
-                        # the level where condensation starts    
-                        conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                    if  vulcan_cfg.ini_mix != 'table': # and vulcan_cfg.ini_mix != 'vulcan_ini'
+                        
+                        # the level where condensation starts 
+                        if vulcan_cfg.use_sat_surfaceH2O == True: # shami added 2024
+                            conden_bot = 0
+                        else:    
+                            conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                               
+                        #conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
                         # conden_status: ture if the partial p >= the saturation p
                         sat_rho = data_atm.n_0 * data_atm.sat_mix[sp]
                         conden_status = data_var.y[:,species.index(sp)] >= sat_rho
@@ -235,7 +249,7 @@ class InitialAbun(object):
                             min_sat = np.amin(data_atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
                             conden_min_lev = np.where(data_atm.sat_mix[sp] == min_sat)[0][0]
                             
-                            data_atm.conden_min_lev = conden_min_lev
+                            data_atm.conden_min_lev[sp] = conden_min_lev
                             
                             print ( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)") 
                             #data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
@@ -640,7 +654,7 @@ class Atm(object):
         + " (>="+str(vulcan_cfg.dbin_12trans)+" nm)" + " and conserving " + "{:.2f}".format(100* sum_bin/sum_orgin)+" %" + " energy." )
         #print (str(100* sum_old/sum_orgin)+" %" )
 
-        
+
     
     def mol_diff(self, atm):
         '''
@@ -711,6 +725,13 @@ class Atm(object):
         
         # setting the molecuar diffusion of the non-gaseous species to zero
         for sp in [_ for _ in vulcan_cfg.non_gas_sp if _ in species]: atm.Dzz[:,species.index(sp)] = 0
+        
+        # contruct the advective component of molcular diffsion # added 2025
+        delta_T = np.roll(Tco,-1)-Tco
+        delta_T[0] = delta_T[1]; np.insert(delta_T, 0, delta_T[0])
+        
+        atm.vm = - atm.Dzz_cen * ( atm.ms[np.newaxis,:]*atm.g[:,np.newaxis]/(Navo*kb*Tco[:,np.newaxis]) - 1./atm.Hp[:,np.newaxis] +  atm.alpha/Tco[:,np.newaxis]*(delta_T[:,np.newaxis])/atm.dz[:,np.newaxis]  )
+        # contruct the advective component of molcular diffsion
                 
     
     def BC_flux(self, atm):

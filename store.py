@@ -128,6 +128,8 @@ class AtmData(object):
         self.mu = np.empty(nz) # mean molecular weight
         self.ms = np.empty(ni) # molecular weight for every species
         self.Dzz = np.zeros((nz-1,ni)) # molecular diffusion (nz,ni)
+        self.Dzz_cen = np.zeros((nz,ni)) # molecular diffusion (nz,ni)
+        self.vm = np.zeros((nz,ni)) # molecular diffusion (nz,ni)
         self.vs = np.zeros((nz-1,ni)) # the settling velocity
         self.alpha = np.zeros(ni) # thermal diffusion factor = -0.25 for every species except for H and H2 (defined in mol_diff() in build_atm.py)
         self.gs = vulcan_cfg.gs # the gravitational acceleration at the surface or at 1 bar
@@ -140,6 +142,8 @@ class AtmData(object):
         
         self.sat_p = {}
         self.sat_mix = {}
+        
+        self.conden_min_lev = {} # the level of cold trap (sp dependent; for fixing the condensation only below the cold trap )
         
         # excluding non-gaseous species while computing ymix from y
         self.gas_indx = [_ for _ in range(ni) if spec_list[_] not in vulcan_cfg.non_gas_sp]
@@ -159,6 +163,8 @@ class AtmData(object):
                 self.r_p[sp] = vulcan_cfg.r_p[sp]
             for sp in vulcan_cfg.rho_p.keys():
                 self.rho_p[sp] = vulcan_cfg.rho_p[sp]  
+            
+            self.conden_status = np.zeros(nz, dtype=bool)
             
         # self.r_p['H2O_l_s'] = 0.01 # 100 micron
         # self.r_p['H2SO4_l'] = 1e-4 # 1 micron
@@ -191,9 +197,7 @@ class Parameters(object):
         self.where_varies_most = np.zeros((nz, ni)) # recording from where and what species flucating from convergence
         self.pic_count = 0 # for live plotting
         
-        #TEST
-        self.fix_species_start = False
-        #self.conden_water_start = False
+        self.fix_species_start = False # flag for the start of fixing condensed species
         
         # These are the "Tableau 20" colors as RGB.    
         self.tableau20 = [(31, 119, 180),(255, 127, 14),(44, 160, 44),(214, 39, 40),(148, 103, 189),(140, 86, 75), (227, 119, 194),(127, 127, 127),(188, 189, 34),(23, 190, 207),\

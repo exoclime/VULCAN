@@ -120,9 +120,6 @@ data_atm = make_atm.f_pico(data_atm)
 data_atm =  make_atm.load_TPK(data_atm)
 # construct Dzz (molecular diffusion)
 
-# Only setting up ms (the species molecular weight) if vulcan_cfg.use_moldiff == False
-make_atm.mol_diff(data_atm)
-
 # calculating the saturation pressure
 if vulcan_cfg.use_condense == True: make_atm.sp_sat(data_atm)
 
@@ -149,6 +146,10 @@ data_var = ini_abun.ele_sum(data_var)
 
 # calculating mean molecular weight, dz, and dzi and plotting TP
 data_atm = make_atm.f_mu_dz(data_var, data_atm, output)
+
+# after dz is calculated
+# Only setting up ms (the species molecular weight) if vulcan_cfg.use_moldiff == False
+make_atm.mol_diff(data_atm)
 
 # specify the BC
 make_atm.BC_flux(data_atm)
