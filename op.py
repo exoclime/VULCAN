@@ -137,6 +137,7 @@ class ReadRate(object):
                     var.ion_indx = i
                 
                 elif line.startswith("# reverse stops"):
+                    var.special_re = False
                     var.stop_rev_indx = i
                       
                 # skip common lines and blank lines
@@ -1472,8 +1473,110 @@ class ODESolver(object):
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
         return diff
     
-    
     def diffdf(self, y, atm): 
+        """
+        function of eddy diffusion including molecular diffusion, with zero-flux boundary conditions and non-uniform grids (dzi)
+        in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
+        """
+        
+        y = y.copy()
+        
+        # TEST condensation excluding non-gaseous species
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
+        else: ysum = np.sum(y, axis=1)
+        # TEST condensation excluding non-gaseous species
+    
+        dzi = atm.dzi.copy()
+        Kzz = atm.Kzz.copy()
+        vz = atm.vz.copy()
+        Dzz = atm.Dzz.copy()
+        alpha = atm.alpha.copy()
+        Tco = atm.Tco.copy()
+        ms = atm.ms.copy()
+        Hp = atm.Hp.copy()
+        g = atm.g
+        Ti = atm.Ti
+        Hpi = atm.Hpi
+        
+        # # define T_1/2 for the molecular diffusion
+        # Ti = 0.5*(Tco + np.roll(Tco,-1))
+        # Ti = Ti[:-1]
+        # Hpi = 0.5*(Hp + np.roll(Hp,-1))
+        # Hpi = Hpi[:-1]
+        # # store Ti and Hpi
+        # atm.Ti = Ti
+        # atm.Hpi = Hpi
+        
+        A, B, C = np.zeros(nz), np.zeros(nz), np.zeros(nz)
+        Ai, Bi, Ci = [ np.zeros((nz,ni)) for i in range(3)]
+        
+        A[0] = -1./(dzi[0])*(Kzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[0]     
+        B[0] = 1./(dzi[0])*(Kzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] 
+        C[0] = 0 
+        A[nz-1] = -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] 
+        B[nz-1] = 0 
+        C[nz-1] = 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] 
+        
+        # vertical adection (with closed B.C.) 
+        A[0] += -( (vz[0]>0)*vz[0] )/dzi[0]
+        B[0] += -( (vz[0]<0)*vz[0] )/dzi[0]
+        A[-1] += ( (vz[-1]<0)*vz[-1] )/dzi[-1]
+        C[-1] += ( (vz[-1]>0)*vz[-1] )/dzi[-1]
+        # vertical adection
+         
+        # shape of ni-long 1D array
+        Ai[0] = -1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[0] +\
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  
+        Bi[0] = 1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] +\
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+        Ci[0] = 0 
+        Ai[nz-1] = -1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] \
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        Bi[nz-1] = 0
+        Ci[nz-1] = 1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] \
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        
+        for j in range(1,nz-1):
+            dz_ave = 0.5*(dzi[j-1] + dzi[j])
+            A[j] = -1./dz_ave * ( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j]  
+            B[j] = 1./dz_ave * Kzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]
+            C[j] = 1./dz_ave * Kzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]
+            
+            # vertical adection
+            A[j] += -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            B[j] += -( (vz[j]<0)*vz[j] )/dz_ave
+            C[j] += ( (vz[j-1]>0)*vz[j-1] )/dz_ave
+            # vertical adection
+            
+            # Ai in the shape of nz*ni and Ai[j] in the shape of ni 
+            Ai[j] = -1./dz_ave * ( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j]  
+            Bi[j] = 1./dz_ave * Dzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]
+            Ci[j] = 1./dz_ave * Dzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]
+            
+            Ai[j] += 1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+ alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) ) #/ysum[j]
+            Bi[j] += 1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+            Ci[j] += -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+ 
+        tmp0 = (A[0] + Ai[0])*y[0] + (B[0] + Bi[0])*y[1] # shape of ni-long 1D array  
+        tmp1 = np.ndarray.flatten( (np.vstack(A[1:nz-1])*y[1:(nz-1)] + np.vstack(B[1:nz-1])*y[1+1:(nz-1)+1] + np.vstack(C[1:nz-1])*y[1-1:(nz-1)-1]) ) 
+        tmp1 += np.ndarray.flatten( Ai[1:nz-1]*y[1:(nz-1)] + Bi[1:nz-1]*y[1+1:(nz-1)+1] + Ci[1:nz-1]*y[1-1:(nz-1)-1] ) # shape of (nz-2,ni)
+        tmp2 = (A[nz-1] + Ai[nz-1])*y[nz-1] + (C[nz-1] + Ci[nz-1])*y[nz-2]
+        diff = np.append(np.append(tmp0, tmp1), tmp2)
+        diff = diff.reshape(nz,ni)
+
+        if vulcan_cfg.use_topflux == True:
+            # Don't forget dz!!! -d phi/ dz
+            ### the const flux has no contribution to the jacobian ### 
+            diff[-1] += atm.top_flux /dzi[-1]
+        if vulcan_cfg.use_botflux == True:
+            ### the deposition term needs to be included in the jacobian!!!   
+            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
+        
+        return diff
+            
+    def diffdf_vm(self, y, atm): 
         """
         function of eddy diffusion including molecular diffusion, with zero-flux boundary conditions and non-uniform grids (dzi)
         in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
@@ -1569,9 +1672,106 @@ class ODESolver(object):
             diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
         
         return diff
-    
-    
+
     def diffdf_settling(self, y, atm): 
+        """
+        function of eddy diffusion including molecular diffusion and the settling velocity for particles, with zero-flux boundary conditions and non-uniform grids (dzi)
+        in the form of Aj*y_j + Bj+1*y_j+1 + Cj-1*y_j-1
+        """
+        
+        y = y.copy()
+        
+        # TEST condensation excluding non-gaseous species
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
+        else: ysum = np.sum(y, axis=1)
+        # TEST condensation excluding non-gaseous species
+    
+        dzi = atm.dzi.copy()
+        Kzz = atm.Kzz.copy()
+        vz = atm.vz.copy()
+        Dzz = atm.Dzz.copy()
+        vs = atm.vs.copy()
+        alpha = atm.alpha.copy()
+        Tco = atm.Tco.copy()
+        ms = atm.ms.copy()
+        Hp = atm.Hp.copy()
+        g = atm.g
+        Ti = atm.Ti
+        Hpi = atm.Hpi
+        
+        A, B, C = np.zeros(nz), np.zeros(nz), np.zeros(nz)
+        Ai, Bi, Ci = [ np.zeros((nz,ni)) for i in range(3)]
+        
+        A[0] = -1./(dzi[0])*(Kzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[0]     
+        B[0] = 1./(dzi[0])*(Kzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] 
+        C[0] = 0 
+        A[nz-1] = -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] 
+        B[nz-1] = 0 
+        C[nz-1] = 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] 
+        
+        # vertical adection (with closed B.C.) 
+        A[0] += -( (vz[0]>0)*vz[0] )/dzi[0]
+        B[0] += -( (vz[0]<0)*vz[0] )/dzi[0]
+        A[-1] += ( (vz[-1]<0)*vz[-1] )/dzi[-1]
+        C[-1] += ( (vz[-1]>0)*vz[-1] )/dzi[-1]
+        # vertical adection
+        
+        # shape of ni-long 1D array
+        # Including the settling velocity of the particles
+        Ai[0] = -1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[0] +\
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]  
+        Bi[0] = 1./(dzi[0])*(Dzz[0]/dzi[0]) *(ysum[1]+ysum[0])/2. /ysum[1] +\
+        1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]<0)*vs[0] )/dzi[0]
+        #Ci[0] = 0 
+        Ai[nz-1] = -1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-1] \
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]<0)*vs[-1] )/dzi[-1]
+        #Bi[nz-1] = 0
+        Ci[nz-1] = 1./(dzi[-1])*(Dzz[nz-2]/dzi[-1]) *(ysum[nz-1]+ysum[nz-2])/2. /ysum[nz-2] \
+        -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )  +( (vs[-1]>0)*vs[-1] )/dzi[-1]
+        
+        for j in range(1,nz-1):
+            dz_ave = 0.5*(dzi[j-1] + dzi[j])
+            A[j] = -1./dz_ave * ( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j]  
+            B[j] = 1./dz_ave * Kzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]
+            C[j] = 1./dz_ave * Kzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]
+            
+            # vertical adection
+            A[j] += -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            B[j] += -( (vz[j]<0)*vz[j] )/dz_ave
+            C[j] += ( (vz[j-1]>0)*vz[j-1] )/dz_ave
+            # vertical adection
+            
+            # Ai in the shape of nz*ni and Ai[j] in the shape of ni 
+            # Including the settling velocity of the particles
+            Ai[j] = -1./dz_ave * ( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j]+ysum[j-1])/2. ) /ysum[j] -( (vs[j]>0)*vs[j] - (vs[j-1]<0)*vs[j-1] )/dz_ave
+            Bi[j] = 1./dz_ave * Dzz[j]/dzi[j] *(ysum[j+1]+ysum[j])/2. /ysum[j+1]  -( (vs[j]<0)*vs[j] )/dz_ave
+            Ci[j] = 1./dz_ave * Dzz[j-1]/dzi[j-1] *(ysum[j]+ysum[j-1])/2. /ysum[j-1]  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
+            
+            Ai[j] += 1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+ alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) ) #/ysum[j]
+            Bi[j] += 1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+            Ci[j] += -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+ 
+        tmp0 = (A[0] + Ai[0])*y[0] + (B[0] + Bi[0])*y[1] # shape of ni-long 1D array  
+        tmp1 = np.ndarray.flatten( (np.vstack(A[1:nz-1])*y[1:(nz-1)] + np.vstack(B[1:nz-1])*y[1+1:(nz-1)+1] + np.vstack(C[1:nz-1])*y[1-1:(nz-1)-1]) ) 
+        tmp1 += np.ndarray.flatten( Ai[1:nz-1]*y[1:(nz-1)] + Bi[1:nz-1]*y[1+1:(nz-1)+1] + Ci[1:nz-1]*y[1-1:(nz-1)-1] ) # shape of (nz-2,ni)
+        tmp2 = (A[nz-1] + Ai[nz-1])*y[nz-1] + (C[nz-1] + Ci[nz-1])*y[nz-2]
+        diff = np.append(np.append(tmp0, tmp1), tmp2)
+        diff = diff.reshape(nz,ni)
+
+        if vulcan_cfg.use_topflux == True:
+            # Don't forget dz!!! -d phi/ dz
+            ### the const flux has no contribution to the jacobian ### 
+            diff[-1] += atm.top_flux /dzi[-1]
+        if vulcan_cfg.use_botflux == True:
+            ### the deposition term needs to be included in the jacobian!!!   
+            diff[0] += (atm.bot_flux - y[0]*atm.bot_vdep) /dzi[0]
+        
+        return diff
+            
+    
+    def diffdf_settling_vm(self, y, atm): 
         """
         added vm for molecular diffusion
         function of eddy diffusion including molecular diffusion and the settling velocity for particles, with zero-flux boundary conditions and non-uniform grids (dzi)
@@ -1749,9 +1949,79 @@ class ODESolver(object):
                 -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
 
         return dfdy
-    
 
     def lhs_jac_tot(self, var, atm):      
+        """
+        directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy
+        jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion)
+        zero-flux BC:  1st derivitive of y is zero
+        """
+        y = var.y.copy()
+        # TEST condensation excluding non-gaseous species
+        if vulcan_cfg.use_condense == True:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
+            #ysum = np.sum(y, axis=1)
+        else: ysum = np.sum(y, axis=1)
+        # TEST condensation excluding non-gaseous species
+        dzi = atm.dzi.copy()
+        Kzz = atm.Kzz.copy()
+        Dzz = atm.Dzz.copy()
+        vz = atm.vz.copy()
+        alpha = atm.alpha.copy()
+        Tco = atm.Tco.copy()
+        mu, ms = atm.mu.copy(),  atm.ms.copy()
+        g = atm.g
+
+        Ti = atm.Ti.copy()
+        Hpi = atm.Hpi.copy()
+
+        # c0 = 1./(r*h) where r = 1. + 1./2.**0.5
+        r = 1. + 1./2.**0.5
+        c0 = 1./(r*var.dt)
+        dfdy = neg_achemjac(y, atm.M, var.k)
+        np.fill_diagonal(dfdy, c0 + np.diag(dfdy)) 
+        j_indx = []
+        
+        for j in range(nz):
+            j_indx.append( np.arange(j*ni,j*ni+ni) )
+
+        for j in range(1,nz-1):
+            # excluding the buttom and the top cell
+            # at j level consists of ni species
+            dz_ave = 0.5*(dzi[j-1] + dzi[j])
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
+
+            # [j_indx[j], j_indx[j]] has size ni*ni
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
+            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
+            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
+            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )
+    
+        dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
+        dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) 
+        # deposition velocity
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+        
+        dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0]
+        dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )
+
+        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]  
+        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
+        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+        dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]  
+        dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
+                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] )
+
+        return dfdy    
+
+    def lhs_jac_tot_vm(self, var, atm):      
         """
         directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy
         jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion)
@@ -2001,8 +2271,79 @@ class ODESolver(object):
         dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]  
 
         return dfdy
-        
+
     def lhs_jac_settling(self, var, atm):      
+        """
+        directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy
+        jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion and gravitation settling for particles)
+        zero-flux BC:  1st derivitive of y is zero
+        """
+        y = var.y.copy()
+        # TEST condensation excluding non-gaseous species
+        if vulcan_cfg.non_gas_sp:
+            ysum = np.sum(y[:,atm.gas_indx], axis=1)
+        else: ysum = np.sum(y, axis=1)
+        # TEST condensation excluding non-gaseous species
+        dzi = atm.dzi.copy()
+        Kzz = atm.Kzz.copy()
+        Dzz = atm.Dzz.copy()
+        vz = atm.vz.copy()
+        vs = atm.vs.copy()
+        alpha = atm.alpha.copy()
+        Tco = atm.Tco.copy()
+        mu, ms = atm.mu.copy(),  atm.ms.copy()
+        g = atm.g
+
+        Ti = atm.Ti.copy()
+        Hpi = atm.Hpi.copy()
+
+        # c0 = 1./(r*h) where r = 1. + 1./2.**0.5
+        r = 1. + 1./2.**0.5
+        c0 = 1./(r*var.dt)
+        dfdy = neg_achemjac(y, atm.M, var.k)
+        np.fill_diagonal(dfdy, c0 + np.diag(dfdy)) 
+        j_indx = []
+        
+        for j in range(nz):
+            j_indx.append( np.arange(j*ni,j*ni+ni) )
+
+        for j in range(1,nz-1):
+            # excluding the buttom and the top cell
+            # at j level consists of ni species
+            dz_ave = 0.5*(dzi[j-1] + dzi[j])
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j] -( (vz[j]>0)*vz[j] - (vz[j-1]<0)*vz[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Kzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) -( (vz[j]<0)*vz[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Kzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) +( (vz[j-1]>0)*vz[j-1] )/dz_ave
+
+            # [j_indx[j], j_indx[j]] has size ni*ni
+            dfdy[j_indx[j], j_indx[j]] -=  -1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/2. + Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/2. ) /ysum[j]\
+            +1./(2.*dz_ave)*( Dzz[j]*(-1./Hpi[j]+ms*g[j]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] ) \
+            - Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] ) )  -( (vs[j]>0)*vs[j] - (vs[j-1]<0)*vs[j-1] )/dz_ave
+            dfdy[j_indx[j], j_indx[j+1]] -= 1./dz_ave*( Dzz[j]/dzi[j]*(ysum[j+1]+ysum[j])/(2.*ysum[j+1]) ) \
+            +1./(2.*dz_ave)* Dzz[j]*(-1./Hpi[j]+ms*g[j+1]/(Navo*kb*Ti[j])+alpha/Ti[j]*(Tco[j+1]-Tco[j])/dzi[j] )  -( (vs[j]<0)*vs[j] )/dz_ave
+            dfdy[j_indx[j], j_indx[j-1]] -= 1./dz_ave*( Dzz[j-1]/dzi[j-1]*(ysum[j-1]+ysum[j])/(2.*ysum[j-1]) ) \
+            -1./(2.*dz_ave)* Dzz[j-1]*(-1./Hpi[j-1]+ms*g[j-1]/(Navo*kb*Ti[j-1])+alpha/Ti[j-1]*(Tco[j]-Tco[j-1])/dzi[j-1] )  +( (vs[j-1]>0)*vs[j-1] )/dz_ave
+    
+        dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) -( (vz[0]>0)*vz[0] )/dzi[0]
+        dfdy[j_indx[0], j_indx[0]] -= -1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[0]) \
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] )  -( (vs[0]>0)*vs[0] )/dzi[0]
+        # deposition velocity
+        if vulcan_cfg.use_botflux == True: dfdy[j_indx[0], j_indx[0]] -= -1.*atm.bot_vdep /dzi[0]
+        
+        dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Kzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) -( (vz[0]<0)*vz[0] )/dzi[0] 
+        dfdy[j_indx[0], j_indx[1]] -= 1./(dzi[0])*(Dzz[0]/dzi[0]) * (ysum[1]+ysum[0])/(2.*ysum[1]) \
+        +1./(dzi[0])* Dzz[0]/2.*(-1./Hpi[0]+ms*g[0]/(Navo*kb*Ti[0])+alpha/Ti[0]*(Tco[1]-Tco[0])/dzi[0] ) -( (vs[0]<0)*vs[0] )/dzi[0]
+
+        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2]) *(ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[nz-1]) +( (vz[-1]<0)*vz[-1] )/dzi[-1]  
+        dfdy[j_indx[nz-1], j_indx[nz-1]] -= -1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[nz-1]) \
+        - 1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]<0)*vs[-1] )/dzi[-1]
+        dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Kzz[nz-2]/dzi[nz-2])* (ysum[(nz-1)-1]+ysum[nz-1])/(2.*ysum[(nz-1)-1]) +( (vz[-1]>0)*vz[-1] )/dzi[-1]   
+        dfdy[j_indx[nz-1], j_indx[(nz-1)-1]] -= 1./(dzi[nz-2])*(Dzz[nz-2]/dzi[nz-2]) *(ysum[nz-1]+ysum[nz-2])/(2.*ysum[(nz-1)-1]) \
+                -1./(dzi[-1])* Dzz[-1]/2.*(-1./Hpi[-1]+ms*g[-1]/(Navo*kb*Ti[-1])+alpha/Ti[-1]*(Tco[-1]-Tco[-2])/dzi[-1] ) +( (vs[-1]>0)*vs[-1] )/dzi[-1]
+
+        return dfdy
+                
+    def lhs_jac_settling_vm(self, var, atm):      
         """
         directly constructing lhs = 1./(r*h)*sparse.identity(ni*nz) - dfdy
         jacobian matrix for dn/dt + dphi/dz = P - L (including molecular diffusion and gravitation settling for particles)
@@ -2503,22 +2844,28 @@ class Ros2(ODESolver):
                 
         y, ymix, h, k = var.y, var.ymix, var.dt, var.k
         M, dzi, Kzz = atm.M, atm.dzi, atm.Kzz
+        
+        if vulcan_cfg.use_vm_mol == False:    
+            if vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == False:
+                diffdf = self.diffdf
+                jac_tot = self.lhs_jac_tot
+            elif vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == True:
+                diffdf = self.diffdf_settling
+                jac_tot = self.lhs_jac_settling
+            else:
+                diffdf = self.diffdf_no_mol
+                jac_tot = self.lhs_jac_no_mol
+        else: # vulcan_cfg.use_vm_mol == True:
+            if vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == False:
+                diffdf = self.diffdf_vm
+                jac_tot = self.lhs_jac_tot_vm
+            elif vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == True:
+                diffdf = self.diffdf_settling_vm
+                jac_tot = self.lhs_jac_settling_vm
+            else:
+                diffdf = self.diffdf_no_mol
+                jac_tot = self.lhs_jac_no_mol
             
-        if vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == False:
-            diffdf = self.diffdf
-            jac_tot = self.lhs_jac_tot
-        elif vulcan_cfg.use_moldiff == True and vulcan_cfg.use_settling == True:
-            diffdf = self.diffdf_settling
-            jac_tot = self.lhs_jac_settling
-        else:
-            diffdf = self.diffdf_no_mol
-            jac_tot = self.lhs_jac_no_mol
-        
-        # now included in build_atm.py
-        # if para.count == 0 and vulcan_cfg.use_condense == True and species.index("H2O") in self.fix_sp_bot_index: # only do once at count = 0
-        #     self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))] = min(atm.sat_mix["H2O"][0],  self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))])
-        #     print ("\nThe fixed surface water is now reset by condensation and humidity to " + str(self.fix_sp_bot_mix[self.fix_sp_bot_index.index(species.index("H2O"))]))
-        
         r = 1. + 1./2.**0.5
 
         df = chemdf(y,M,k).flatten() + diffdf(y, atm).flatten()

@@ -23,7 +23,7 @@ movie_dir = 'plot/movie/'
 out_name =  'HD189.vul' # output file name
 
 # ====== Setting up the elemental abundance ======
-use_solar = False # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
+use_solar = True # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
 # customized elemental abundance (only read when use_solar = False)
 O_H = 6.0618E-4 #*(0.793)  
 C_H = 2.7761E-4  
@@ -31,7 +31,7 @@ N_H = 8.1853E-5
 S_H = 1.3183E-5
 He_H = 0.09692
 ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini', 'table' (for 'vulcan_ini, the T-P grids have to be exactly the same)
-fastchem_met_scale = 0.1 # scaling factor for other elements in fastchem (e.g., if fastchem_met_scale = 0.1, other elements such as Si and Mg will take 0.1 solar values)
+fastchem_met_scale = 1. # scaling factor for other elements in fastchem (e.g., if fastchem_met_scale = 0.1, other elements such as Si and Mg will take 0.1 solar values)
 
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
 const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
@@ -71,6 +71,7 @@ P_b = 1e9  # pressure at the bottom (dyne/cm^2)
 P_t = 1e-2 # pressure at the top (dyne/cm^2)
 use_Kzz = True
 use_moldiff = True
+use_vm_mol = False # use upwind scheme for molecular diffusion -- under testing
 use_vz = False
 atm_type = 'file'  # Options: 'isothermal', 'analytical', 'file', or 'vulcan_ini' 'table'
 Kzz_prof = 'file' # Options: 'const','file' or 'Pfunc' (Kzz increased with P^-0.4)
@@ -101,13 +102,19 @@ max_flux = 1e13  # upper limit for the diffusion-limit fluxes
 remove_list = [] # in pairs e.g. [1,2]
 
 # == Condensation ======
+use_relax = []
 use_condense = False
 use_settling = False
-start_conden_time = 1e10
+start_conden_time = 0
+stop_conden_time = 1e5 # after this time to fix the condensable species
 condense_sp = []     
 non_gas_sp = []
+r_p = {'H2O_l_s': 5e-3}  # particle radius in cm (1e-4 = 1 micron)
+rho_p = {'H2O_l_s': 1} # particle density in g cm^-3
 fix_species = []      # fixed the condensable species after condensation-evapoation EQ has reached  
-fix_species_time = 0  # after this time to fix the condensable species
+fix_species_time = 0  
+fix_species_from_coldtrap_lev = True
+humidity = 1.
 
 # ====== steady state check ======
 st_factor = 0.5
@@ -126,7 +133,7 @@ dt_max = runtime*1e-5
 dt_var_max = 2.
 dt_var_min = 0.5
 count_min = 120
-count_max = int(3E4)
+count_max = int(1E4)
 atol = 1.E-1 # Try decreasing this if the solutions are not stable
 mtol = 1.E-22
 mtol_conv = 1.E-20
@@ -141,7 +148,7 @@ flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
 conver_ignore = [] # added 2023. to get rid off non-convergent species, e.g. HC3N without sinks 
 
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
-rtol = 0.2             # relative tolerence for adjusting the stepsize 
+rtol = 0.25             # relative tolerence for adjusting the stepsize 
 post_conden_rtol = 0.1 # switched to this value after fix_species_time
 
 # ====== Setting up for ouwtput and plotting ======
