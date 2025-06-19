@@ -718,6 +718,7 @@ class Atm(object):
         for i in range(len(species)):
             # input should be float or in the form of nz-long 1D array
             atm.Dzz[:,i] = Dzz_gen(Tco_i, n0_i, self.mol_mass(species[i]))
+            atm.Dzz_cen[:,i] = Dzz_gen(Tco, atm.n_0, self.mol_mass(species[i]))
             
             # constructing the molecular weight for every species
             # this is required even without molecular weight
@@ -730,7 +731,11 @@ class Atm(object):
         delta_T = np.roll(Tco,-1)-Tco
         delta_T[0] = delta_T[1]; np.insert(delta_T, 0, delta_T[0])
         
-        atm.vm = - atm.Dzz_cen * ( atm.ms[np.newaxis,:]*atm.g[:,np.newaxis]/(Navo*kb*Tco[:,np.newaxis]) - 1./atm.Hp[:,np.newaxis] +  atm.alpha/Tco[:,np.newaxis]*(delta_T[:,np.newaxis])/atm.dz[:,np.newaxis]  )
+        if vulcan_cfg.use_vm_mol == True:
+            atm.vm = - atm.Dzz_cen * ( atm.ms[np.newaxis,:]*atm.g[:,np.newaxis]/(Navo*kb*Tco[:,np.newaxis]) - 1./atm.Hp[:,np.newaxis] +  atm.alpha/Tco[:,np.newaxis]*(delta_T[:,np.newaxis])/atm.dz[:,np.newaxis]  )
+            if vulcan_cfg.use_condense == True:
+                non_gas_indices = [species.index(sp) for sp in vulcan_cfg.non_gas_sp]
+                atm.vm[:,non_gas_indices] = 0
         # contruct the advective component of molcular diffsion
                 
     
