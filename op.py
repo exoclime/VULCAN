@@ -2912,10 +2912,11 @@ class Ros2(ODESolver):
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2
         
         ### for Hycean ###
-        if vulcan_cfg.use_fix_H2He == True and 'H2' not in vulcan_cfg.use_fix_sp_bot and var.t > 1e6:
+        if getattr(vulcan_cfg, 'use_fix_H2He', False) and 'H2' not in vulcan_cfg.use_fix_sp_bot and var.t > 1e6:
             vulcan_cfg.use_fix_sp_bot['H2'] = var.ymix[0,species.index('H2')]
             vulcan_cfg.use_fix_sp_bot['He'] = var.ymix[0,species.index('He')]
             print ("After 1e6 sec, H2 and He are fixed at " + str((var.ymix[0,species.index('H2')], var.ymix[0,species.index('He')])))  
+            print (var.atom_loss)
         ### for Hycean ###
         
         # setting particles on the surace = 0
