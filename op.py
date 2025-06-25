@@ -2458,10 +2458,11 @@ class ODESolver(object):
         atom_sum = data_var.atom_sum
         
         for atom in atom_list:
-            #data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
+            # data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
             # TEST V scaling
-            data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)]) # *data_var.v_ratio 
-            data_var.atom_loss[atom] = (data_var.atom_sum[atom] - data_var.atom_ini[atom])/data_var.atom_ini[atom]
+            if atom not in getattr(vulcan_cfg, 'loss_ex', []): # shami added 2024
+                data_var.atom_sum[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)]) # *data_var.v_ratio 
+                data_var.atom_loss[atom] = (data_var.atom_sum[atom] - data_var.atom_ini[atom])/data_var.atom_ini[atom]
 
         return data_var
         
@@ -2910,6 +2911,13 @@ class Ros2(ODESolver):
         
         sol = y + 3./(2.*r)*k1 + 1/(2.*r)*k2
         
+        ### for Hycean ###
+        if vulcan_cfg.use_fix_H2He == True and 'H2' not in vulcan_cfg.use_fix_sp_bot and var.t > 1e6:
+            vulcan_cfg.use_fix_sp_bot['H2'] = var.ymix[0,species.index('H2')]
+            vulcan_cfg.use_fix_sp_bot['He'] = var.ymix[0,species.index('He')]
+            print ("After 1e6 sec, H2 and He are fixed at " + str((var.ymix[0,species.index('H2')], var.ymix[0,species.index('He')])))  
+        ### for Hycean ###
+        
         # setting particles on the surace = 0
         if vulcan_cfg.use_fix_sp_bot: # if use_fix_sp_bot = {} (empty), it returns false
             sol[0,self.fix_sp_bot_index] = self.fix_sp_bot_mix*atm.n_0[0]
@@ -3129,7 +3137,9 @@ class Output(object):
         print ('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
         
         print ('total atom loss:')
-        for atom in vulcan_cfg.atom_list: print (atom + ': ' + str(var.atom_loss[atom]) + ' ')
+        for atom in vulcan_cfg.atom_list: 
+            if atom not in getattr(vulcan_cfg, 'loss_ex', []):
+                print (atom + ': ' + str(var.atom_loss[atom]) + ' ')
       
         print ('negative solution counter:')
         print (para.nega_count)
@@ -3309,7 +3319,7 @@ class Output(object):
             plot.show()
             plt.close()
             
-    def plot_evo(self, var, atm, plot_j=-1, dn=1):
+    def plot_evo(self, var, atm, plot_j=-1, plot_ymin=1e-20, dn=1):
         
         plot_spec = vulcan_cfg.plot_spec
         plot_dir = vulcan_cfg.plot_dir
@@ -3324,7 +3334,7 @@ class Output(object):
         plt.gca().set_yscale('log') 
         plt.xlabel('time')
         plt.ylabel('mixing ratios')
-        plt.ylim((1.E-30,1.))
+        plt.ylim((plot_ymin,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
         plt.savefig(plot_dir + 'evo.png')
         if vulcan_cfg.use_PIL == True:
@@ -3333,7 +3343,7 @@ class Output(object):
             plt.close()
         # else: plt.show(block = False)
     
-    def plot_evo_inter(self, var, atm, plot_j=-1, dn=1):
+    def plot_evo_inter(self, var, atm, plot_j=-1, plot_ymin=1e-20, dn=1):
         '''
         plot the evolution when the code is interrupted
         '''
@@ -3351,7 +3361,7 @@ class Output(object):
         plt.gca().set_yscale('log') 
         plt.xlabel('time')
         plt.ylabel('mixing ratios')
-        plt.ylim((1.E-30,1.))
+        plt.ylim((plot_ymin,1.))
         plt.legend(frameon=0, prop={'size':14}, loc='best')
         plt.savefig(plot_dir + 'evo.png')
         if vulcan_cfg.use_PIL == True:

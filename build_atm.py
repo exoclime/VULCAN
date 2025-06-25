@@ -280,13 +280,14 @@ class InitialAbun(object):
         
 
 
-    def ele_sum(self, data_var):
+    def ele_sum(self, data_var): 
         
         for atom in self.atom_list:
-            data_var.atom_ini[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
-            data_var.atom_loss[atom] = 0.
-            data_var.atom_conden[atom] = 0.
-            
+            if atom not in getattr(vulcan_cfg, 'loss_ex', []): # shami added 2024 (If it doesn’t exist, returns an empty list)
+                data_var.atom_ini[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
+                data_var.atom_loss[atom] = 0.
+                data_var.atom_conden[atom] = 0.
+                
         return data_var
 
 
