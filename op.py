@@ -2916,7 +2916,9 @@ class Ros2(ODESolver):
             vulcan_cfg.use_fix_sp_bot['H2'] = var.ymix[0,species.index('H2')]
             vulcan_cfg.use_fix_sp_bot['He'] = var.ymix[0,species.index('He')]
             print ("After 1e6 sec, H2 and He are fixed at " + str((var.ymix[0,species.index('H2')], var.ymix[0,species.index('He')])))  
-            print (var.atom_loss)
+            
+            self.fix_sp_bot_index = [species.index(sp) for sp in vulcan_cfg.use_fix_sp_bot.keys()]
+            self.fix_sp_bot_mix = np.array([vulcan_cfg.use_fix_sp_bot[sp] for sp in vulcan_cfg.use_fix_sp_bot.keys()])
         ### for Hycean ###
         
         # setting particles on the surace = 0
