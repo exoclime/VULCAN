@@ -220,7 +220,7 @@ class InitialAbun(object):
                 if sp == 'H2O': # some special treatment for H2O oceans
                     data_atm.sat_mix[sp] *= vulcan_cfg.humidity
                     if vulcan_cfg.use_sat_surfaceH2O == True: # 2023 added for eccentric Earth
-                         vulcan_cfg.use_fix_sp_bot[sp] = data_atm.sat_mix[sp][0] * vulcan_cfg.humidity
+                         vulcan_cfg.use_fix_sp_bot[sp] = data_atm.sat_mix[sp][0] 
                          print ("\nThe fixed surface water is now reset by condensation and humidity to " + str(vulcan_cfg.use_fix_sp_bot[sp]))
                          
                          # extending the water sat. from the surface. shami added 2024 
