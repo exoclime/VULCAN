@@ -148,7 +148,7 @@ flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
 conver_ignore = [] # added 2023. to get rid off non-convergent species, e.g. HC3N without sinks 
 
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
-rtol = 0.25             # relative tolerence for adjusting the stepsize 
+rtol = 0.2             # relative tolerence for adjusting the stepsize 
 post_conden_rtol = 0.1 # switched to this value after fix_species_time
 
 # ====== Setting up for ouwtput and plotting ======
