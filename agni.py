@@ -158,7 +158,7 @@ def _solve_energy(atmos, vulcan_cfg:Config,):
 
         # default parameters
         linesearch  = 2
-        easy_start  = True
+        easy_start  = not bool(atmos.is_solved)
         dx_max      = 300.0
         ls_increase = 1.04
         perturb_all = True
@@ -255,10 +255,6 @@ def run_agni(atmos, vulcan_cfg:Config, atm:AtmData, var:Variables):
         atmos = _solve_once(atmos)
 
     # jl.AGNI.plotting.plot_pt(atmos,os.path.join(vulcan_cfg.plot_dir, "_agni_tp.png"))
-
-    # Write output data
-    # ncdf_path = os.path.join(dirs["output"],"data",time_str+"_atm.nc")
-    # jl.AGNI.save.write_ncdf(atmos, ncdf_path)
 
     # Parse result (interpolate from AGNI to VULCAN)
     t_itp = PchipInterpolator(atmos.p, atmos.tmp)

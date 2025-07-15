@@ -99,12 +99,12 @@ class Config:
         self.agni_call_frq  = 10
         self.spectral_file  = "res/spectral_files/Dayspring/48/Dayspring.sf"
         self.use_rayleigh   = True
-        self.surf_albedo    = 0.3
+        self.surf_albedo    = 0.0
         self.Tsurf_guess    = 2000.0
         self.agni_atol      = 1e-1
         self.agni_rtol      = 1e-2
         self.agni_nlev      = 35
-        self.solve_rce      = False
+        self.solve_rce      = True
 
 
         # ====== steady state check ======
