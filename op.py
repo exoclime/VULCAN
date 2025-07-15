@@ -56,7 +56,7 @@ class ReadRate(object):
         re_tri, re_tri_k0 = self.re_tri, self.re_tri_k0
         list_tri = self.list_tri
 
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         M = atm.M.copy()
 
         special_re = False
@@ -273,7 +273,7 @@ class ReadRate(object):
         for i in range(var.stop_rev_indx+1, nr+1,2):
             var.k[i] = np.zeros(nz)
 
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
 
         # reversing rates and storing into data_var
         log.debug('Reverse rates from R1 to R' + str(var.stop_rev_indx-2))
@@ -767,18 +767,16 @@ class Integration(object):
 
             # call atmosphere solver?
             if atmos and (para.count % self.cfg.agni_call_frq == 0):
-                atmos, atm.tco = self.run_agni(atmos, self.cfg, var)
+                atmos, atm.Tco = self.run_agni(atmos, self.cfg, var)
 
             # print info to user
             if use_print_prog and para.count % self.cfg.print_prog_num==0:
                 self.output.print_prog(var,para)
 
             if self.cfg.use_live_flux  and self.cfg.use_photo  and para.count % self.cfg.live_plot_frq ==0:
-                #plt.figure('flux')
                 self.output.plot_flux_update(var, atm, para)
 
             if use_live_plot and para.count % self.cfg.live_plot_frq ==0:
-                #plt.figure('mix')
                 self.output.plot_update(var, atm, para)
         return atmos
 
@@ -795,7 +793,7 @@ class Integration(object):
         # gravity
         gz = atm.g
         pref_indx = atm.pref_indx
-        Tco, pico = atm.Tco.copy(), atm.pico.copy()
+        Tco, pico = atm.Tco, atm.pico.copy()
         # calculating mu (mean molecular weight)
         atm = make_atm.mean_mass(var, atm, ni)
         Hp = atm.Hp
@@ -1350,7 +1348,7 @@ class ODESolver(object):
         vz = atm.vz.copy()
         Dzz = atm.Dzz.copy()
         alpha = atm.alpha.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         ms = atm.ms.copy()
         Hp = atm.Hp.copy()
         g = atm.g
@@ -1457,7 +1455,7 @@ class ODESolver(object):
         Dzz = atm.Dzz.copy()
         vs = atm.vs.copy()
         alpha = atm.alpha.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         ms = atm.ms.copy()
         Hp = atm.Hp.copy()
         g = atm.g
@@ -1563,7 +1561,7 @@ class ODESolver(object):
         Dzz = atm.Dzz.copy()
         vz = atm.vz.copy()
         alpha = atm.alpha.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         mu, ms = atm.mu.copy(),  atm.ms.copy()
         g = atm.g
 
@@ -1639,7 +1637,7 @@ class ODESolver(object):
         Dzz = atm.Dzz.copy()
         vz = atm.vz.copy()
         alpha = atm.alpha.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         mu, ms = atm.mu.copy(),  atm.ms.copy()
         g = atm.g
 
@@ -1718,7 +1716,7 @@ class ODESolver(object):
         dzi = atm.dzi.copy()
         Kzz = atm.Kzz.copy()
         vz = atm.vz.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         mu, ms = atm.mu.copy(),  atm.ms.copy()
 
         r = 1. + 1./2.**0.5
@@ -1769,7 +1767,7 @@ class ODESolver(object):
         Dzz = atm.Dzz.copy()
         vz = atm.vz.copy()
         alpha = atm.alpha.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         mu, ms = atm.mu.copy(),  atm.ms.copy()
         g = atm.g
 
@@ -1847,7 +1845,7 @@ class ODESolver(object):
         dzi = atm.dzi.copy()
         Kzz = atm.Kzz.copy()
         vz = atm.vz.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         mu, ms = atm.mu.copy(),  atm.ms.copy()
 
         r = 1. + 1./2.**0.5
@@ -1902,7 +1900,7 @@ class ODESolver(object):
         vz = atm.vz.copy()
         vs = atm.vs.copy()
         alpha = atm.alpha.copy()
-        Tco = atm.Tco.copy()
+        Tco = atm.Tco
         mu, ms = atm.mu.copy(),  atm.ms.copy()
         g = atm.g
 

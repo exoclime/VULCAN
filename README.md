@@ -103,6 +103,8 @@ If both use_topflux and use_botflux in vulcan_cfg.py are set to False, it will u
 ## Coupling to a self-consistent climate model
 VULCAN can be self-consistently coupled to a atmosphere climate model (AGNI) which solves for the atmospheric temperature profile given the composition calculated by VULCAN. AGNI uses correlated-k radiative transfer and mixing-length convection in order to determine realistic TP- and Kzz-profiles. More information on AGNI can be found [here](https://www.h-nicholls.space/AGNI/).
 
+To enable chemistry-climate calculations, install AGNI on your machine and make it available inside the VULCAN folder (e.g. `VULCAN/AGNI/agni.jl`). Then set `agni_call_frq` to a value >0 in the VULCAN config object and run VULCAN like normal.
+
 ## Reading Output Files
 Run ```plot_vulcan.py``` within ```plot_py```
 ```
