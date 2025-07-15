@@ -26,7 +26,7 @@ class Config:
 
         # Isothermal T(p)
         self.Tiso                    = 1000.0
-
+            
         self.sflux_file              = VULCAN_DIR+'atm/stellar_flux/sflux-HD189_Moses11.txt'
         self.top_BC_flux_file        = VULCAN_DIR+'atm/BC_top.txt' # the file for the top boundary conditions
         self.bot_BC_flux_file        = VULCAN_DIR+'atm/BC_bot.txt' # the file for the lower boundary conditions
@@ -94,9 +94,20 @@ class Config:
         self.fix_species         = []      # fixed the condensable species after condensation-evapoation EQ has reached
         self.fix_species_time    = 0  # after this time to fix the condensable species
 
+        # ====== coupling to AGNI ======
+        self.use_agni       = True 
+        self.spectral_file  = "AGNI/res/spectral_files/Dayspring/48/Dayspring.sf"
+        self.use_rayleigh   = True
+        self.surf_albedo    = 0.3
+        self.Tsurf_guess    = 2000.0
+        self.agni_atol      = 1e-1
+        self.agni_rtol      = 1e-2
+        self.solve_rce      = True
+
+
         # ====== steady state check ======
-        self.st_factor = 0.5
-        self.conv_step = 100
+        self.st_factor      = 0.5
+        self.conv_step      = 100
 
         # ====== Setting up numerical parameters for the ODE solver ======
         self.ode_solver      = 'Ros2' # case sensitive
