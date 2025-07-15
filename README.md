@@ -3,8 +3,8 @@
 Photochemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python code.
 
 ## Credits
-* Original author: Shang-Min (Shami) Tsai
-* Distributing author: Harrison Nicholls
+* Shang-Min (Shami) Tsai
+* Harrison Nicholls
 
 This distribution of VULCAN contains a number of performance and usability improvements.
 
@@ -99,6 +99,9 @@ After changing the network, you can examine all the readable information, like t
 
 ## Boundary Conditions
 If both use_topflux and use_botflux in vulcan_cfg.py are set to False, it will use the default boundary condition -- zero flux boundary i.e. nothing coming in or out. When use_topflux = True, it reads the file prescribed in top_BC_flux_file as the incoming/outgoing flux at the top boundary. Similarly, when use_botflux = True, the file prescribed in bot_BC_flux_file is read in for the surface pressure and sinks at the bottom boundary. In addition, you can also use the dictionary use_fix_sp_bot to set fixed mole fraction at the surface. e.g. use_fix_sp_bot = {'CO2': 0.01} sets the surface CO<sub>2</sub> mixing ratio to 0.01.
+
+## Coupling to a self-consistent climate model
+VULCAN can be self-consistently coupled to a atmosphere climate model (AGNI) which solves for the atmospheric temperature profile given the composition calculated by VULCAN. AGNI uses correlated-k radiative transfer and mixing-length convection in order to determine realistic TP- and Kzz-profiles. More information on AGNI can be found [here](https://www.h-nicholls.space/AGNI/).
 
 ## Reading Output Files
 Run ```plot_vulcan.py``` within ```plot_py```
