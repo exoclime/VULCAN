@@ -1,4 +1,5 @@
 from paths import VULCAN_DIR
+import os
 
 class Config:
     """
@@ -95,8 +96,8 @@ class Config:
         self.fix_species_time    = 0  # after this time to fix the condensable species
 
         # ====== coupling to AGNI ======
-        self.use_agni       = True 
-        self.spectral_file  = "AGNI/res/spectral_files/Dayspring/48/Dayspring.sf"
+        self.agni_call_frq  = 0
+        self.spectral_file  = "res/spectral_files/Dayspring/48/Dayspring.sf"
         self.use_rayleigh   = True
         self.surf_albedo    = 0.3
         self.Tsurf_guess    = 2000.0
@@ -158,3 +159,10 @@ class Config:
         self.output_humanread = False
         self.save_evolution   = False   # save the evolution of chemistry (y_time and t_time) for every save_evo_frq step
         self.save_evo_frq     = 10
+
+    def write_file(self):
+        fpath = os.path.join(self.output_dir,"vulcan_cfg.txt")
+        with open(fpath,'w') as hdl:
+            hdl.write("# Variables set in vulcan_cfg object \n")
+            for attr, value in self.__dict__.items():
+                hdl.write("%-22s  %-s \n"%(attr,str(value)))

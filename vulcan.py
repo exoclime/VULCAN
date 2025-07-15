@@ -48,8 +48,8 @@ def main(vulcan_cfg:Config):
     # for plotting and printing
     output = op.Output(vulcan_cfg)
 
-    # save a copy of the config file
-    output.save_cfg()
+    # write config to disk
+    vulcan_cfg.write_file()
 
     # construct pico
     data_atm = make_atm.f_pico(data_atm)
@@ -94,6 +94,16 @@ def main(vulcan_cfg:Config):
     # specify the BC
     make_atm.BC_flux(data_atm)
 
+    # initialise environment for T(p) solver
+    atmos = None
+    if vulcan_cfg.agni_call_frq > 0:
+        # setup julia 
+        from agni import activate_julia, init_agni_atmos, deallocate_atmos
+        activate_julia()
+        
+        # setup AGNI atmosphere object
+        atmos = init_agni_atmos(vulcan_cfg, data_atm, data_var)
+
 
     # ============== Execute VULCAN  ==============
     # time-steping in the while loop until conv() returns True or count > count_max
@@ -122,10 +132,14 @@ def main(vulcan_cfg:Config):
 
     # Running the integration loop
     log.info("Starting VULCAN integration...")
-    integ(data_var, data_atm, data_para, make_atm)
+    integ(data_var, data_atm, data_para, make_atm, atmos=atmos)
 
     # Save result to disk
     output.save_out(data_var, data_atm, data_para)
+
+    # Deallocate AGNI 
+    if atmos:
+        deallocate_atmos(atmos)
 
 
 if __name__ == "__main__":

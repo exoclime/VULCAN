@@ -651,6 +651,10 @@ class Integration(object):
         self.non_gas_sp = self.cfg.non_gas_sp
         self.use_settling = self.cfg.use_settling
 
+        # import AGNI?
+        if self.cfg.agni_call_frq > 0:
+            from agni import run_agni
+
         # including photoionisation
         if self.cfg.use_photo:
             self.update_photo_frq = self.cfg.ini_update_photo_frq
@@ -660,7 +664,7 @@ class Integration(object):
             self.condense_sp_index = [species.index(sp) for sp in self.cfg.condense_sp]
 
 
-    def __call__(self, var, atm, para, make_atm):
+    def __call__(self, var, atm, para, make_atm, atmos=None):
 
         use_print_prog, use_live_plot = self.cfg.use_print_prog, self.cfg.use_live_plot
         nz = self.cfg.nz
@@ -760,6 +764,11 @@ class Integration(object):
                                            dt_min=self.cfg.dt_min,
                                            dt_max=self.cfg.dt_max)
 
+            # call atmosphere solver?
+            if atmos and (para.count % self.cfg.agni_call_frq == 0):
+                atmos = run_agni(atmos, self.cfg, var)
+
+            # print info to user
             if use_print_prog and para.count % self.cfg.print_prog_num==0:
                 self.output.print_prog(var,para)
 
@@ -770,6 +779,7 @@ class Integration(object):
             if use_live_plot and para.count % self.cfg.live_plot_frq ==0:
                 #plt.figure('mix')
                 self.output.plot_update(var, atm, para)
+        return atmos
 
 
 
@@ -2613,20 +2623,6 @@ class Output(object):
         log.debug('delta rejected counter: ' + str(para.delta_count))
         log.info('------ Live long and prosper \\V/ ------')
 
-
-
-    def save_cfg(self):
-        output_dir, out_name = self.cfg.output_dir, self.cfg.out_name
-        if not os.path.exists(output_dir):
-            log.debug('The output directory assigned in vulcan_cfg does not exist.')
-            log.debug(f'Directory {output_dir} created.')
-            os.mkdir(output_dir)
-
-        # # copy the self.cfg.py file
-        # with open('self.cfg.py' ,'r') as f:
-        #     cfg_str = f.read()
-        # with open(output_dir + "cfg_" + out_name[:-3] + "txt", 'w') as f: f.write(cfg_str)
-
     def save_out(self, var, atm, para):
         output_dir, out_name = self.cfg.output_dir, self.cfg.out_name
         output_file = output_dir + out_name
@@ -2752,7 +2748,7 @@ class Output(object):
         last_fpath = self.cfg.plot_dir+"_recent.png"
         copy_fpath = self.cfg.plot_dir+str(para.pic_count)+'.png'
 
-        print(f"Plotting to {last_fpath}")
+        log.debug(f"Plotting to {last_fpath}")
         fig.savefig( last_fpath, dpi=self.cfg.plot_dpi, bbox_inches='tight')
         shutil.copyfile(last_fpath, copy_fpath)
 

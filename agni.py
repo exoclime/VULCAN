@@ -66,7 +66,7 @@ def init_agni_atmos(vulcan_cfg:Config, atm:AtmData, var:Variables):
         input_star =    ""
     else:
         # doesn't exist => AGNI will copy it + modify as required
-        input_sf =      vulcan_cfg.spectral_file
+        input_sf =      os.path.join(paths.AGNI_DIR,vulcan_cfg.spectral_file)
         input_star =    sflux_path
 
     # composition set initially well-mixed
@@ -137,15 +137,6 @@ def deallocate_atmos(atmos):
     jl.AGNI.atmosphere.deallocate_b(atmos)
 
 
-def update_agni_atmos(atmos, var:Variables):
-    """Update atmosphere (composition only)."""
-
-    # list is reversed relative to VULCAN
-    for g in gas_list:
-        atmos.gas_vmr[g][:]  = var.ymix[::-1,gas_list.index(g)]
-        atmos.gas_ovmr[g][:] = atmos.gas_vmr[g][:]
-
-    return atmos
 
 
 def _solve_energy(atmos, vulcan_cfg:Config,):
@@ -237,11 +228,16 @@ def _solve_once(atmos):
 
     return atmos
 
-def run_agni(atmos,vulcan_cfg:Config, atm:AtmData, var:Variables):
+def run_agni(atmos, vulcan_cfg:Config, var:Variables):
     """Run AGNI atmosphere model.  """
 
     # Inform
     log.debug("Running AGNI...")
+
+    # update gas compositions (list is reversed relative to VULCAN)
+    for g in gas_list:
+        atmos.gas_vmr[g][:]  = var.ymix[::-1,gas_list.index(g)]
+        atmos.gas_ovmr[g][:] = atmos.gas_vmr[g][:]
 
     # has opacity
     if vulcan_cfg.solve_rce:
