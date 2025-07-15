@@ -220,8 +220,9 @@ def _solve_once(atmos):
     #    temperature floor in stratosphere
     jl.AGNI.setpt.stratosphere_b(atmos, 0.5)
 
-    # solve fluxes
-    jl.AGNI.energy.calc_fluxes_b(atmos, False, True, False, False, calc_cf=True)
+    # calculate convective flux only, to get Kzz profile
+    jl.AGNI.energy.calc_fluxes_b(atmos, False, 
+                                    False, True, False, False, calc_cf=False)
 
     # fill kzz values
     jl.AGNI.energy.fill_Kzz_b(atmos)
@@ -243,7 +244,7 @@ def run_agni(atmos, vulcan_cfg:Config, atm:AtmData, var:Variables):
         atmos.gas_vmr[g][:]  = 10**g_itp(atmos.p)[:]
         atmos.gas_ovmr[g][:] = atmos.gas_vmr[g][:]
 
-    jl.AGNI.plotting.plot_vmr(atmos,os.path.join(vulcan_cfg.plot_dir,"_agni_vmr.png"))
+    # jl.AGNI.plotting.plot_vmr(atmos,os.path.join(vulcan_cfg.plot_dir,"_agni_vmr.png"))
 
     # Run model
     if vulcan_cfg.solve_rce:
@@ -253,8 +254,7 @@ def run_agni(atmos, vulcan_cfg:Config, atm:AtmData, var:Variables):
         log.info("Using prescribed temperature profile")
         atmos = _solve_once(atmos)
 
-    # Make plots
-    jl.AGNI.plotting.plot_pt(atmos,os.path.join(vulcan_cfg.plot_dir, "_agni_tp.png"))
+    # jl.AGNI.plotting.plot_pt(atmos,os.path.join(vulcan_cfg.plot_dir, "_agni_tp.png"))
 
     # Write output data
     # ncdf_path = os.path.join(dirs["output"],"data",time_str+"_atm.nc")
