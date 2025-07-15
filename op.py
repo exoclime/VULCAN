@@ -654,6 +654,7 @@ class Integration(object):
         # import AGNI?
         if self.cfg.agni_call_frq > 0:
             from agni import run_agni
+            self.run_agni = run_agni
 
         # including photoionisation
         if self.cfg.use_photo:
@@ -766,7 +767,7 @@ class Integration(object):
 
             # call atmosphere solver?
             if atmos and (para.count % self.cfg.agni_call_frq == 0):
-                atmos = run_agni(atmos, self.cfg, var)
+                atmos, atm.tco = self.run_agni(atmos, self.cfg, var)
 
             # print info to user
             if use_print_prog and para.count % self.cfg.print_prog_num==0:
@@ -2595,8 +2596,11 @@ class Output(object):
         output_dir = self.cfg.output_dir + "/"
         out_name   = self.cfg.out_name
 
+        shutil.rmtree(self.cfg.output_dir, ignore_errors=True)
+
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
+
         if not os.path.exists(self.cfg.plot_dir):
             os.makedirs(self.cfg.plot_dir)
 
@@ -2719,7 +2723,7 @@ class Output(object):
                 color_index += 1
 
             if self.cfg.plot_height == False:
-                line, = plt.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = color, label=sp_lab)
+                line, = ax.plot(var.ymix[:,species.index(sp)], atm.pco/1.e6, color = color, label=sp_lab)
                 if self.cfg.use_condense == True and sp in self.cfg.condense_sp:
                     ax.plot(atm.sat_mix[sp], atm.pco/1.e6, color = color, label=sp_lab + ' sat', ls='--')
 
@@ -2729,7 +2733,7 @@ class Output(object):
                 ax.set_ylim((self.cfg.P_b/1.E6,self.cfg.P_t/1.E6))
 
             else: # plotting with height
-                line, = plt.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = color, label=sp_lab)
+                line, = ax.plot(var.ymix[:,species.index(sp)], atm.zmco/1.e5, color = color, label=sp_lab)
                 if self.cfg.use_condense == True and sp in self.cfg.condense_sp:
                     ax.plot(atm.sat_mix[sp], atm.zco[1:]/1.e5, color = color, label=sp_lab + ' sat', ls='--')
 
@@ -2744,6 +2748,15 @@ class Output(object):
         ax.set_xlim(1.E-16, 1.2)
         ax.legend(fontsize=10, labelspacing=0.2,
                     loc='upper left', bbox_to_anchor=(1.0, 1.0))
+
+        # temperature profile 
+        axt = ax.twiny()
+        axt.set_xlabel("Temperature [K]")
+        if self.cfg.plot_height:
+            axt_yarr = atm.zmco/1.e5
+        else:
+            axt_yarr = atm.pco/1.e6
+        axt.plot(atm.Tco, axt_yarr, color='k', lw=0.5, ls='dotted')
 
         last_fpath = self.cfg.plot_dir+"_recent.png"
         copy_fpath = self.cfg.plot_dir+str(para.pic_count)+'.png'
@@ -2874,5 +2887,5 @@ class Output(object):
         ax1.set_xlabel("Temperature (K)")
         ax2.set_xlabel(r'K$_{zz}$ (cm$^2$s$^{-1}$)')
 
-        fig.savefig(plot_dir + 'TPK.png', dpi=self.cfg.plot_dpi)
+        fig.savefig(plot_dir + 'TPK_initial.png', dpi=self.cfg.plot_dpi)
 

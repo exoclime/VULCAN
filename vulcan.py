@@ -99,7 +99,7 @@ def main(vulcan_cfg:Config):
     if vulcan_cfg.agni_call_frq > 0:
         # setup julia 
         from agni import activate_julia, init_agni_atmos, deallocate_atmos
-        activate_julia()
+        activate_julia(vulcan_cfg)
         
         # setup AGNI atmosphere object
         atmos = init_agni_atmos(vulcan_cfg, data_atm, data_var)

@@ -72,7 +72,9 @@ def init_agni_atmos(vulcan_cfg:Config, atm:AtmData, var:Variables):
     # composition set initially well-mixed
     vol_dict = {}
     for g in gas_list:
-        vol_dict = np.median(var.ymix[:,gas_list.index(g)])
+        if "_" in g:
+            continue
+        vol_dict[g] = np.median(var.ymix[:,gas_list.index(g)])
 
     # set condensation
     condensates = []
@@ -232,10 +234,10 @@ def run_agni(atmos, vulcan_cfg:Config, var:Variables):
     """Run AGNI atmosphere model.  """
 
     # Inform
-    log.debug("Running AGNI...")
+    log.info("Running climate calculation...")
 
     # update gas compositions (list is reversed relative to VULCAN)
-    for g in gas_list:
+    for g in atmos.gas_names:
         atmos.gas_vmr[g][:]  = var.ymix[::-1,gas_list.index(g)]
         atmos.gas_ovmr[g][:] = atmos.gas_vmr[g][:]
 
@@ -251,11 +253,5 @@ def run_agni(atmos, vulcan_cfg:Config, var:Variables):
     # ncdf_path = os.path.join(dirs["output"],"data",time_str+"_atm.nc")
     # jl.AGNI.save.write_ncdf(atmos, ncdf_path)
 
-    # ---------------------------
-    # Parse results
-    # ---------------------------
-
-    tco  = np.array(atmos.tmp)[::-1]
-    tico = np.array(atmos.tmpl)[::-1]
-
-    return atmos, tco, tico
+    log.info('------------------------------------------------------------------------')
+    return atmos, np.array(atmos.tmp)[::-1]

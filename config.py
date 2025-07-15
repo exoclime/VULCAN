@@ -96,14 +96,14 @@ class Config:
         self.fix_species_time    = 0  # after this time to fix the condensable species
 
         # ====== coupling to AGNI ======
-        self.agni_call_frq  = 0
+        self.agni_call_frq  = 10
         self.spectral_file  = "res/spectral_files/Dayspring/48/Dayspring.sf"
         self.use_rayleigh   = True
         self.surf_albedo    = 0.3
         self.Tsurf_guess    = 2000.0
         self.agni_atol      = 1e-1
         self.agni_rtol      = 1e-2
-        self.solve_rce      = True
+        self.solve_rce      = False
 
 
         # ====== steady state check ======
