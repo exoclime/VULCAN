@@ -1,11 +1,11 @@
 # Wrapper functions for coupling VULCAN to AGNI
 
 # Import system modules
-import glob
 import logging
 import os
 import numpy as np
 from juliacall import Main as jl
+from scipy.interpolate import PchipInterpolator
 from scipy.integrate import trapezoid
 
 # initialise logger for vulcan
@@ -80,8 +80,8 @@ def init_agni_atmos(vulcan_cfg:Config, atm:AtmData, var:Variables):
     condensates = []
 
     # Boundary pressures
-    p_surf = atm.pico[0] *0.1 # convert to SI, Pa
-    p_top  = atm.pico[-1]*0.1 # convert to SI, Pa
+    p_surf = atm.pico[0] * 1e-6 # convert to bar
+    p_top  = atm.pico[-1]* 1e-6 # convert to bar
 
     # Setup struct
     jl.AGNI.atmosphere.setup_b(atmos,
@@ -96,7 +96,7 @@ def init_agni_atmos(vulcan_cfg:Config, atm:AtmData, var:Variables):
                         vulcan_cfg.gs*0.01, # convert to SI, m/s^2
                         vulcan_cfg.Rp*0.01, # convert to SI, m
 
-                        vulcan_cfg.nz,
+                        vulcan_cfg.agni_nlev,
                         p_surf,
                         p_top,
 
@@ -137,8 +137,6 @@ def deallocate_atmos(atmos):
     Deallocate atmosphere struct
     """
     jl.AGNI.atmosphere.deallocate_b(atmos)
-
-
 
 
 def _solve_energy(atmos, vulcan_cfg:Config,):
@@ -230,18 +228,24 @@ def _solve_once(atmos):
 
     return atmos
 
-def run_agni(atmos, vulcan_cfg:Config, var:Variables):
+def run_agni(atmos, vulcan_cfg:Config, atm:AtmData, var:Variables):
     """Run AGNI atmosphere model.  """
 
     # Inform
     log.info("Running climate calculation...")
 
-    # update gas compositions (list is reversed relative to VULCAN)
+    # update gas compositions (interpolate from VULCAN to AGNI)
     for g in atmos.gas_names:
-        atmos.gas_vmr[g][:]  = var.ymix[::-1,gas_list.index(g)]
+        p_vul = atm.pco[::-1]*0.1 # convert to Pa
+        g_vul = np.clip(var.ymix[::-1,gas_list.index(g)], 1e-30, 1.0)
+        g_itp = PchipInterpolator(p_vul, np.log10(g_vul))
+
+        atmos.gas_vmr[g][:]  = 10**g_itp(atmos.p)[:]
         atmos.gas_ovmr[g][:] = atmos.gas_vmr[g][:]
 
-    # has opacity
+    jl.AGNI.plotting.plot_vmr(atmos,os.path.join(vulcan_cfg.plot_dir,"_agni_vmr.png"))
+
+    # Run model
     if vulcan_cfg.solve_rce:
         log.info("Using nonlinear solver to conserve fluxes")
         atmos = _solve_energy(atmos, vulcan_cfg)
@@ -249,9 +253,16 @@ def run_agni(atmos, vulcan_cfg:Config, var:Variables):
         log.info("Using prescribed temperature profile")
         atmos = _solve_once(atmos)
 
+    # Make plots
+    jl.AGNI.plotting.plot_pt(atmos,os.path.join(vulcan_cfg.plot_dir, "_agni_tp.png"))
+
     # Write output data
     # ncdf_path = os.path.join(dirs["output"],"data",time_str+"_atm.nc")
     # jl.AGNI.save.write_ncdf(atmos, ncdf_path)
 
+    # Parse result (interpolate from AGNI to VULCAN)
+    t_itp = PchipInterpolator(atmos.p, atmos.tmp)
+    atm.Tco[:] = t_itp(atm.pco*0.1)[:] 
+
     log.info('------------------------------------------------------------------------')
-    return atmos, np.array(atmos.tmp)[::-1]
+    return atmos

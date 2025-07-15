@@ -767,7 +767,7 @@ class Integration(object):
 
             # call atmosphere solver?
             if atmos and (para.count % self.cfg.agni_call_frq == 0):
-                atmos, atm.Tco = self.run_agni(atmos, self.cfg, var)
+                atmos = self.run_agni(atmos, self.cfg, atm, var)
 
             # print info to user
             if use_print_prog and para.count % self.cfg.print_prog_num==0:

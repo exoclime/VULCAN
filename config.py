@@ -103,6 +103,7 @@ class Config:
         self.Tsurf_guess    = 2000.0
         self.agni_atol      = 1e-1
         self.agni_rtol      = 1e-2
+        self.agni_nlev      = 35
         self.solve_rce      = False
 
 
