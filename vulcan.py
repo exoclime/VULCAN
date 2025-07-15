@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "25.05.06"
+__version__ = "25.07.15"
 
 # Import system modules
 import time

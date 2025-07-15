@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 # https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
 [project]
 name = "vulcan"
-version = "25.05.20"
+version = "25.07.15"
 description = "Photochemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python code."
 readme = "README.md"
 requires-python = ">=3.11"
