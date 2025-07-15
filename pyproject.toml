@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+# https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+[project]
+name = "vulcan"
+version = "25.05.20"
+description = "Photochemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python code."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Shang-Min Tsai", email = "shangmin.tsai@ucr.edu"},
+	{name = "Harrison Nicholls", email = "harrison.nicholls@physics.ox.ac.uk"},
+]
+keywords = [
+    "Astronomy",
+    "Exoplanets",
+    "Model-coupling",
+]
+license = {text = "Apache 2.0 License"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    "juliacall",
+    "matplotlib",
+    "numpy>=2.0.0",
+    "pandas",
+    "scipy",
+    "sympy",
+    "astropy"
+]
+
+[project.urls]
+homepage = "https://github.com/exoclime/VULCAN/"
+issues = "https://github.com/exoclime/VULCAN/issues"
+changelog = "https://github.com/exoclime/VULCAN//releases"
+
