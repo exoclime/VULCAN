@@ -2594,7 +2594,8 @@ class Output(object):
         output_dir = self.cfg.output_dir + "/"
         out_name   = self.cfg.out_name
 
-        shutil.rmtree(self.cfg.output_dir, ignore_errors=True)
+        if self.cfg.clean_output:
+            shutil.rmtree(self.cfg.output_dir, ignore_errors=True)
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -2747,7 +2748,7 @@ class Output(object):
         ax.legend(fontsize=10, labelspacing=0.2,
                     loc='upper left', bbox_to_anchor=(1.0, 1.0))
 
-        # temperature profile 
+        # temperature profile
         axt = ax.twiny()
         axt.set_xlabel("Temperature [K]")
         if self.cfg.plot_height:

@@ -35,6 +35,7 @@ class Config:
         self.output_dir              = VULCAN_DIR + "output/"
         self.plot_dir                = self.output_dir + "plot/"
         self.out_name                = 'example.pkl'
+        self.clean_output            = True
 
 
         # ====== Setting up the elemental abundance ======
