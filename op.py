@@ -3137,12 +3137,12 @@ class Output(object):
     def print_end_msg(self, var, para ): 
         print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time') 
         print (vulcan_cfg.out_name[:-4] + ' has successfully run to steady-state with ' + str(para.count) + ' steps and ' + str("{:.2e}".format(var.t)) + ' s' )
-        print ('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
+        print ('long dy = ' + f"{var.longdy:.6e}" + ' and long dy/dt = ' + f"{var.longdydt:.6e}" )
         
         print ('total atom loss:')
         for atom in vulcan_cfg.atom_list: 
             if atom not in getattr(vulcan_cfg, 'loss_ex', []):
-                print (atom + ': ' + str(var.atom_loss[atom]) + ' ')
+                print (atom + ': ' + f"{var.atom_loss[atom]:.4e}" + ' ')
       
         print ('negative solution counter:')
         print (para.nega_count)
@@ -3152,9 +3152,35 @@ class Output(object):
         print (para.delta_count)
         if vulcan_cfg.use_shark == True: print ("It's a long journey to this shark planet. Don't stop bleeding.")
         print ('------ Live long and prosper \V/ ------') 
+
+    def print_unconverged_msg(self, var, para, case): 
         
+        if case == 2:
+            print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
+            print (vulcan_cfg.out_name[:-4] + ' did not reach steady-state:')
+            print ('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
+            print ('Integration stopped before converged...\nMaximal allowed runtime exceeded ('+ f"{vulcan_cfg.runtime:.1e}" + ' sec)')
+        elif case == 3:
+            print ("After ------- %s seconds -------" % ( time.time()- para.start_time ) + ' s CPU time')
+            print (vulcan_cfg.out_name[:-4] + ' did not reach steady-state:')
+            print ('long dy = ' + str(var.longdy) + ' and long dy/dt = ' + str(var.longdydt) )
+            print ('Integration stopped before converged...\nMaximal allowed steps exceeded ('+ str(vulcan_cfg.count_max) + ' steps)')
         
+        print ('total atom loss:')
+        for atom in vulcan_cfg.atom_list: 
+            if atom not in getattr(vulcan_cfg, 'loss_ex', []):
+                print (atom + ': ' + f"{var.atom_loss[atom]:.4e}" + ' ')
+        print ('negative solution counter:')
+        print (para.nega_count)
+        print ('loss rejected counter:')
+        print (para.loss_count)
+        print ('delta rejected counter:')
+        print (para.delta_count)
+       
+        if case not in (2, 3):
+            raise RuntimeError(f"Unconverged case undefined (case={case})") # more robust than printing warning
         
+
     def save_cfg(self, dname):
         output_dir, out_name = vulcan_cfg.output_dir, vulcan_cfg.out_name
         if not os.path.exists(output_dir):
