@@ -831,6 +831,25 @@ class Integration(object):
             # integrating one step
             var, para = self.odesolver.one_step(var, atm, para)
             
+            # # TEST 2025: using atom_loss to reduce rtol
+            if vulcan_cfg.use_adapt_rtol == True and para.count%10 == 0:
+                if max([np.abs(loss) for loss in var.atom_loss.values()]) >= self.loss_criteria: 
+                    self.loss_criteria *= 2.
+                    vulcan_cfg.rtol *= 0.75
+                    vulcan_cfg.rtol = max(vulcan_cfg.rtol, vulcan_cfg.rtol_min)
+                    if vulcan_cfg.rtol != vulcan_cfg.rtol_min:
+                        print ('rtol reduced to ' + str(vulcan_cfg.rtol))
+                        print ('------------------------------------------------------------------')
+
+            if vulcan_cfg.use_adapt_rtol == True and para.count%1000 == 0 and para.count>0:
+                if max([np.abs(loss) for loss in var.atom_loss.values()]) < 2e-4: #
+                    vulcan_cfg.rtol *= 1.25
+                    vulcan_cfg.rtol = min(vulcan_cfg.rtol, vulcan_cfg.rtol_max)
+                    if vulcan_cfg.rtol != vulcan_cfg.rtol_max:
+                        print ('rtol increased to ' + str(vulcan_cfg.rtol))
+                        print ('------------------------------------------------------------------')
+            #
+            # # TEST 2025
             
             # Condensation (needs to be after solver.one_step)
             if vulcan_cfg.use_condense == True and var.t >= vulcan_cfg.start_conden_time and para.fix_species_start == False:

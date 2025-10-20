@@ -3,10 +3,12 @@
 # ============================================================================= 
 
 # ====== Setting up the elements included in the network ======
-atom_list = ['H', 'O', 'C', 'N']
+atom_list = ['H', 'O', 'C', 'N',  'S']
 # ====== Setting up paths and filenames for the input and output files  ======
 # input:
-network = 'thermo/NCHO_photo_network.txt'
+#network = 'thermo/SNCHO_full_photo_network.txt'
+
+network = 'thermo/SNCHO_full_photo_network_2025.txt'
 use_lowT_limit_rates = False
 gibbs_text = 'thermo/gibbs_text.txt' # (all the nasa9 files must be placed in the folder: thermo/NASA9/)
 cross_folder = 'thermo/photo_cross/'
@@ -15,7 +17,7 @@ atm_file = 'atm/atm_HD189_Kzz.txt' # TP and Kzz (optional) file
 sflux_file = 'atm/stellar_flux/sflux-HD189_Moses11.txt' # sflux-HD189_B2020.txt This is the flux density at the stellar surface
 top_BC_flux_file = 'atm/BC_top.txt' # the file for the top boundary conditions
 bot_BC_flux_file = 'atm/BC_bot.txt' # the file for the lower boundary conditions
-vul_ini = 'output/HD189-nominal.vul' # the file to initialize the abundances for ini_mix = 'vulcan_ini'
+vul_ini = 'output/' # the file to initialize the abundances for ini_mix = 'vulcan_ini'
 # output:
 output_dir = 'output/'
 plot_dir = 'plot/'
@@ -23,16 +25,17 @@ movie_dir = 'plot/movie/'
 out_name =  'HD189.vul' # output file name
 
 # ====== Setting up the elemental abundance ======
-use_solar = True # True: using the solar abundance from Table 10. K.Lodders 2009; False: using the customized elemental abundance. 
+use_solar = True # True: using the solar abundance from Table 8. K.Lodders 2019; False: using the customized elemental abundance. 
 # customized elemental abundance (only read when use_solar = False)
-O_H = 6.0618E-4 #*(0.793)  
-C_H = 2.7761E-4  
-N_H = 8.1853E-5
-S_H = 1.3183E-5
-He_H = 0.09692
+O_H = 5.37E-4 #*(0.793)  
+C_H = 2.95E-4  
+N_H = 7.08E-5
+S_H = 1.41E-5
+He_H = 0.0838
 ini_mix = 'EQ' # Options: 'EQ', 'const_mix', 'vulcan_ini', 'table' (for 'vulcan_ini, the T-P grids have to be exactly the same)
 fastchem_met_scale = 1. # scaling factor for other elements in fastchem (e.g., if fastchem_met_scale = 0.1, other elements such as Si and Mg will take 0.1 solar values)
 
+use_ini_cold_trap = True #True
 # Initialsing uniform (constant with pressure) mixing ratios (only reads when ini_mix = const_mix)
 const_mix = {'CH4':2.7761E-4*2, 'O2':4.807e-4, 'He':0.09691, 'N2':8.1853E-5, 'H2':1. -2.7761E-4*2*4/2} 
 
@@ -66,7 +69,7 @@ if use_photo == False and use_ion == True:
 # ====== Setting up parameters for the atmosphere ======
 atm_base = 'H2' #Options: 'H2', 'N2', 'O2', 'CO2 -- the bulk gas of the atmosphere: changes the molecular diffsion, thermal diffusion factor, and settling velocity
 rocky = False # for the surface gravity
-nz = 150   # number of vertical layers
+nz = 120   # number of vertical layers
 P_b = 1e9  # pressure at the bottom (dyne/cm^2)
 P_t = 1e-2 # pressure at the top (dyne/cm^2)
 use_Kzz = True
@@ -95,8 +98,9 @@ update_frq = 100
 use_topflux = False
 use_botflux = False
 use_fix_sp_bot = {} # fixed mixing ratios at the lower boundary
-diff_esc = [] # species for diffusion-limit escape at TOA
+diff_esc = ['H'] # species for diffusion-limit escape at TOA
 max_flux = 1e13  # upper limit for the diffusion-limit fluxes
+use_sat_surfaceH2O = True
 
 # ====== Reactions to be switched off  ======
 remove_list = [] # in pairs e.g. [1,2]
@@ -133,7 +137,7 @@ dt_max = runtime*1e-5
 dt_var_max = 2.
 dt_var_min = 0.5
 count_min = 120
-count_max = int(1E4)
+count_max = int(3E4)
 atol = 1.E-1 # Try decreasing this if the solutions are not stable
 mtol = 1.E-22
 mtol_conv = 1.E-20
@@ -145,11 +149,14 @@ slope_cri = 1.e-4
 yconv_min = 0.1
 flux_cri = 0.1
 flux_atol = 1. # the tol for actinc flux (# photons cm-2 s-1 nm-1)
-conver_ignore = [] # added 2023. to get rid off non-convergent species, e.g. HC3N without sinks 
+### use with caution
+conver_ignore = ['HC3N'] # added 2023. to get rid off non-convergent species, e.g. HC3N without sinks 
 
 # ====== Setting up numerical parameters for Ros2 ODE solver ====== 
-rtol = 0.2             # relative tolerence for adjusting the stepsize 
+rtol = 0.25             # relative tolerence for adjusting the stepsize 
 post_conden_rtol = 0.1 # switched to this value after fix_species_time
+rtol_min = 0.02
+rtol_max = 2.5  
 
 # ====== Setting up for ouwtput and plotting ======
 # plotting:
