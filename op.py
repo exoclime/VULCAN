@@ -186,8 +186,7 @@ class ReadRate(object):
                         # the pressure dependence from Jasper 2017
                         Fc = 0.1855*np.exp(-Tco/155.8)+0.8145*np.exp(-Tco/1675.)+np.exp(-4531./Tco)
                         nn = 0.75 - 1.27*np.log(Fc)
-                        ff = np.exp( np.log(Fc)/(1.+ (np.log(k[i]*M/k_inf)/nn**2)**2 ) )
-
+                        ff = np.exp( np.log(Fc)/(1.+ (np.log(k[i]*M/k_inf)/nn)**2 ) )
                         k[i] = k[i]/(1 + k[i]*M/k_inf ) *ff
 
                         k_fun[i] = lambda temp, mm, i=i: 1.932E3 *temp**-9.88 *np.exp(-7544./temp) + 5.109E-11*temp**-6.25 *np.exp(-1433./temp)
