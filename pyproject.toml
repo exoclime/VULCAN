@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 # https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
 [project]
 name = "vulcan"
-version = "25.07.15"
+version = "25.10.21"
 description = "Photochemical kinetics for exoplanetary atmospheres, a fast and easy-to-use python code."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/exoclime/VULCAN/"
-issues = "https://github.com/exoclime/VULCAN/issues"
-changelog = "https://github.com/exoclime/VULCAN//releases"
+homepage = "https://github.com/shami-EEG/VULCAN/"
+issues = "https://github.com/shami-EEG/VULCAN/issues"
+changelog = "https://github.com/shami-EEG/VULCAN//releases"
 

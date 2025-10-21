@@ -18,7 +18,7 @@ This is currently a release candidate version. Any questions or feedbacks is wel
 
 Let's dive in and see chemical kinetics in action!
 
-First, go to the `fastchem_vulcan/` folder to compile [FastChem](https://github.com/exoclime/FastChem) by running
+First, go to the `fastchem_vulcan/` folder to compile [FastChem](https://github.com/shami-EEG/FastChem) by running
 ```
 make
 ```
