@@ -1,5 +1,5 @@
 *.nc
-# .DS_Store
+.DS_Store
 __pycache__
 nogit_*
 
@@ -16,4 +16,6 @@ output/
 plot/
 
 AGNI
+agni 
+Agni  
 
