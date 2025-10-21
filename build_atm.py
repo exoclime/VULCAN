@@ -223,14 +223,25 @@ class InitialAbun(object):
                 # fixed 2022
                 data_atm.sat_mix[sp] = np.minimum(1., data_atm.sat_mix[sp])
 
-                if sp == 'H2O':
+                if sp == 'H2O':   # some special treatment for H2O oceans
                     data_atm.sat_mix[sp] *= self.cfg.humidity
+                    if self.cfg.use_sat_surfaceH2O == True: # 2023 added for eccentric Earth
+                         self.cfg.use_fix_sp_bot[sp] = data_atm.sat_mix[sp][0] 
+                         print ("\nThe fixed surface water is now reset by condensation and humidity to " + str(self.cfg.use_fix_sp_bot[sp]))
+                         
+                         # extending the water sat. from the surface. shami added 2024 
+                         data_var.ymix[:,species.index('H2O')] = data_atm.sat_mix[sp][0]
+                         data_var.y[:,species.index('H2O')] = data_var.ymix[:,species.index('H2O')]*data_atm.n_0
 
                 if self.cfg.use_ini_cold_trap:
-
                     if  self.cfg.ini_mix != 'table' and self.cfg.ini_mix != 'vul_ini':
                         # the level where condensation starts
-                        conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                        if self.cfg.use_sat_surfaceH2O == True: # shami added 2024
+                            conden_bot = 0
+                        else:    
+                            conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
+                               
+                        #conden_bot = np.argmax( data_atm.n_0*data_atm.sat_mix[sp] <= data_var.y[:,species.index(sp)] )
                         # conden_status: ture if the partial p >= the saturation p
                         sat_rho = data_atm.n_0 * data_atm.sat_mix[sp]
                         conden_status = data_var.y[:,species.index(sp)] >= sat_rho
@@ -242,9 +253,9 @@ class InitialAbun(object):
                             min_sat = np.amin(data_atm.sat_mix[sp][conden_status]) # the mininum value of the saturation p within the saturation region
                             conden_min_lev = np.where(data_atm.sat_mix[sp] == min_sat)[0][0]
 
-                            data_atm.conden_min_lev = conden_min_lev
-
+                            data_atm.conden_min_lev[sp] = conden_min_lev
                             log.debug( sp + " condensed from nz = " + str(conden_bot) + " to the minimum level nz = "+ str(conden_min_lev) + " (cold trap)")
+
                             #data_var.y[conden_min_lev:,species.index(sp)] = (y_ini[conden_min_lev,species.index(sp)]/data_atm.n_0[conden_min_lev]) *data_atm.n_0[conden_min_lev:]
                             data_var.y[conden_min_lev:,species.index(sp)] = data_atm.sat_mix[sp][conden_min_lev] * data_atm.n_0[conden_min_lev:]
 
@@ -272,13 +283,14 @@ class InitialAbun(object):
 
 
 
-    def ele_sum(self, data_var):
-
+    def ele_sum(self, data_var): 
+        
         for atom in self.atom_list:
-            data_var.atom_ini[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
-            data_var.atom_loss[atom] = 0.
-            data_var.atom_conden[atom] = 0.
-
+            if atom not in getattr(self.cfg, 'loss_ex', []): # shami added 2024 (If it doesn’t exist, returns an empty list)
+                data_var.atom_ini[atom] = np.sum([compo[compo_row.index(species[i])][atom] * data_var.y[:,i] for i in range(ni)])
+                data_var.atom_loss[atom] = 0.
+                data_var.atom_conden[atom] = 0.
+                
         return data_var
 
 
@@ -608,7 +620,7 @@ class Atm(object):
         sum_bin -= dbin2 *0.5*(var.sflux_top[var.sflux_din12_indx]+var.sflux_top[-1])
 
         log.debug("The stellar flux is interpolated onto uniform grid of " +str(self.cfg.dbin1) + " (<" +str(self.cfg.dbin_12trans)+" nm) and "+str(self.cfg.dbin2)\
-        + " (>="+str(self.cfg.dbin_12trans)+" nm)" + " and conserving " + "{:.2f}".format(100* sum_bin/sum_orgin)+" %" + " energy." )
+            + " (>="+str(self.cfg.dbin_12trans)+" nm)" + " and conserving " + "{:.2f}".format(100* sum_bin/sum_orgin)+" %" + " energy." )
 
 
     def mol_diff(self, atm):
@@ -673,15 +685,26 @@ class Atm(object):
         for i in range(len(species)):
             # input should be float or in the form of nz-long 1D array
             atm.Dzz[:,i] = Dzz_gen(Tco_i, n0_i, self.mol_mass(species[i]))
-
+            atm.Dzz_cen[:,i] = Dzz_gen(Tco, atm.n_0, self.mol_mass(species[i]))
+            
             # constructing the molecular weight for every species
             # this is required even without molecular weight
             atm.ms[i] = compo[compo_row.index(species[i])][-1]
 
         # setting the molecuar diffusion of the non-gaseous species to zero
         for sp in [_ for _ in self.cfg.non_gas_sp if _ in species]: atm.Dzz[:,species.index(sp)] = 0
-
-
+        
+        # contruct the advective component of molcular diffsion # added 2025
+        delta_T = np.roll(Tco,-1)-Tco
+        delta_T[0] = delta_T[1]; np.insert(delta_T, 0, delta_T[0])
+        
+        if self.cfg.use_vm_mol == True:
+            atm.vm = - atm.Dzz_cen * ( atm.ms[np.newaxis,:]*atm.g[:,np.newaxis]/(Navo*kb*Tco[:,np.newaxis]) - 1./atm.Hp[:,np.newaxis] +  atm.alpha/Tco[:,np.newaxis]*(delta_T[:,np.newaxis])/atm.dz[:,np.newaxis]  )
+            if self.cfg.use_condense == True:
+                non_gas_indices = [species.index(sp) for sp in self.cfg.non_gas_sp]
+                atm.vm[:,non_gas_indices] = 0
+        # contruct the advective component of molcular diffsion
+                
     def BC_flux(self, atm):
         '''
         Reading-in the boundary conditions of constant flux (cm^-2 s^-1) at top/bottom

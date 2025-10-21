@@ -57,10 +57,6 @@ def main(vulcan_cfg:Config):
     # construct Tco and Kzz
     data_atm =  make_atm.load_TPK(data_atm)
 
-    # construct Dzz (molecular diffusion)
-    # Only setting up ms (the species molecular weight) if vulcan_cfg.use_moldiff == False
-    make_atm.mol_diff(data_atm)
-
     # calculating the saturation pressure
     if vulcan_cfg.use_condense:
         make_atm.sp_sat(data_atm)

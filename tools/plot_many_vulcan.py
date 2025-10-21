@@ -20,8 +20,8 @@ import pickle
 # vul_data2 = '../output/test-Earth.vul'
 # vul_data3 = '../output/no-Coldtrap-Earth.vul'
 
-vul_data = '../output/HD189-nominal.vul'
-vul_data2 = '../output/HD189-longdouble.vul'
+vul_data = '../output/HD189-rtol02.vul'
+vul_data2 = '../output/HD189-vm-rtol-02.vul'
 
 
 # Setting the 2rd input argument as the species names to be plotted (separated by ,)
