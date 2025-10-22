@@ -808,6 +808,7 @@ class Integration(object):
     def __call__(self, var, atm, para, make_atm):
         
         use_print_prog, use_live_plot = vulcan_cfg.use_print_prog, vulcan_cfg.use_live_plot
+        self.loss_criteria = 0.0005
         
         while not self.stop(var, para, atm): # Looping until the stop condition is satisfied
             
